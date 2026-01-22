@@ -1,55 +1,41 @@
 {
-    "typ": "Abwesenheit",
+    "typ": "Aufgabe",
     "felder": [
         {
-            "name": "Datum-von",
-            "typ": "Datum",
-            "pflicht": "ja"
-        },
-        {
-            "name": "Zeit-von",
-            "typ": "Zeit",
-            "pflicht": "ja"
-        },
-        {
-            "name": "Datum-bis",
-            "typ": "Datum",
-            "pflicht": "ja"
-        },
-        {
-            "name": "Zeit-bis",
-            "typ": "Zeit",
-            "pflicht": "ja"
-        },
-        {
-            "name": "Grund",
+            "name": "Ort",
             "typ": "Auswahl",
             "pflicht": "ja",
             "optionen": [
-                "Dienstgeschäft",
-                "Fortbildung"
+                "Raum 101",
+                "Raum 102",
+                "Raum 201",
+                "Raum 202",
+                "Raum 203",
+                "Raum 204",
+                "Raum 205"
             ]
         }
     ],
     "workflow": [
         {
             "status": [
-                "offen.neu"
+                "offen.neu",
+                "offen.inArbeit"
             ],
             "aktionen": [
                 {
-                    "name": "genehmigen",
+                    "name": "bearbeiten",
                     "gruppen": [
                         "Schulleitung"
                     ],
-                    "script": "ticket.status = 'offen.genehmigt'"
+                    "script": "ticket.status = 'offen.inArbeit'"
                 },
                 {
                     "name": "ablehnen",
                     "gruppen": [
                         "Schulleitung"
                     ],
-                    "script": "ticket.status = 'offen.abgelehnt'"
+                    "script": "ticket.status = 'geschlossen.abgelehnt'"
                 }
             ]
         },
