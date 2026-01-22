@@ -1,0 +1,22 @@
+{
+    "name": "ticket-system-backend",
+    "version": "1.0.0",
+    "description": "Backend for Ticket System",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "dependencies": {
+        "body-parser": "^1.20.2",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "jsonwebtoken": "^9.0.2",
+        "ldapjs": "^3.0.7",
+        "mongoose": "^8.3.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0"
+    }
+}

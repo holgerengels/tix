@@ -1,0 +1,128 @@
+{
+    "typ": "Abwesenheit",
+    "felder": [
+        {
+            "name": "Datum-von",
+            "typ": "Datum",
+            "pflicht": "ja"
+        },
+        {
+            "name": "Zeit-von",
+            "typ": "Zeit",
+            "pflicht": "ja"
+        },
+        {
+            "name": "Datum-bis",
+            "typ": "Datum",
+            "pflicht": "ja"
+        },
+        {
+            "name": "Zeit-bis",
+            "typ": "Zeit",
+            "pflicht": "ja"
+        },
+        {
+            "name": "Grund",
+            "typ": "Auswahl",
+            "pflicht": "ja",
+            "optionen": [
+                "Dienstgeschäft",
+                "Fortbildung"
+            ]
+        }
+    ],
+    "workflow": [
+        {
+            "status": [
+                "offen.neu"
+            ],
+            "aktionen": [
+                {
+                    "name": "genehmigen",
+                    "gruppe": "Schulleitung",
+                    "script": "ticket.status = 'offen.genehmigt'"
+                },
+                {
+                    "name": "ablehnen",
+                    "gruppe": "Schulleitung",
+                    "script": "ticket.status = 'offen.abgelehnt'"
+                }
+            ]
+        },
+        {
+            "status": [
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "aktionen": [
+                {
+                    "name": "bearbeiten",
+                    "gruppe": "Vertretungsplan",
+                    "formular": "abwesenheit.bearbeiten"
+                }
+            ]
+        },
+        {
+            "status": [
+                "offen.neu",
+                "offen.genehmigt"
+            ],
+            "aktionen": [
+                {
+                    "name": "stornieren",
+                    "gruppe": "@ersteller",
+                    "script": "ticket.status = 'geschlossen.storniert'"
+                }
+            ]
+        },
+        {
+            "status": [
+                "offen.bearbeitet",
+                "offen.abgelehnt"
+            ],
+            "aktionen": [
+                {
+                    "name": "ok",
+                    "gruppe": "@ersteller",
+                    "script": "ticket.status = 'geschlossen.ok'"
+                }
+            ]
+        }
+    ],
+    "zugriff": [
+        {
+            "name": "erstellen",
+            "gruppen": [
+                "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "lesen",
+            "gruppen": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "löschen",
+            "gruppen": [
+                "Schulleitung"
+            ]
+        }
+    ],
+    "formulare": [
+        {
+            "name": "abwesenheit.bearbeiten",
+            "titel": "Abwesenheit bearbeiten",
+            "aktionen": [
+                {
+                    "name": "fertig",
+                    "script": "ticket.status = 'offen.bearbeitet'"
+                },
+                {
+                    "name": "nicht fertig",
+                    "script": "ticket.status = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ]
+}
