@@ -4,9 +4,10 @@ const MOCK_USERS = [
     { username: 'admin', password: 'password', groups: ['Admin'] },
     { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte'] },
-    { username: 'schulleiter', password: 'password', groups: ['Schulleitung'] },
-    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung'] },
-    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung'] }
+    { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },
+    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'] },
+    { username: 'hausmeister', password: 'password', groups: ['Hausmeister'] },
+    { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'] },
 ];
 
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env

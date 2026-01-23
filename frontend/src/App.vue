@@ -141,6 +141,9 @@ body {
     border-top: 1px solid var(--sl-color-neutral-200);
     padding-top: 1rem;
 }
+.footer sl-button {
+    margin-left: 0.5rem;
+}
 .user-info {
     margin-bottom: 0.5rem;
     color: var(--sl-color-neutral-500);

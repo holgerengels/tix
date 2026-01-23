@@ -16,8 +16,8 @@
            </sl-option>
         </sl-select>
 
-        <sl-input label="Titel" :value="newTicketData.title" @sl-input="newTicketData.title = $event.target.value" required></sl-input>
-        <sl-textarea label="Beschreibung" :value="newTicketData.description" @sl-input="newTicketData.description = $event.target.value" resize="auto"></sl-textarea>
+        <sl-input :label="getFieldLabel('title')" :value="newTicketData.title" @sl-input="newTicketData.title = $event.target.value" required></sl-input>
+        <RichTextEditor :label="getFieldLabel('description')" v-model="newTicketData.description" />
 
         <div v-if="newTicketType && config[newTicketType]" class="dynamic-section">
             <DynamicForm 
@@ -42,6 +42,13 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import DynamicForm from '../components/DynamicForm.vue';
+import RichTextEditor from '../components/RichTextEditor.vue';
+import { STANDARD_FIELDS } from '../config/standardFields';
+
+const getFieldLabel = (name) => {
+    const field = STANDARD_FIELDS.find(f => f.name === name);
+    return field ? field.label : name; // Fallback
+};
 
 const router = useRouter();
 const config = ref({});

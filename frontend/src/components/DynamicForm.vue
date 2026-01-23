@@ -34,6 +34,14 @@
         </sl-option>
       </sl-select>
 
+      <!-- RichText (Quill) -->
+      <RichTextEditor
+        v-else-if="field.type === 'RichText'"
+        :label="field.name"
+        :modelValue="modelValue[field.name] || ''"
+        @update:modelValue="updateField(field.name, $event)"
+      />
+
       <!-- Standard Text -->
       <sl-input 
         v-else
@@ -48,6 +56,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
+import RichTextEditor from './RichTextEditor.vue';
 
 const props = defineProps({
   fields: { type: Array, required: true },

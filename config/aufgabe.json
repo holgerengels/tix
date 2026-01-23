@@ -1,5 +1,6 @@
 {
     "type": "Aufgabe",
+    "template": "{{Ort}}",
     "fields": [
         {
             "name": "Ort",
@@ -41,15 +42,6 @@
                         "Hausmeister"
                     ],
                     "script": "ticket.state = 'geschlossen.abgelehnt'"
-                },
-                {
-                    "name": "zuweisen",
-                    "groups": [
-                        "Schulleitung",
-                        "Netzwerkteam",
-                        "Hausmeister"
-                    ],
-                    "form": "aufgabe.zuweisen"
                 }
             ]
         },
@@ -89,7 +81,8 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte"
+                "Lehrkräfte",
+                "Hausmeister"
             ]
         },
         {
@@ -118,16 +111,6 @@
                 },
                 {
                     "name": "nicht fertig",
-                    "script": "ticket.state = 'offen.inArbeit'"
-                }
-            ]
-        },
-        {
-            "name": "aufgabe.zuweisen",
-            "title": "Aufgabe zuweisen",
-            "actions": [
-                {
-                    "name": "fertig",
                     "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]

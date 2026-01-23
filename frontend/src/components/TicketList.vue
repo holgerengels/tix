@@ -81,6 +81,7 @@ import { ref, onMounted, defineProps, watch } from 'vue';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import { format } from 'date-fns';
+import { STANDARD_FIELDS } from '../config/standardFields';
 
 const props = defineProps({
   filter: String,
@@ -258,12 +259,63 @@ const handleAction = async (ticket, action) => {
     if (action.form) {
         currentTicket.value = ticket;
         currentAction.value = { ...action }; // Cloned to be safe
-        actionFormData.value = {};
+        
+        // Pre-fill form data with current ticket values
+        actionFormData.value = { 
+            title: ticket.title,
+            description: ticket.description,
+            assignee: ticket.assignee,
+            ...getDynamicFields(ticket) 
+        };
         currentFormDef.value = null;
         
         const wf = props.config[ticket.type];
-        const formDef = wf.forms?.find(f => f.name === action.form);
-        currentFormDef.value = formDef;
+        const specificFormDef = wf.forms?.find(f => f.name === action.form);
+        
+        // Base fields from ticket definition
+        let fields = [...(wf.fields || [])];
+        
+        
+        // Prepend Standard Fields
+        fields.unshift(...STANDARD_FIELDS);
+        
+        // If specific form has fields, we might want to merge or append. 
+        // Requirement is "all fields of the ticket". 
+        // We will prioritize the ticket fields, but if the form defines extra fields, we append them.
+        if (specificFormDef && specificFormDef.fields) {
+            // Check for duplicates or specific overrides if needed. 
+            // For now, simple append of unique fields could work, 
+            // or just rely on base fields if the specific form was only defining a subset previously.
+            // If the specific form defines fields that are NOT in the base ticket, add them.
+            specificFormDef.fields.forEach(sf => {
+                if (!fields.find(f => f.name === sf.name)) {
+                    fields.push(sf);
+                }
+            });
+        }
+        
+        // If specific form has fields, we might want to merge or append. 
+        // Requirement is "all fields of the ticket". 
+        // We will prioritize the ticket fields, but if the form defines extra fields, we append them.
+        if (specificFormDef && specificFormDef.fields) {
+            // Check for duplicates or specific overrides if needed. 
+            // For now, simple append of unique fields could work, 
+            // or just rely on base fields if the specific form was only defining a subset previously.
+            // If the specific form defines fields that are NOT in the base ticket, add them.
+            specificFormDef.fields.forEach(sf => {
+                if (!fields.find(f => f.name === sf.name)) {
+                    fields.push(sf);
+                }
+            });
+        }
+
+        // Construct a composite form definition
+        currentFormDef.value = {
+            ...specificFormDef,
+            fields: fields,
+            actions: specificFormDef ? specificFormDef.actions : [] // Preserve actions (buttons)
+        };
+        
         // Dialog opens automatically due to currentAction being set
     } 
     // 3. Simple Action Case: No script (explicitly) and No form -> Just execute.
@@ -302,10 +354,10 @@ const submitAction = async (btn = null) => {
 }
 
 .ticket-table th, .ticket-table td {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--sl-color-neutral-200);
-    vertical-align: top;
+    vertical-align: middle;
 }
 
 .ticket-table th {
@@ -330,8 +382,7 @@ const submitAction = async (btn = null) => {
     white-space: nowrap;
     line-height: 1;
 }
-
-.actions-cell {
-    gap: 0.5rem;
+.actions-cell sl-button {
+    margin-right: 4px;
 }
 </style>
