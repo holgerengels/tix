@@ -56,7 +56,7 @@ const availableTypes = computed(() => {
         const wf = config.value[type];
         // If no 'erstellen' rule exists, assume allowed, or check specific logic
         if (!wf.access) return true; 
-        const rule = wf.access.find(z => z.name === 'erstellen');
+        const rule = wf.access.find(z => z.name === 'create');
         // If no explicit create rule, maybe allow? relying on backend to reject.
         // But for UI, let's show if rule exists and matches, or if no rule exists (default allow?)
         // Based on DashboardView logic:

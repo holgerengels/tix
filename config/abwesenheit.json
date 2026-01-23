@@ -1,31 +1,31 @@
 {
-    "typ": "Abwesenheit",
-    "felder": [
+    "type": "Abwesenheit",
+    "fields": [
         {
             "name": "Datum-von",
-            "typ": "Datum",
-            "pflicht": "ja"
+            "type": "Datum",
+            "required": true
         },
         {
             "name": "Zeit-von",
-            "typ": "Zeit",
-            "pflicht": "ja"
+            "type": "Zeit",
+            "required": true
         },
         {
             "name": "Datum-bis",
-            "typ": "Datum",
-            "pflicht": "ja"
+            "type": "Datum",
+            "required": true
         },
         {
             "name": "Zeit-bis",
-            "typ": "Zeit",
-            "pflicht": "ja"
+            "type": "Zeit",
+            "required": true
         },
         {
             "name": "Grund",
-            "typ": "Auswahl",
-            "pflicht": "ja",
-            "optionen": [
+            "type": "Auswahl",
+            "required": true,
+            "options": [
                 "Dienstgeschäft",
                 "Fortbildung"
             ]
@@ -33,104 +33,107 @@
     ],
     "workflow": [
         {
-            "status": [
+            "states": [
                 "offen.neu"
             ],
-            "aktionen": [
+            "actions": [
                 {
                     "name": "genehmigen",
-                    "gruppen": [
+                    "groups": [
                         "Schulleitung"
                     ],
-                    "script": "ticket.status = 'offen.genehmigt'"
+                    "script": "ticket.state = 'offen.genehmigt'"
                 },
                 {
                     "name": "ablehnen",
-                    "gruppen": [
+                    "groups": [
                         "Schulleitung"
                     ],
-                    "script": "ticket.status = 'offen.abgelehnt'"
+                    "script": "ticket.state = 'offen.abgelehnt'"
                 }
             ]
         },
         {
-            "status": [
+            "states": [
                 "offen.genehmigt",
                 "offen.inArbeit"
             ],
-            "aktionen": [
+            "actions": [
                 {
                     "name": "bearbeiten",
-                    "gruppen": [
+                    "groups": [
                         "Vertretungsplan"
                     ],
-                    "formular": "abwesenheit.bearbeiten"
+                    "form": "abwesenheit.bearbeiten"
                 }
             ]
         },
         {
-            "status": [
+            "states": [
                 "offen.neu",
                 "offen.genehmigt"
             ],
-            "aktionen": [
+            "actions": [
                 {
                     "name": "stornieren",
-                    "gruppen": [
-                        "@ersteller"
+                    "groups": [
+                        "@creator"
                     ],
-                    "script": "ticket.status = 'geschlossen.storniert'"
+                    "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]
         },
         {
-            "status": [
+            "states": [
                 "offen.bearbeitet",
                 "offen.abgelehnt"
             ],
-            "aktionen": [
+            "actions": [
                 {
                     "name": "ok",
-                    "gruppen": [
-                        "@ersteller"
+                    "groups": [
+                        "@creator"
                     ],
-                    "script": "ticket.status = 'geschlossen.ok'"
+                    "script": "ticket.state = 'geschlossen.ok'"
                 }
             ]
         }
     ],
-    "zugriff": [
+    "access": [
         {
-            "name": "erstellen",
-            "gruppen": [
-                "Lehrkräfte"
+            "name": "create",
+            "groups": [
+                "Lehrkräfte",
+                "Admin"
             ]
         },
         {
-            "name": "lesen",
-            "gruppen": [
-                "Schulleitung"
+            "name": "read",
+            "groups": [
+                "Schulleitung",
+                "Admin"
             ]
         },
         {
-            "name": "löschen",
-            "gruppen": [
-                "Schulleitung"
+            "name": "delete",
+            "groups": [
+                "Schulleitung",
+                "Admin"
             ]
         }
     ],
-    "formulare": [
+    "forms": [
         {
             "name": "abwesenheit.bearbeiten",
-            "titel": "Abwesenheit bearbeiten",
-            "aktionen": [
+            "title": "Abwesenheit bearbeiten",
+            "actions": [
                 {
                     "name": "fertig",
-                    "script": "ticket.status = 'offen.bearbeitet'"
+                    "script": "ticket.state = 'offen.bearbeitet'"
                 },
                 {
                     "name": "nicht fertig",
-                    "script": "ticket.status = 'offen.inArbeit'"
+                    "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]
         }

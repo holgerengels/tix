@@ -3,30 +3,33 @@
     <div v-for="field in fields" :key="field.name" class="form-field">
       <!-- Datum -->
       <sl-input 
-        v-if="field.typ === 'Datum'"
+        v-if="field.type === 'Datum'"
         type="date"
         :label="field.name"
-        :required="field.pflicht === 'ja'"
-        v-model="model[field.name]"
+        :required="field.required === true || field.required === 'ja'"
+        :value="modelValue[field.name] || ''"
+        @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
 
       <!-- Zeit -->
       <sl-input 
-        v-else-if="field.typ === 'Zeit'"
+        v-else-if="field.type === 'Zeit'"
         type="time"
         :label="field.name"
-        :required="field.pflicht === 'ja'"
-        v-model="model[field.name]"
+        :required="field.required === true || field.required === 'ja'"
+        :value="modelValue[field.name] || ''"
+        @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
 
       <!-- Auswahl -->
       <sl-select
-        v-else-if="field.typ === 'Auswahl'"
+        v-else-if="field.type === 'Auswahl'"
         :label="field.name"
-        :required="field.pflicht === 'ja'"
-        v-model="model[field.name]"
+        :required="field.required === true || field.required === 'ja'"
+        :value="modelValue[field.name] || ''"
+        @sl-change="updateField(field.name, $event.target.value)"
       >
-        <sl-option v-for="opt in field.optionen" :key="opt" :value="opt">
+        <sl-option v-for="opt in field.options" :key="opt" :value="opt">
             {{ opt }}
         </sl-option>
       </sl-select>
@@ -35,15 +38,16 @@
       <sl-input 
         v-else
         :label="field.name"
-        :required="field.pflicht === 'ja'"
-        v-model="model[field.name]"
+        :required="field.required === true || field.required === 'ja'"
+        :value="modelValue[field.name] || ''"
+        @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue';
+import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -52,10 +56,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const model = computed({
-  get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
-});
+const updateField = (name, value) => {
+    // Updates the model by emitting a new object
+    emit('update:modelValue', { ...props.modelValue, [name]: value });
+};
 </script>
 
 <style scoped>

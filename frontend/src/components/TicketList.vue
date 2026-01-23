@@ -6,14 +6,14 @@
 
     <sl-card v-for="ticket in tickets" :key="ticket._id" class="ticket-card">
       <div slot="header" class="ticket-header">
-        <strong>{{ ticket.typ }}: {{ ticket.titel }}</strong>
-        <sl-tag :variant="getStatusColor(ticket.status)">{{ ticket.status }}</sl-tag>
+        <strong>{{ ticket.type }}: {{ ticket.title }}</strong>
+        <sl-tag :variant="getStatusColor(ticket.state)">{{ ticket.state }}</sl-tag>
       </div>
       
       <div class="ticket-body">
-        <p><strong>Ersteller:</strong> {{ ticket.ersteller }}</p>
-        <p><strong>Erstellt:</strong> {{ formatDate(ticket.erstellt) }}</p>
-        <p>{{ ticket.beschreibung }}</p>
+        <p><strong>Ersteller:</strong> {{ ticket.creator }}</p>
+        <p><strong>Erstellt:</strong> {{ formatDate(ticket.created) }}</p>
+        <p>{{ ticket.description }}</p>
         
         <!-- Dynamic Fields Display (simplified) -->
         <div v-for="(val, key) in getDynamicFields(ticket)" :key="key">
@@ -37,10 +37,8 @@
     <!-- Action Dialog -->
     <sl-dialog :label="currentAction?.name" :open="!!currentAction" @sl-after-hide="currentAction = null">
         <div v-if="currentFormDef">
-            <!-- If form had fields, we would render DynamicForm here -->
-            <!-- <DynamicForm :fields="currentFormDef.felder" v-model="actionFormData" /> -->
-            <p v-if="currentFormDef.felder">Bitte ergänzen:</p>
-            <DynamicForm v-if="currentFormDef.felder" :fields="currentFormDef.felder" v-model="actionFormData" />
+            <p v-if="currentFormDef.fields">Bitte ergänzen:</p>
+            <DynamicForm v-if="currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
             <p v-else>Bitte bestätigen Sie die Aktion.</p>
         </div>
         <div v-else>
@@ -48,9 +46,9 @@
         </div>
         
         <div slot="footer">
-            <template v-if="currentFormDef && currentFormDef.aktionen">
+            <template v-if="currentFormDef && currentFormDef.actions">
                  <sl-button 
-                    v-for="btn in currentFormDef.aktionen" 
+                    v-for="btn in currentFormDef.actions" 
                     :key="btn.name" 
                     variant="primary"
                     @click="submitAction(btn)"
@@ -85,18 +83,31 @@ const currentTicket = ref(null);
 const actionFormData = ref({});
 const currentFormDef = ref(null);
 
+let lastRequestId = 0;
+
 const fetchTickets = async () => {
+    const requestId = ++lastRequestId;
     loading.value = true;
+    console.log(`[TicketList] Fetching tickets (ID: ${requestId}) for filter: ${props.filter}`);
+    
     try {
         const res = await axios.get('/api/tickets', {
             params: { filter: props.filter },
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        tickets.value = res.data;
+        
+        if (requestId === lastRequestId) {
+            tickets.value = res.data;
+            console.log(`[TicketList] Loaded ${res.data.length} tickets (ID: ${requestId})`);
+        } else {
+             console.log(`[TicketList] Ignoring stale response (ID: ${requestId})`);
+        }
     } catch (err) {
-        console.error(err);
+        console.error(`[TicketList] Error fetching tickets (ID: ${requestId})`, err);
     } finally {
-        loading.value = false;
+        if (requestId === lastRequestId) {
+            loading.value = false;
+        }
     }
 };
 
@@ -113,83 +124,86 @@ const getStatusColor = (status) => {
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const getDynamicFields = (ticket) => {
-    const { _id, __v, typ, status, titel, beschreibung, ersteller, erstellt, log, ...rest } = ticket;
+    const { _id, __v, type, state, title, description, creator, created, log, ...rest } = ticket;
     return rest;
 };
 
 const getActions = (ticket) => {
-    if (!props.config || !props.config[ticket.typ]) return [];
+    if (!props.config || !props.config[ticket.type]) return [];
     
-    const workflow = props.config[ticket.typ].workflow;
-    const currentState = workflow.find(s => s.status.includes(ticket.status));
+    const workflow = props.config[ticket.type].workflow;
+    const currentState = workflow.find(s => s.states.includes(ticket.state));
     
     if (!currentState) return [];
     
     // Filter actions by user group
-    return currentState.aktionen.filter(action => {
-        if (action.gruppe === '@ersteller') return ticket.ersteller === user.username;
-        return user.groups.includes(action.gruppe);
+    return currentState.actions.filter(action => {
+        if (action.groups.includes('@creator')) return ticket.creator === user.username;
+        return action.groups.some(g => user.groups.includes(g));
     });
 };
 
-const handleAction = (ticket, action) => {
-    currentTicket.value = ticket;
-    currentAction.value = action;
-    actionFormData.value = {};
-    currentFormDef.value = null;
-    
-    if (action.formular) {
-        const wf = props.config[ticket.typ];
-        const formDef = wf.formulare?.find(f => f.name === action.formular);
+const executeActionApi = async (ticket, action, formData, btnName = null) => {
+    const payload = {
+        actionName: action.name,
+        formData: formData
+    };
+    if (btnName) payload.formButtonName = btnName;
+
+    try {
+        await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
+             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        return true;
+    } catch (err) {
+        alert('Fehler: ' + (err.response?.data?.message || err.message));
+        return false;
+    }
+};
+
+const handleAction = async (ticket, action) => {
+    // 1. Script Case: If script exists, execute it immediately
+    if (action.script) {
+        const success = await executeActionApi(ticket, action, {});
+        if (!success) return; // Stop if script execution failed
+
+        await fetchTickets();
+        // Update local ticket reference to the latest version after script
+        const updatedTicket = tickets.value.find(t => t._id === ticket._id);
+        if (updatedTicket) {
+            ticket = updatedTicket;
+        }
+    }
+
+    // 2. Form Case: If form exists, show it (potentially after script)
+    if (action.form) {
+        currentTicket.value = ticket;
+        currentAction.value = { ...action }; // Cloned to be safe
+        actionFormData.value = {};
+        currentFormDef.value = null;
+        
+        const wf = props.config[ticket.type];
+        const formDef = wf.forms?.find(f => f.name === action.form);
         currentFormDef.value = formDef;
+        // Dialog opens automatically due to currentAction being set
     } 
+    // 3. Simple Action Case: No script (explicitly) and No form -> Just execute.
+    // Note: If script existed, we already executed in Step 1.
+    // If form exists, we handled it in Step 2.
+    // This else-if covers the case where there is neither, or just an action name acting as a trigger.
+    else if (!action.script) {
+        const success = await executeActionApi(ticket, action, {});
+        if (success) {
+            fetchTickets();
+        }
+    }
 };
 
 const submitAction = async (btn = null) => {
-    // If btn (from form) is clicked, it works like a sub-action logic
-    // The prompt says: "Die Formulare enthalten Buttons, mit denen jeweils ein Script assoziiert ist."
-    
-    // If we have a button from the form, WE USE THAT BUTTON as the "action" to execute on backend.
-    // BUT the backend expects an action NAME from the workflow state.
-    // This implies that the workflow action that OPENED the form is just the potential entry point.
-    // The ACTUAL status change is determined by the button clicked in the form.
-    
-    // My backend logic: finds action in CURRENT STATE.
-    // If I send "fertig" (from form), but the current state only has "bearbeiten" (which opened the form)... 
-    // The backend `tickets/:id/action` endpoint checks `currentState.aktionen`. 
-    // It will NOT find "fertig".
-    
-    // So either:
-    // A) The form buttons trigger a NEW action `post` against the backend, and I need to update backend to support "Form Actions".
-    // B) The `actionName` sent to backend is looking for the action that OPENED the form, but maybe we pass "subAction" or "script"?
-    
-    // Prompt: "Zu jeder Aktion ist ... entweder ein Script ... oder ein Formular ... Die Formulare enthalten Buttons, mit denen jeweils ein Script assoziiert ist."
-    // This means the FORM buttons contain the script to execute.
-    // So the backend needs to know WHICH script to execute.
-    
-    // I should modify Backend `tickets/:id/action`:
-    // Accept `formActionName` optional.
-    // If `formActionName` is present, look up the form definition, find the button, and use ITS script.
-    
-    // I will pass `actionName` (the main action) AND `formButtonName` (if applicable).
-    
-    const payload = {
-        actionName: currentAction.value.name,
-        formData: actionFormData.value
-    };
-    
-    if (btn) {
-        payload.formButtonName = btn.name;
-    }
-    
-    try {
-        await axios.post(`/api/tickets/${currentTicket.value._id}/action`, payload, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+    const success = await executeActionApi(currentTicket.value, currentAction.value, actionFormData.value, btn ? btn.name : null);
+    if (success) {
         currentAction.value = null;
-        fetchTickets(); 
-    } catch (err) {
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
+        fetchTickets();
     }
 };
 </script>

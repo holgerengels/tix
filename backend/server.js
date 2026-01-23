@@ -12,7 +12,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // DB
-// connectDB();
+connectDB();
 
 // Routes
 app.use('/api', routes);

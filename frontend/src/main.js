@@ -25,12 +25,14 @@ setBasePath('https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.20.1/cdn/')
 
 import LoginView from './views/LoginView.vue'
 import DashboardView from './views/DashboardView.vue'
+import NewTicketView from './views/NewTicketView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
     routes: [
         { path: '/login', component: LoginView },
-        { path: '/', component: DashboardView, meta: { requiresAuth: true } }
+        { path: '/', component: DashboardView, meta: { requiresAuth: true } },
+        { path: '/tickets/new', component: NewTicketView, meta: { requiresAuth: true } }
     ]
 })
 

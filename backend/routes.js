@@ -9,23 +9,23 @@ const mongoose = require('mongoose');
 let mockTickets = [
     {
         _id: 'mock_1',
-        titel: 'Beispiel Ticket 1',
-        typ: 'Abwesenheit',
-        status: 'neu',
-        ersteller: 'lehrer1',
-        erstellt: new Date(),
-        daten: {},
-        log: [{ bearbeiter: 'lehrer1', text: 'Ticket erstellt', bearbeitet: new Date() }]
+        title: 'Beispiel Ticket 1',
+        type: 'Abwesenheit',
+        state: 'neu',
+        creator: 'lehrer1',
+        created: new Date(),
+        data: {},
+        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date() }]
     },
     {
         _id: 'mock_2',
-        titel: 'Beispiel Ticket 2',
-        typ: 'Abwesenheit',
-        status: 'genehmigt',
-        ersteller: 'lehrer2',
-        erstellt: new Date(),
-        daten: {},
-        log: [{ bearbeiter: 'lehrer2', text: 'Ticket erstellt', bearbeitet: new Date() }]
+        title: 'Beispiel Ticket 2',
+        type: 'Abwesenheit',
+        state: 'genehmigt',
+        creator: 'lehrer2',
+        created: new Date(),
+        data: {},
+        log: [{ editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date() }]
     }
 ];
 
@@ -55,7 +55,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
         let results = [];
         // Simple mock filtering
         if (filter === 'my') {
-            results = mockTickets.filter(t => t.ersteller === user.username);
+            results = mockTickets.filter(t => t.creator === user.username);
         } else {
             // Return all for now in mock mode for simplicity, or implement complex filtering if needed
             results = mockTickets;
@@ -65,23 +65,25 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
     let query = {};
     if (filter === 'my') {
-        query.ersteller = user.username;
+        query.creator = user.username;
     } else if (filter === 'assigned') {
         const conditions = [];
         const allWorkflows = workflowEngine.getWorkflows();
         Object.values(allWorkflows).forEach(wf => {
             if (wf.workflow) {
                 wf.workflow.forEach(state => {
-                    const releavantActions = state.aktionen.filter(action => {
-                        return user.groups.includes(action.gruppe) || (action.gruppe === '@ersteller'); // simplified
+                    const releavantActions = (state.actions || []).filter(action => {
+                        const hasGroupAccess = action.groups.some(g => user.groups.includes(g));
+                        const hasCreatorAccess = action.groups.includes('@creator');
+                        return hasGroupAccess || hasCreatorAccess;
                     });
 
                     if (releavantActions.length > 0) {
-                        if (releavantActions.some(a => a.gruppe === '@ersteller')) {
-                            conditions.push({ typ: wf.typ, status: { $in: state.status }, ersteller: user.username });
+                        if (releavantActions.some(a => a.groups.includes('@creator'))) {
+                            conditions.push({ type: wf.type, state: { $in: state.states }, creator: user.username });
                         }
-                        if (releavantActions.some(a => user.groups.includes(a.gruppe))) {
-                            conditions.push({ typ: wf.typ, status: { $in: state.status } });
+                        if (releavantActions.some(a => a.groups.some(g => user.groups.includes(g)))) {
+                            conditions.push({ type: wf.type, state: { $in: state.states } });
                         }
                     }
                 });
@@ -95,14 +97,14 @@ router.get('/tickets', verifyToken, async (req, res) => {
         const conditions = [];
         const allWorkflows = workflowEngine.getWorkflows();
         Object.values(allWorkflows).forEach(wf => {
-            const readAccess = wf.zugriff.find(z => z.name === 'lesen');
-            const deleteAccess = wf.zugriff.find(z => z.name === 'löschen');
+            const readAccess = wf.access.find(z => z.name === 'read');
+            const deleteAccess = wf.access.find(z => z.name === 'delete');
             const groups = [];
-            if (readAccess) groups.push(...readAccess.gruppen);
-            if (deleteAccess) groups.push(...deleteAccess.gruppen);
+            if (readAccess) groups.push(...readAccess.groups);
+            if (deleteAccess) groups.push(...deleteAccess.groups);
 
             if (groups.some(g => user.groups.includes(g))) {
-                conditions.push({ typ: wf.typ });
+                conditions.push({ type: wf.type });
             }
         });
 
@@ -111,7 +113,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
 
     try {
-        const tickets = await Ticket.find(query).sort({ erstellt: -1 });
+        const tickets = await Ticket.find(query).sort({ created: -1 });
         res.json(tickets);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -120,17 +122,22 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
 router.post('/tickets', verifyToken, async (req, res) => {
     try {
-        const ticketData = req.body;
-        ticketData.ersteller = req.user.username;
-        ticketData.log = [{ bearbeiter: req.user.username, text: 'Ticket erstellt' }];
+        const ticketData = {
+            type: req.body.typ || req.body.type,
+            title: req.body.titel || req.body.title,
+            description: req.body.beschreibung || req.body.description,
+            ...req.body,
+            creator: req.user.username,
+            created: new Date(),
+            state: 'offen.neu',
+            log: [{ editor: req.user.username, text: 'Ticket erstellt', edited: new Date() }]
+        };
 
         if (!isDBConnected()) {
             console.log('Creating MOCK ticket');
             const newTicket = {
                 _id: 'mock_' + Date.now(),
-                ...ticketData,
-                erstellt: new Date(),
-                status: 'neu' // Default status
+                ...ticketData
             };
             mockTickets.push(newTicket);
             return res.status(201).json(newTicket);
@@ -157,22 +164,22 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
-        const wf = workflowEngine.getWorkflowForType(ticket.typ);
-        // Robustness fix: Handle if ticket.status doesn't match any workflow state (e.g. old data)
-        const currentState = wf.workflow.find(s => s.status.includes(ticket.status));
+        const wf = workflowEngine.getWorkflowForType(ticket.type);
+        // Robustness fix: Handle if ticket.state doesn't match any workflow state (e.g. old data)
+        const currentState = wf.workflow.find(s => s.states.includes(ticket.state));
 
-        if (!currentState) return res.status(400).json({ message: `Invalid ticket status: ${ticket.status}` });
+        if (!currentState) return res.status(400).json({ message: `Invalid ticket state: ${ticket.state}` });
 
-        const action = currentState.aktionen.find(a => a.name === actionName);
+        const action = currentState.actions.find(a => a.name === actionName);
         if (!action) return res.status(400).json({ message: 'Invalid action' });
 
         // Check permission
         const userGroups = req.user.groups;
         let authorized = false;
 
-        if (action.gruppe === '@ersteller') {
-            if (ticket.ersteller === req.user.username) authorized = true;
-        } else if (userGroups.includes(action.gruppe)) {
+        if (action.groups.includes('@creator')) {
+            if (ticket.creator === req.user.username) authorized = true;
+        } else if (action.groups.some(g => userGroups.includes(g))) {
             authorized = true;
         }
 
@@ -181,10 +188,10 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         // Determine Script to run
         let scriptToRun = action.script;
 
-        if (formButtonName && action.formular) {
-            const formDef = wf.formulare.find(f => f.name === action.formular);
+        if (formButtonName && action.form) {
+            const formDef = wf.forms.find(f => f.name === action.form);
             if (formDef) {
-                const btn = formDef.aktionen.find(b => b.name === formButtonName);
+                const btn = formDef.actions.find(b => b.name === formButtonName);
                 if (btn) {
                     scriptToRun = btn.script;
                 }
@@ -193,17 +200,17 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         // Execute Script
         if (scriptToRun) {
-            const match = scriptToRun.match(/ticket\.status\s*=\s*'([^']+)'/);
+            const match = scriptToRun.match(/ticket\.state\s*=\s*'([^']+)'/);
             if (match) {
-                ticket.status = match[1];
+                ticket.state = match[1];
             }
         }
 
         // Add log
         const newLog = {
-            bearbeiter: req.user.username,
+            editor: req.user.username,
             text: `Aktion: ${actionName} ${formButtonName ? `(${formButtonName})` : ''}`,
-            bearbeitet: new Date()
+            edited: new Date()
         };
 
         if (Array.isArray(ticket.log)) {

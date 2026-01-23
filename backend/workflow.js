@@ -11,8 +11,8 @@ const loadWorkflows = () => {
             if (file.endsWith('.json')) {
                 const content = fs.readFileSync(path.join(configDir, file), 'utf8');
                 const workflow = JSON.parse(content);
-                workflows[workflow.typ] = workflow;
-                console.log(`Loaded workflow: ${workflow.typ}`);
+                workflows[workflow.type] = workflow;
+                console.log(`Loaded workflow: ${workflow.type}`);
             }
         });
     } catch (err) {
@@ -29,9 +29,9 @@ const getWorkflowForType = (type) => workflows[type];
 const canCreate = (type, userGroups) => {
     const wf = workflows[type];
     if (!wf) return false;
-    const rule = wf.zugriff.find(z => z.name === 'erstellen');
+    const rule = wf.access.find(z => z.name === 'create');
     if (!rule) return false;
-    return rule.gruppen.some(g => userGroups.includes(g));
+    return rule.groups.some(g => userGroups.includes(g));
 };
 
 const getVisibleTicketTypes = (userGroups) => {

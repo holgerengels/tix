@@ -3,7 +3,7 @@ const Ticket = require('../models/ticket');
 
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb://localhost:27017/ticketsystem');
+        await mongoose.connect('mongodb://admin:password@localhost:27017/tickets?authSource=admin');
         console.log('MongoDB connected for seeding');
     } catch (err) {
         console.error('MongoDB connection error:', err);
@@ -13,24 +13,24 @@ const connectDB = async () => {
 
 const mockTickets = [
     {
-        titel: 'Beispiel Ticket 1',
-        typ: 'Abwesenheit',
-        status: 'offen.neu',
-        ersteller: 'lehrer1',
-        erstellt: new Date(),
-        daten: {},
-        log: [{ bearbeiter: 'lehrer1', text: 'Ticket erstellt', bearbeitet: new Date() }]
+        title: 'Beispiel Ticket 1',
+        type: 'Abwesenheit',
+        state: 'offen.neu',
+        creator: 'lehrer1',
+        created: new Date(),
+        data: {},
+        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date() }]
     },
     {
-        titel: 'Beispiel Ticket 2',
-        typ: 'Abwesenheit',
-        status: 'offen.genehmigt',
-        ersteller: 'lehrer2',
-        erstellt: new Date(),
-        daten: {},
+        title: 'Beispiel Ticket 2',
+        type: 'Abwesenheit',
+        state: 'offen.genehmigt',
+        creator: 'lehrer2',
+        created: new Date(),
+        data: {},
         log: [
-            { bearbeiter: 'lehrer2', text: 'Ticket erstellt', bearbeitet: new Date() },
-            { bearbeiter: 'hannes_rometsch', text: 'Ticket genehmigt', bearbeitet: new Date() }
+            { editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date() },
+            { editor: 'schulleiter', text: 'Ticket genehmigt', edited: new Date() }
         ]
     }
 ];
