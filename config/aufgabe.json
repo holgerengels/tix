@@ -26,38 +26,36 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Schulleitung"
+                        "Schulleitung",
+                        "Netzwerkteam",
+                        "Hausmeister"
                     ],
                     "script": "ticket.state = 'offen.inArbeit'"
                 },
                 {
                     "name": "ablehnen",
                     "groups": [
-                        "Schulleitung"
+                        "Schulleitung",
+                        "Netzwerkteam",
+                        "Hausmeister"
                     ],
                     "script": "ticket.state = 'geschlossen.abgelehnt'"
-                }
-            ]
-        },
-        {
-            "states": [
-                "offen.genehmigt",
-                "offen.inArbeit"
-            ],
-            "actions": [
+                },
                 {
-                    "name": "bearbeiten",
+                    "name": "zuweisen",
                     "groups": [
-                        "Vertretungsplan"
+                        "Schulleitung",
+                        "Netzwerkteam",
+                        "Hausmeister"
                     ],
-                    "form": "aufgabe.bearbeiten"
+                    "form": "aufgabe.zuweisen"
                 }
             ]
         },
         {
             "states": [
                 "offen.neu",
-                "offen.genehmigt"
+                "offen.inArbeit"
             ],
             "actions": [
                 {
@@ -71,7 +69,7 @@
         },
         {
             "states": [
-                "offen.bearbeitet",
+                "offen.erledigt",
                 "offen.abgelehnt"
             ],
             "actions": [
@@ -89,22 +87,21 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte",
-                "Admin"
+                "Lehrkräfte"
             ]
         },
         {
             "name": "read",
             "groups": [
-                "Schulleitung",
-                "Admin"
+                "Lehrkräfte",
+                "Hausmeister"
             ]
         },
         {
             "name": "delete",
             "groups": [
                 "Schulleitung",
-                "Admin"
+                "Netzwerkteam"
             ]
         }
     ],
@@ -115,13 +112,65 @@
             "actions": [
                 {
                     "name": "fertig",
-                    "script": "ticket.state = 'offen.bearbeitet'"
+                    "script": "ticket.state = 'offen.erledigt'"
                 },
                 {
                     "name": "nicht fertig",
                     "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]
+        },
+        {
+            "name": "aufgabe.zuweisen",
+            "title": "Aufgabe zuweisen",
+            "actions": [
+                {
+                    "name": "fertig",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "Offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "Neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "In Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.erledigt",
+            "label": "Erledigt",
+            "color": "green"
+        },
+        {
+            "name": "offen.abgelehnt",
+            "label": "Abgelehnt",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "Storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "Geschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "Geschlossen",
+            "color": "green"
         }
     ]
 }

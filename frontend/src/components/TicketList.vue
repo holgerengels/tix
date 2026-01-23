@@ -4,35 +4,45 @@
     
     <div v-else-if="tickets.length === 0">Keine Tickets gefunden.</div>
 
-    <sl-card v-for="ticket in tickets" :key="ticket._id" class="ticket-card">
-      <div slot="header" class="ticket-header">
-        <strong>{{ ticket.type }}: {{ ticket.title }}</strong>
-        <sl-tag :variant="getStatusColor(ticket.state)">{{ ticket.state }}</sl-tag>
-      </div>
-      
-      <div class="ticket-body">
-        <p><strong>Ersteller:</strong> {{ ticket.creator }}</p>
-        <p><strong>Erstellt:</strong> {{ formatDate(ticket.created) }}</p>
-        <p>{{ ticket.description }}</p>
-        
-        <!-- Dynamic Fields Display (simplified) -->
-        <div v-for="(val, key) in getDynamicFields(ticket)" :key="key">
-            <strong>{{ key }}:</strong> {{ val }}
-        </div>
-      </div>
-
-      <div slot="footer" class="ticket-actions">
-        <!-- Render Actions -->
-        <sl-button 
-            v-for="action in getActions(ticket)" 
-            :key="action.name"
-            size="small"
-            @click="handleAction(ticket, action)"
-        >
-            {{ action.name }}
-        </sl-button>
-      </div>
-    </sl-card>
+    <table v-else class="ticket-table">
+      <thead>
+        <tr>
+          <th>Typ</th>
+          <th>Titel</th>
+          <th>Status</th>
+          <th>Ersteller</th>
+          <th>Erstellt am</th>
+          <th>Daten</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="ticket in tickets" :key="ticket._id">
+          <td>{{ ticket.type }}</td>
+          <td><strong>{{ ticket.title }}</strong></td>
+          <td><sl-tag :variant="getStatusColor(ticket.state)">{{ ticket.state }}</sl-tag></td>
+          <td>{{ ticket.creator }}</td>
+          <td>{{ formatDate(ticket.created) }}</td>
+          <td>
+            <div class="dynamic-data">
+                <span v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
+                    <strong>{{ key }}:</strong> {{ val }}
+                </span>
+            </div>
+          </td>
+          <td class="actions-cell">
+             <sl-button 
+                v-for="action in getActions(ticket)" 
+                :key="action.name"
+                size="small"
+                @click="handleAction(ticket, action)"
+            >
+                {{ action.name }}
+            </sl-button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
     <!-- Action Dialog -->
     <sl-dialog :label="currentAction?.name" :open="!!currentAction" @sl-after-hide="currentAction = null">
@@ -124,7 +134,7 @@ const getStatusColor = (status) => {
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const getDynamicFields = (ticket) => {
-    const { _id, __v, type, state, title, description, creator, created, log, ...rest } = ticket;
+    const { _id, __v, type, state, title, description, creator, created, updated, log, ...rest } = ticket;
     return rest;
 };
 
@@ -207,3 +217,51 @@ const submitAction = async (btn = null) => {
     }
 };
 </script>
+
+<style scoped>
+.ticket-list {
+    width: 100%;
+    overflow-x: auto;
+}
+.ticket-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: var(--sl-border-radius-medium);
+}
+
+.ticket-table th, .ticket-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--sl-color-neutral-200);
+    vertical-align: top;
+}
+
+.ticket-table th {
+    background-color: var(--sl-color-neutral-50);
+    font-weight: 600;
+    color: var(--sl-color-neutral-700);
+}
+
+.ticket-table tr:last-child td {
+    border-bottom: none;
+}
+
+.dynamic-data {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.data-item {
+    font-size: 0.9em;
+    padding: 0.1rem 0;
+    white-space: nowrap;
+}
+
+.actions-cell {
+    gap: 0.5rem;
+}
+</style>

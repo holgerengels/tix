@@ -127,10 +127,10 @@ async function runScenario() {
     console.log('\n--- Lehrer1 Actions ---');
     const l1Tickets = await getTickets('lehrer1', 'my');
 
-    // Check Ticket A (should be offen.bearbeitet)
+    // Check Ticket A (should be offen.erledigt)
     const finalA = l1Tickets.find(t => t._id === ticketA._id);
     console.log(`Ticket A state for Lehrer1: ${finalA?.state}`);
-    if (finalA && finalA.state === 'offen.bearbeitet') {
+    if (finalA && finalA.state === 'offen.erledigt') {
         await performAction('lehrer1', finalA._id, 'ok');
     }
 
@@ -140,7 +140,7 @@ async function runScenario() {
     if (finalB && (finalB.state === 'offen.abgelehnt' || finalB.state === 'geschlossen.abgelehnt')) {
         // Note: config says 'offen.abgelehnt' and action 'ok' -> 'geschlossen.ok'
         // Wait, config says: 
-        // { state: ["offen.bearbeitet", "offen.abgelehnt"], actions: [{ name: "ok", script: "ticket.state = 'geschlossen.ok'" }] }
+        // { state: ["offen.erledigt", "offen.abgelehnt"], actions: [{ name: "ok", script: "ticket.state = 'geschlossen.ok'" }] }
         await performAction('lehrer1', finalB._id, 'ok');
     }
 

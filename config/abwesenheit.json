@@ -85,7 +85,7 @@
         },
         {
             "states": [
-                "offen.bearbeitet",
+                "offen.erledigt",
                 "offen.abgelehnt"
             ],
             "actions": [
@@ -129,13 +129,60 @@
             "actions": [
                 {
                     "name": "fertig",
-                    "script": "ticket.state = 'offen.bearbeitet'"
+                    "script": "ticket.state = 'offen.erledigt'"
                 },
                 {
                     "name": "nicht fertig",
                     "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "Offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "Neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.genehmigt",
+            "label": "Genehmigt",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "In Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.erledigt",
+            "label": "Erledigt",
+            "color": "green"
+        },
+        {
+            "name": "offen.abgelehnt",
+            "label": "Abgelehnt",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "Storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "Geschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "Geschlossen",
+            "color": "green"
         }
     ]
 }
