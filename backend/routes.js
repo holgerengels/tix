@@ -45,6 +45,15 @@ router.get('/config', verifyToken, (req, res) => {
     res.json(workflowEngine.getWorkflows());
 });
 
+router.post('/config/reload', verifyToken, (req, res) => {
+    try {
+        workflowEngine.loadWorkflows();
+        res.json({ message: 'Workflows reloaded' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
     const { filter } = req.query; // 'my', 'assigned', 'all'
@@ -73,6 +82,9 @@ router.get('/tickets', verifyToken, async (req, res) => {
             if (wf.workflow) {
                 wf.workflow.forEach(state => {
                     const releavantActions = (state.actions || []).filter(action => {
+                        // For 'assigned' filter, we only care about mandatory (non-optional) actions
+                        if (action.optional) return false;
+
                         const hasGroupAccess = action.groups.some(g => user.groups.includes(g));
                         const hasCreatorAccess = action.groups.includes('@creator');
                         return hasGroupAccess || hasCreatorAccess;

@@ -11,7 +11,7 @@
           <th>Titel</th>
           <th>Status</th>
           <th>Ersteller</th>
-          <th>Erstellt am</th>
+          <th>Erstellt</th>
           <th>Daten</th>
           <th>Aktionen</th>
         </tr>
@@ -20,12 +20,15 @@
         <tr v-for="ticket in tickets" :key="ticket._id">
           <td>{{ ticket.type }}</td>
           <td><strong>{{ ticket.title }}</strong></td>
-          <td><sl-tag :variant="getStatusColor(ticket.state)">{{ ticket.state }}</sl-tag></td>
+          <td><sl-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</sl-tag></td>
           <td>{{ ticket.creator }}</td>
           <td>{{ formatDate(ticket.created) }}</td>
           <td>
             <div class="dynamic-data">
-                <span v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
+                <div v-if="hasTemplate(ticket)" class="template-data">
+                    {{ getFormattedData(ticket) }}
+                </div>
+                <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
                     <strong>{{ key }}:</strong> {{ val }}
                 </span>
             </div>
@@ -124,11 +127,31 @@ const fetchTickets = async () => {
 watch(() => props.filter, fetchTickets);
 onMounted(fetchTickets);
 
-const getStatusColor = (status) => {
-    if (status.includes('neu')) return 'primary';
-    if (status.includes('genehmigt') || status.includes('ok')) return 'success';
-    if (status.includes('abgelehnt')) return 'danger';
-    return 'neutral';
+const getStatusColor = (ticket) => {
+    if (!props.config || !props.config[ticket.type] || !props.config[ticket.type].states) {
+        // Fallback
+        if (ticket.state.includes('neu')) return 'primary';
+        if (ticket.state.includes('genehmigt') || ticket.state.includes('ok') || ticket.state.includes('erledigt')) return 'success';
+        if (ticket.state.includes('abgelehnt') || ticket.state.includes('storniert')) return 'danger';
+        return 'neutral';
+    }
+    const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
+    const colorMap = {
+        'blue': 'primary',
+        'green': 'success',
+        'yellow': 'warning',
+        'red': 'danger',
+        'gray': 'neutral'
+    };
+    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
+};
+
+const getStatusLabel = (ticket) => {
+    if (!props.config || !props.config[ticket.type] || !props.config[ticket.type].states) {
+        return ticket.state;
+    }
+    const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
+    return stateDef ? stateDef.label : ticket.state;
 };
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
@@ -138,19 +161,65 @@ const getDynamicFields = (ticket) => {
     return rest;
 };
 
+const hasTemplate = (ticket) => {
+    return props.config && props.config[ticket.type] && props.config[ticket.type].template;
+};
+
+const getFormattedData = (ticket) => {
+    if (!hasTemplate(ticket)) return '';
+    let template = props.config[ticket.type].template;
+    const fields = getDynamicFields(ticket);
+    const fieldDefs = props.config[ticket.type].fields || [];
+    
+    // Replace all placeholders {{Key}} or ${Key} with value
+    for (const [key, val] of Object.entries(fields)) {
+        let displayVal = val;
+        
+        // Find field definition to check type
+        const fieldDef = fieldDefs.find(f => f.name === key);
+
+        if (fieldDef && fieldDef.type === 'Date' && val) {
+            try {
+                displayVal = format(new Date(val), 'dd.MM.yyyy');
+            } catch (e) {
+                console.error(`[debug] Date format error for ${key}:`, e);
+            }
+        }
+
+        // Replace {{Key}}
+        template = template.replace(new RegExp(`{{${key}}}`, 'g'), displayVal);
+        // Replace ${Key}
+        template = template.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), displayVal);
+    }
+    return template;
+};
+
 const getActions = (ticket) => {
     if (!props.config || !props.config[ticket.type]) return [];
     
     const workflow = props.config[ticket.type].workflow;
-    const currentState = workflow.find(s => s.states.includes(ticket.state));
+    // Support multiple workflow blocks for the same state
+    const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
     
-    if (!currentState) return [];
+    if (matchingBlocks.length === 0) return [];
     
+    const allActions = matchingBlocks.flatMap(block => block.actions);
+
     // Filter actions by user group
-    return currentState.actions.filter(action => {
+    const authorizedActions = allActions.filter(action => {
         if (action.groups.includes('@creator')) return ticket.creator === user.username;
         return action.groups.some(g => user.groups.includes(g));
     });
+
+    // Filter by View Context
+    if (props.filter === 'assigned') {
+        return authorizedActions.filter(a => !a.optional);
+    } else if (props.filter === 'my') {
+        return authorizedActions.filter(a => a.optional === true);
+    }
+    
+    // Default / 'all': Show all authorized
+    return authorizedActions;
 };
 
 const executeActionApi = async (ticket, action, formData, btnName = null) => {
@@ -257,8 +326,9 @@ const submitAction = async (btn = null) => {
 
 .data-item {
     font-size: 0.9em;
-    padding: 0.1rem 0;
+    padding: 0;
     white-space: nowrap;
+    line-height: 1;
 }
 
 .actions-cell {

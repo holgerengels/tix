@@ -1,9 +1,9 @@
 <template>
   <div class="dynamic-form">
     <div v-for="field in fields" :key="field.name" class="form-field">
-      <!-- Datum -->
+      <!-- Date -->
       <sl-input 
-        v-if="field.type === 'Datum'"
+        v-if="field.type === 'Date'"
         type="date"
         :label="field.name"
         :required="field.required === true || field.required === 'ja'"
@@ -11,9 +11,9 @@
         @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
 
-      <!-- Zeit -->
+      <!-- Time -->
       <sl-input 
-        v-else-if="field.type === 'Zeit'"
+        v-else-if="field.type === 'Time'"
         type="time"
         :label="field.name"
         :required="field.required === true || field.required === 'ja'"
@@ -21,9 +21,9 @@
         @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
 
-      <!-- Auswahl -->
+      <!-- Select -->
       <sl-select
-        v-else-if="field.type === 'Auswahl'"
+        v-else-if="field.type === 'Select'"
         :label="field.name"
         :required="field.required === true || field.required === 'ja'"
         :value="modelValue[field.name] || ''"

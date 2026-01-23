@@ -41,5 +41,6 @@ const getVisibleTicketTypes = (userGroups) => {
 module.exports = {
     getWorkflows,
     getWorkflowForType,
-    getVisibleTicketTypes
+    getVisibleTicketTypes,
+    loadWorkflows
 };

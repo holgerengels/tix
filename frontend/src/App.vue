@@ -26,6 +26,10 @@
              <sl-button variant="text" @click="logout" size="small">
                 <sl-icon slot="prefix" name="box-arrow-right"></sl-icon> Logout
              </sl-button>
+             
+             <sl-button v-if="isDev" variant="text" @click="reloadConfig" size="small" title="Reload Config form Disk">
+                <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon> Reload
+             </sl-button>
         </div>
     </aside>
 
@@ -38,6 +42,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import axios from 'axios';
 
 const router = useRouter();
 const route = useRoute();
@@ -49,6 +54,19 @@ const logout = () => {
     localStorage.removeItem('user');
     // Force reload to clear state effectively or push login
     window.location.href = '/login';
+};
+
+const isDev = import.meta.env.DEV;
+
+const reloadConfig = async () => {
+    try {
+        await axios.post('/api/config/reload', {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        window.location.reload();
+    } catch (err) {
+        alert('Reload failed: ' + err.message);
+    }
 };
 </script>
 

@@ -1,29 +1,30 @@
 {
     "type": "Abwesenheit",
+    "template": "{{Datum-von}} {{Zeit-von}} - {{Datum-bis}} {{Zeit-bis}} ({{Grund}})",
     "fields": [
         {
             "name": "Datum-von",
-            "type": "Datum",
+            "type": "Date",
             "required": true
         },
         {
             "name": "Zeit-von",
-            "type": "Zeit",
+            "type": "Time",
             "required": true
         },
         {
             "name": "Datum-bis",
-            "type": "Datum",
+            "type": "Date",
             "required": true
         },
         {
             "name": "Zeit-bis",
-            "type": "Zeit",
+            "type": "Time",
             "required": true
         },
         {
             "name": "Grund",
-            "type": "Auswahl",
+            "type": "Select",
             "required": true,
             "options": [
                 "Dienstgeschäft",
@@ -79,6 +80,7 @@
                     "groups": [
                         "@creator"
                     ],
+                    "optional": true,
                     "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]

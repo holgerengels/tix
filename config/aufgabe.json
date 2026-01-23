@@ -3,7 +3,7 @@
     "fields": [
         {
             "name": "Ort",
-            "type": "Options",
+            "type": "Select",
             "required": true,
             "options": [
                 "Raum 101",
@@ -30,7 +30,8 @@
                         "Netzwerkteam",
                         "Hausmeister"
                     ],
-                    "script": "ticket.state = 'offen.inArbeit'"
+                    "script": "ticket.state = 'offen.inArbeit'",
+                    "form": "aufgabe.bearbeiten"
                 },
                 {
                     "name": "ablehnen",
@@ -63,6 +64,7 @@
                     "groups": [
                         "@creator"
                     ],
+                    "optional": true,
                     "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]
@@ -165,6 +167,11 @@
         {
             "name": "geschlossen.ok",
             "label": "Geschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.abgelehnt",
+            "label": "Abgelehnt",
             "color": "green"
         },
         {

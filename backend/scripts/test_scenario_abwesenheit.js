@@ -92,7 +92,7 @@ async function runScenario() {
         'Zeit-von': '09:00',
         'Datum-bis': '2025-06-01',
         'Zeit-bis': '11:00',
-        'Grund': 'Dienstgeschäft' // Naja, passt nicht ganz, aber ist Auswahloption
+        'Grund': 'Dienstgeschäft' // Naja, passt nicht ganz, aber ist Selectoption
     };
 
     const ticketA = await createTicket('lehrer1', ticket1Data); // Becomes Approved
