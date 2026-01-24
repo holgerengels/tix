@@ -78,21 +78,21 @@ async function runScenario() {
         type: 'Abwesenheit',
         title: 'Fortbildung Berlin',
         description: 'Eine wichtige Fortbildung',
-        'Datum-von': '2025-05-20',
-        'Zeit-von': '08:00',
-        'Datum-bis': '2025-05-21',
-        'Zeit-bis': '16:00',
-        'Grund': 'Fortbildung'
+        'dateFrom': '2025-05-20',
+        'timeFrom': '08:00',
+        'dateUntil': '2025-05-21',
+        'timeUntil': '16:00',
+        'reason': 'Fortbildung'
     };
     const ticket2Data = {
         type: 'Abwesenheit',
         title: 'Arzttermin',
         description: 'Routineuntersuchung',
-        'Datum-von': '2025-06-01',
-        'Zeit-von': '09:00',
-        'Datum-bis': '2025-06-01',
-        'Zeit-bis': '11:00',
-        'Grund': 'Dienstgeschäft' // Naja, passt nicht ganz, aber ist Selectoption
+        'dateFrom': '2025-06-01',
+        'timeFrom': '09:00',
+        'dateUntil': '2025-06-01',
+        'timeUntil': '11:00',
+        'reason': 'Dienstgeschäft' // Naja, passt nicht ganz, aber ist Selectoption
     };
 
     const ticketA = await createTicket('lehrer1', ticket1Data); // Becomes Approved

@@ -48,7 +48,13 @@
     </table>
 
     <!-- Action Dialog -->
-    <sl-dialog :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" :open="!!currentAction" @sl-after-hide="currentAction = null">
+    <!-- Action Dialog -->
+    <sl-dialog 
+        :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" 
+        :open="!!currentAction" 
+        @sl-after-hide="currentAction = null"
+        @sl-request-close="handleRequestClose"
+    >
         <DynamicForm v-if="currentFormDef && currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
         <div v-else>
             Sicher, dass diese Aktion ausgeführt werden soll?
@@ -60,12 +66,13 @@
                     v-for="btn in currentFormDef.actions" 
                     :key="btn.name" 
                     variant="primary"
+                    type="button"
                     @click="submitAction(btn)"
                  >
                     {{ btn.name }}
                  </sl-button>
             </template>
-            <sl-button v-else variant="primary" @click="submitAction(null)">Ausführen</sl-button>
+            <sl-button v-else variant="primary" type="button" @click="submitAction(null)">Ausführen</sl-button>
         </div>
     </sl-dialog>
 
@@ -290,14 +297,7 @@ const handleAction = async (ticket, action) => {
         // Prepend Standard Fields
         fields.unshift(...STANDARD_FIELDS);
         
-        // If specific form has fields, we might want to merge or append. 
-        // Requirement is "all fields of the ticket". 
-        // We will prioritize the ticket fields, but if the form defines extra fields, we append them.
         if (specificFormDef && specificFormDef.fields) {
-            // Check for duplicates or specific overrides if needed. 
-            // For now, simple append of unique fields could work, 
-            // or just rely on base fields if the specific form was only defining a subset previously.
-            // If the specific form defines fields that are NOT in the base ticket, add them.
             specificFormDef.fields.forEach(sf => {
                 if (!fields.find(f => f.name === sf.name)) {
                     fields.push(sf);
@@ -305,14 +305,7 @@ const handleAction = async (ticket, action) => {
             });
         }
         
-        // If specific form has fields, we might want to merge or append. 
-        // Requirement is "all fields of the ticket". 
-        // We will prioritize the ticket fields, but if the form defines extra fields, we append them.
         if (specificFormDef && specificFormDef.fields) {
-            // Check for duplicates or specific overrides if needed. 
-            // For now, simple append of unique fields could work, 
-            // or just rely on base fields if the specific form was only defining a subset previously.
-            // If the specific form defines fields that are NOT in the base ticket, add them.
             specificFormDef.fields.forEach(sf => {
                 if (!fields.find(f => f.name === sf.name)) {
                     fields.push(sf);
@@ -326,18 +319,19 @@ const handleAction = async (ticket, action) => {
             fields: fields,
             actions: specificFormDef ? specificFormDef.actions : [] // Preserve actions (buttons)
         };
-        
-        // Dialog opens automatically due to currentAction being set
     } 
-    // 3. Simple Action Case: No script (explicitly) and No form -> Just execute.
-    // Note: If script existed, we already executed in Step 1.
-    // If form exists, we handled it in Step 2.
-    // This else-if covers the case where there is neither, or just an action name acting as a trigger.
     else if (!action.script) {
         const success = await executeActionApi(ticket, action, {});
         if (success) {
             fetchTickets();
         }
+    }
+};
+
+const handleRequestClose = (event) => {
+    console.log(event.detail.source);
+    if (event.detail.source === 'overlay') {
+        event.preventDefault();
     }
 };
 
@@ -395,8 +389,5 @@ const submitAction = async (btn = null) => {
 }
 .actions-cell sl-button {
     margin-right: 4px;
-}
-.footer sl-button {
-    margin-left: 12px;
 }
 </style>

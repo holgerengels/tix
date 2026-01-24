@@ -1,29 +1,34 @@
 {
     "type": "Abwesenheit",
-    "template": "{{Datum-von}} {{Zeit-von}} - {{Datum-bis}} {{Zeit-bis}} ({{Grund}})",
+    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} ({{reason}})",
     "fields": [
         {
-            "name": "Datum-von",
+            "name": "dateFrom",
+            "label": "Datum von",
             "type": "Date",
             "required": true
         },
         {
-            "name": "Zeit-von",
+            "name": "timeFrom",
+            "label": "Zeit von",
             "type": "Time",
             "required": true
         },
         {
-            "name": "Datum-bis",
+            "name": "dateUntil",
+            "label": "Datum bis",
             "type": "Date",
             "required": true
         },
         {
-            "name": "Zeit-bis",
+            "name": "timeUntil",
+            "label": "Zeit bis",
             "type": "Time",
             "required": true
         },
         {
-            "name": "Grund",
+            "name": "reason",
+            "label": "Grund",
             "type": "Select",
             "required": true,
             "options": [
@@ -63,7 +68,7 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Vertretungsplan"
+                        "Stundenplanung"
                     ],
                     "form": "abwesenheit.bearbeiten"
                 }

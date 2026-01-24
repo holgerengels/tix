@@ -142,7 +142,7 @@ body {
     padding-top: 1rem;
 }
 .footer sl-button {
-    margin-left: 0.5rem;
+    margin-left: 1rem;
 }
 .user-info {
     margin-bottom: 0.5rem;
@@ -154,5 +154,9 @@ body {
     flex: 2;
     padding: 2rem;
     overflow-y: auto;
+}
+sl-dialog {
+    --width: 60%;
+    --max-width: 800px;
 }
 </style>

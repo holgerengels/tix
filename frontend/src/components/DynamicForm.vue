@@ -5,7 +5,7 @@
       <sl-input 
         v-if="field.type === 'Date'"
         type="date"
-        :label="field.name"
+        :label="field.label"
         :required="field.required === true || field.required === 'ja'"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
@@ -15,7 +15,7 @@
       <sl-input 
         v-else-if="field.type === 'Time'"
         type="time"
-        :label="field.name"
+        :label="field.label"
         :required="field.required === true || field.required === 'ja'"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
@@ -24,28 +24,57 @@
       <!-- Select -->
       <sl-select
         v-else-if="field.type === 'Select'"
-        :label="field.name"
+        hoist
+        :label="field.label"
         :required="field.required === true || field.required === 'ja'"
         :value="modelValue[field.name] || ''"
-        @sl-change="updateField(field.name, $event.target.value)"
+        @sl-change.stop="updateField(field.name, $event.target.value)"
+        @sl-input.stop
+        @sl-after-hide.stop="isOpen = false"
       >
         <sl-option v-for="opt in field.options" :key="opt" :value="opt">
             {{ opt }}
         </sl-option>
       </sl-select>
 
-      <!-- RichText (Quill) -->
+      <!-- Autocomplete -->
+      <div v-else-if="field.type === 'Autocomplete'">
+        <SLAutocomplete
+            :label="field.label"
+            :required="field.required === true || field.required === 'ja'"
+            :modelValue="modelValue[field.name] || ''"
+            :options="field.options"
+            @update:modelValue="updateField(field.name, $event)"
+        />
+      </div>
+
       <RichTextEditor
         v-else-if="field.type === 'RichText'"
-        :label="field.name"
+        :label="field.label"
         :modelValue="modelValue[field.name] || ''"
         @update:modelValue="updateField(field.name, $event)"
       />
 
+      <!-- User Select -->
+      <sl-select
+        v-else-if="field.type === 'User'"
+        hoist
+        :label="field.label"
+        :required="field.required === true || field.required === 'ja'"
+        :value="modelValue[field.name] || ''"
+        @sl-change.stop="updateField(field.name, $event.target.value)"
+        @sl-input.stop
+        @sl-after-hide.stop="isOpen = false"
+      >
+        <sl-option v-for="user in getFilteredUsers(field.groups)" :key="user.username" :value="user.username">
+            {{ user.username }}
+        </sl-option>
+      </sl-select>
+
       <!-- Standard Text -->
       <sl-input 
         v-else
-        :label="field.name"
+        :label="field.label"
         :required="field.required === true || field.required === 'ja'"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
@@ -55,8 +84,10 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, ref, onMounted } from 'vue';
+import axios from 'axios';
 import RichTextEditor from './RichTextEditor.vue';
+import SLAutocomplete from './SLAutocomplete.vue';
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -69,6 +100,28 @@ const updateField = (name, value) => {
     // Updates the model by emitting a new object
     emit('update:modelValue', { ...props.modelValue, [name]: value });
 };
+
+const users = ref([]);
+
+const fetchUsers = async () => {
+    try {
+        const res = await axios.get('/api/users', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        users.value = res.data;
+    } catch (err) {
+        console.error("Failed to fetch users", err);
+    }
+};
+
+const getFilteredUsers = (groups) => {
+    if (!groups || groups.length === 0) return users.value;
+    return users.value.filter(u => u.groups && u.groups.some(g => groups.includes(g)));
+};
+
+onMounted(() => {
+    fetchUsers();
+});
 </script>
 
 <style scoped>

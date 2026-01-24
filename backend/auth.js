@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const MOCK_USERS = [
-    { username: 'admin', password: 'password', groups: ['Admin'] },
+    { username: 'admin', password: 'password', groups: ['Admin', 'Schulleitung', 'Stundenplanung'] },
     { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },
@@ -32,4 +32,6 @@ const verifyToken = (req, res, next) => {
     });
 };
 
-module.exports = { login, verifyToken };
+const getUsers = () => MOCK_USERS.map(({ password, ...u }) => u);
+
+module.exports = { login, verifyToken, getUsers };

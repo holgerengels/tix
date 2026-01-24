@@ -40,6 +40,11 @@ router.post('/login', (req, res) => {
     else res.status(401).json({ message: 'Invalid credentials' });
 });
 
+router.get('/users', verifyToken, (req, res) => {
+    const { getUsers } = require('./auth');
+    res.json(getUsers());
+});
+
 // Config
 router.get('/config', verifyToken, (req, res) => {
     res.json(workflowEngine.getWorkflows());
@@ -250,7 +255,9 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         // If formData updates other fields, apply them
         if (formData) {
-            Object.assign(ticket, formData);
+            Object.keys(formData).forEach(key => {
+                ticket.set(key, formData[key]);
+            });
         }
 
         if (!isDBConnected()) {

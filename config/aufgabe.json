@@ -1,10 +1,11 @@
 {
     "type": "Aufgabe",
-    "template": "{{Ort}}",
+    "template": "{{location}}",
     "fields": [
         {
-            "name": "Ort",
-            "type": "Select",
+            "name": "location",
+            "label": "Ort",
+            "type": "Autocomplete",
             "required": true,
             "options": [
                 "Raum 101",
