@@ -48,17 +48,13 @@
     </table>
 
     <!-- Action Dialog -->
-    <sl-dialog :label="currentAction?.name" :open="!!currentAction" @sl-after-hide="currentAction = null">
-        <div v-if="currentFormDef">
-            <p v-if="currentFormDef.fields">Bitte ergänzen:</p>
-            <DynamicForm v-if="currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
-            <p v-else>Bitte bestätigen Sie die Aktion.</p>
-        </div>
+    <sl-dialog :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" :open="!!currentAction" @sl-after-hide="currentAction = null">
+        <DynamicForm v-if="currentFormDef && currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
         <div v-else>
             Sicher, dass diese Aktion ausgeführt werden soll?
         </div>
         
-        <div slot="footer">
+        <div slot="footer" class="footer">
             <template v-if="currentFormDef && currentFormDef.actions">
                  <sl-button 
                     v-for="btn in currentFormDef.actions" 
@@ -98,35 +94,48 @@ const actionFormData = ref({});
 const currentFormDef = ref(null);
 
 let lastRequestId = 0;
+let debounceTimer = null;
 
-const fetchTickets = async () => {
-    const requestId = ++lastRequestId;
-    loading.value = true;
-    console.log(`[TicketList] Fetching tickets (ID: ${requestId}) for filter: ${props.filter}`);
-    
-    try {
-        const res = await axios.get('/api/tickets', {
-            params: { filter: props.filter },
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        if (requestId === lastRequestId) {
-            tickets.value = res.data;
-            console.log(`[TicketList] Loaded ${res.data.length} tickets (ID: ${requestId})`);
-        } else {
-             console.log(`[TicketList] Ignoring stale response (ID: ${requestId})`);
-        }
-    } catch (err) {
-        console.error(`[TicketList] Error fetching tickets (ID: ${requestId})`, err);
-    } finally {
-        if (requestId === lastRequestId) {
-            loading.value = false;
-        }
+const fetchTickets = async (newFilter) => {
+    // Clear existing timer
+    if (debounceTimer) {
+        clearTimeout(debounceTimer);
     }
+    
+    // UI Feedback immediately
+    loading.value = true;
+    
+    debounceTimer = setTimeout(async () => {
+        const requestId = ++lastRequestId;
+        
+        try {
+            const res = await axios.get('/api/tickets', {
+                params: { filter: newFilter },
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            // Only update if this is the latest request (simple race condition check)
+            if (requestId === lastRequestId) {
+                tickets.value = res.data;
+                loading.value = false;
+            }
+        } catch (err) {
+            console.error(err);
+             if (requestId === lastRequestId) {
+                loading.value = false;
+            }
+        }
+    }, 300);
 };
 
-watch(() => props.filter, fetchTickets);
-onMounted(fetchTickets);
+// Watch prop change. 
+watch(() => props.filter, (newVal) => {
+    fetchTickets(newVal);
+});
+
+onMounted(() => {
+    fetchTickets(props.filter);
+});
 
 const getStatusColor = (ticket) => {
     if (!props.config || !props.config[ticket.type] || !props.config[ticket.type].states) {
@@ -208,8 +217,10 @@ const getActions = (ticket) => {
 
     // Filter actions by user group
     const authorizedActions = allActions.filter(action => {
-        if (action.groups.includes('@creator')) return ticket.creator === user.username;
-        return action.groups.some(g => user.groups.includes(g));
+        const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
+        const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
+        const allowedByGroup = action.groups.some(g => user.groups.includes(g));
+        return allowedByCreator || allowedByAssignee || allowedByGroup;
     });
 
     // Filter by View Context
@@ -384,5 +395,8 @@ const submitAction = async (btn = null) => {
 }
 .actions-cell sl-button {
     margin-right: 4px;
+}
+.footer sl-button {
+    margin-left: 12px;
 }
 </style>

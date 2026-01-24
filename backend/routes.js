@@ -87,12 +87,16 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
                         const hasGroupAccess = action.groups.some(g => user.groups.includes(g));
                         const hasCreatorAccess = action.groups.includes('@creator');
-                        return hasGroupAccess || hasCreatorAccess;
+                        const hasAssigneeAccess = action.groups.includes('@assignee');
+                        return hasGroupAccess || hasCreatorAccess || hasAssigneeAccess;
                     });
 
                     if (releavantActions.length > 0) {
                         if (releavantActions.some(a => a.groups.includes('@creator'))) {
                             conditions.push({ type: wf.type, state: { $in: state.states }, creator: user.username });
+                        }
+                        if (releavantActions.some(a => a.groups.includes('@assignee'))) {
+                            conditions.push({ type: wf.type, state: { $in: state.states }, assignee: user.username });
                         }
                         if (releavantActions.some(a => a.groups.some(g => user.groups.includes(g)))) {
                             conditions.push({ type: wf.type, state: { $in: state.states } });
@@ -178,22 +182,35 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         const wf = workflowEngine.getWorkflowForType(ticket.type);
         // Robustness fix: Handle if ticket.state doesn't match any workflow state (e.g. old data)
-        const currentState = wf.workflow.find(s => s.states.includes(ticket.state));
+        const currentStates = wf.workflow.filter(s => s.states.includes(ticket.state));
 
-        if (!currentState) return res.status(400).json({ message: `Invalid ticket state: ${ticket.state}` });
+        if (currentStates.length === 0) {
+            console.log(`Debug: Invalid ticket state. Ticket: ${ticket.state}, Workflow States: ${wf.workflow.map(s => s.states.join(','))}`);
+            return res.status(400).json({ message: `Invalid ticket state: ${ticket.state}` });
+        }
 
-        const action = currentState.actions.find(a => a.name === actionName);
-        if (!action) return res.status(400).json({ message: 'Invalid action' });
+        // Search for the action in ALL matching state blocks
+        let action = null;
+        for (const stateBlock of currentStates) {
+            const found = stateBlock.actions.find(a => a.name === actionName);
+            if (found) {
+                action = found;
+                break;
+            }
+        }
+
+        if (!action) {
+            console.log(`Debug: Action not found. Requested: ${actionName}, Available in blocks: ${currentStates.map(block => block.actions.map(a => a.name).join(', ')).join(' | ')}`);
+            return res.status(400).json({ message: 'Invalid action' });
+        }
 
         // Check permission
         const userGroups = req.user.groups;
         let authorized = false;
 
-        if (action.groups.includes('@creator')) {
-            if (ticket.creator === req.user.username) authorized = true;
-        } else if (action.groups.some(g => userGroups.includes(g))) {
-            authorized = true;
-        }
+        if (action.groups.includes('@creator') && ticket.creator === req.user.username) authorized = true;
+        if (action.groups.includes('@assignee') && ticket.assignee === req.user.username) authorized = true;
+        if (action.groups.some(g => userGroups.includes(g))) authorized = true;
 
         if (!authorized) return res.status(403).json({ message: 'Not authorized' });
 

@@ -27,6 +27,7 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
+                        "@assignee",
                         "Schulleitung",
                         "Netzwerkteam",
                         "Hausmeister"

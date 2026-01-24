@@ -42,4 +42,12 @@ router.beforeEach((to, from, next) => {
     else next();
 })
 
-createApp(App).use(router).mount('#app')
+const app = createApp(App);
+
+app.config.errorHandler = (err, instance, info) => {
+    console.error("Global Error:", err);
+    console.error("Info:", info);
+    alert(`Ein Fehler ist aufgetreten: ${err.message}`);
+};
+
+app.use(router).mount('#app');
