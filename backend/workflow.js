@@ -7,12 +7,49 @@ const workflows = {};
 const loadWorkflows = () => {
     try {
         const files = fs.readdirSync(configDir);
+
+        // 1. Load default config
+        let defaultFields = [];
+        if (files.includes('default.json')) {
+            const defaultContent = fs.readFileSync(path.join(configDir, 'default.json'), 'utf8');
+            try {
+                const defaultConfig = JSON.parse(defaultContent);
+                if (defaultConfig.fields) {
+                    defaultFields = defaultConfig.fields;
+                }
+            } catch (e) {
+                console.error('Error parsing default.json:', e);
+            }
+        }
+
         files.forEach(file => {
-            if (file.endsWith('.json')) {
+            if (file.endsWith('.json') && file !== 'default.json') {
                 const content = fs.readFileSync(path.join(configDir, file), 'utf8');
-                const workflow = JSON.parse(content);
-                workflows[workflow.type] = workflow;
-                console.log(`Loaded workflow: ${workflow.type}`);
+                try {
+                    const workflow = JSON.parse(content);
+
+                    // 2. Merge fields: Standard fields first, then specific fields
+                    // Using a map to allow overriding standard fields if needed (by name)
+                    const fieldMap = new Map();
+                    defaultFields.forEach(f => fieldMap.set(f.name, f));
+                    if (workflow.fields) {
+                        workflow.fields.forEach(f => {
+                            if (fieldMap.has(f.name)) {
+                                // Merge with existing standard field
+                                fieldMap.set(f.name, { ...fieldMap.get(f.name), ...f });
+                            } else {
+                                // New field
+                                fieldMap.set(f.name, f);
+                            }
+                        });
+                    }
+                    workflow.fields = Array.from(fieldMap.values());
+
+                    workflows[workflow.type] = workflow;
+                    console.log(`Loaded workflow: ${workflow.type}`);
+                } catch (e) {
+                    console.error(`Error parsing ${file}:`, e);
+                }
             }
         });
     } catch (err) {

@@ -84,7 +84,6 @@ import { ref, onMounted, defineProps, watch } from 'vue';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import { format } from 'date-fns';
-import { STANDARD_FIELDS } from '../config/standardFields';
 
 const props = defineProps({
   filter: String,
@@ -292,10 +291,6 @@ const handleAction = async (ticket, action) => {
         
         // Base fields from ticket definition
         let fields = [...(wf.fields || [])];
-        
-        
-        // Prepend Standard Fields
-        fields.unshift(...STANDARD_FIELDS);
         
         if (specificFormDef && specificFormDef.fields) {
             specificFormDef.fields.forEach(sf => {

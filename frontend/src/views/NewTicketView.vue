@@ -16,13 +16,10 @@
            </sl-option>
         </sl-select>
 
-        <sl-input :label="getFieldLabel('title')" :value="newTicketData.title" @sl-input="newTicketData.title = $event.target.value" required></sl-input>
-        <RichTextEditor :label="getFieldLabel('description')" v-model="newTicketData.description" />
-
         <div v-if="newTicketType && config[newTicketType]" class="dynamic-section">
             <DynamicForm 
                 :fields="config[newTicketType].fields" 
-                v-model="newTicketData.dynamic" 
+                v-model="newTicketData" 
             />
         </div>
         <div v-else-if="newTicketType" class="error">
@@ -43,17 +40,15 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
-import { STANDARD_FIELDS } from '../config/standardFields';
-
 const getFieldLabel = (name) => {
-    const field = STANDARD_FIELDS.find(f => f.name === name);
-    return field ? field.label : name; // Fallback
+    // Fallback or simple implementation if needed, but DynamicForm handles labels now
+    return name;
 };
 
 const router = useRouter();
 const config = ref({});
 const newTicketType = ref('');
-const newTicketData = ref({ title: '', description: '', dynamic: {} });
+const newTicketData = ref({});
 const creating = ref(false);
 const loadingConfig = ref(true);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -61,12 +56,8 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 const availableTypes = computed(() => {
     return Object.keys(config.value).filter(type => {
         const wf = config.value[type];
-        // If no 'erstellen' rule exists, assume allowed, or check specific logic
         if (!wf.access) return true; 
         const rule = wf.access.find(z => z.name === 'create');
-        // If no explicit create rule, maybe allow? relying on backend to reject.
-        // But for UI, let's show if rule exists and matches, or if no rule exists (default allow?)
-        // Based on DashboardView logic:
         return rule && rule.groups.some(g => user.groups.includes(g));
     });
 });
@@ -86,10 +77,11 @@ const fetchConfig = async () => {
 };
 
 const resetForm = () => {
-    newTicketData.value = { title: '', description: '', dynamic: {} };
+    newTicketData.value = {};
 };
 
 const createTicket = async () => {
+    // Basic validation
     if (!newTicketData.value.title) {
         alert("Bitte einen Titel eingeben.");
         return;
@@ -99,9 +91,7 @@ const createTicket = async () => {
     try {
         const payload = {
             type: newTicketType.value,
-            title: newTicketData.value.title,
-            description: newTicketData.value.description,
-            ...newTicketData.value.dynamic
+            ...newTicketData.value
         };
         
         await axios.post('/api/tickets', payload, {

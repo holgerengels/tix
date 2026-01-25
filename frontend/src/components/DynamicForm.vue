@@ -1,12 +1,12 @@
 <template>
   <div class="dynamic-form">
-    <div v-for="field in fields" :key="field.name" class="form-field">
+    <div v-for="field in visibleFields(fields)" :key="field.name" class="form-field">
       <!-- Date -->
       <sl-input 
         v-if="field.type === 'Date'"
         type="date"
         :label="field.label"
-        :required="field.required === true || field.required === 'ja'"
+        :required="field.required === true"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
@@ -16,7 +16,7 @@
         v-else-if="field.type === 'Time'"
         type="time"
         :label="field.label"
-        :required="field.required === true || field.required === 'ja'"
+        :required="field.required === true"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
@@ -26,7 +26,7 @@
         v-else-if="field.type === 'Select'"
         hoist
         :label="field.label"
-        :required="field.required === true || field.required === 'ja'"
+        :required="field.required === true"
         :value="modelValue[field.name] || ''"
         @sl-change.stop="updateField(field.name, $event.target.value)"
         @sl-input.stop
@@ -41,13 +41,14 @@
       <div v-else-if="field.type === 'Autocomplete'">
         <SLAutocomplete
             :label="field.label"
-            :required="field.required === true || field.required === 'ja'"
+            :required="field.required === true"
             :modelValue="modelValue[field.name] || ''"
             :options="field.options"
             @update:modelValue="updateField(field.name, $event)"
         />
       </div>
 
+      <!-- Rich Text -->
       <RichTextEditor
         v-else-if="field.type === 'RichText'"
         :label="field.label"
@@ -60,7 +61,7 @@
         v-else-if="field.type === 'User'"
         hoist
         :label="field.label"
-        :required="field.required === true || field.required === 'ja'"
+        :required="field.required === true"
         :value="modelValue[field.name] || ''"
         @sl-change.stop="updateField(field.name, $event.target.value)"
         @sl-input.stop
@@ -75,7 +76,7 @@
       <sl-input 
         v-else
         :label="field.label"
-        :required="field.required === true || field.required === 'ja'"
+        :required="field.required === true"
         :value="modelValue[field.name] || ''"
         @sl-input="updateField(field.name, $event.target.value)"
       ></sl-input>
@@ -93,6 +94,10 @@ const props = defineProps({
   fields: { type: Array, required: true },
   modelValue: { type: Object, required: true }
 });
+
+const visibleFields = (fields) => {
+    return fields.filter(f => f.visible !== false);
+};
 
 const emit = defineEmits(['update:modelValue']);
 

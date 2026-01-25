@@ -3,6 +3,10 @@
     "template": "{{location}}",
     "fields": [
         {
+            "name": "assignee",
+            "visible": true
+        },
+        {
             "name": "location",
             "label": "Ort",
             "type": "Autocomplete",
@@ -108,11 +112,11 @@
             "title": "Aufgabe bearbeiten",
             "actions": [
                 {
-                    "name": "fertig",
+                    "name": "erledigt",
                     "script": "ticket.state = 'offen.erledigt'"
                 },
                 {
-                    "name": "nicht fertig",
+                    "name": "in Arbeit",
                     "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]
