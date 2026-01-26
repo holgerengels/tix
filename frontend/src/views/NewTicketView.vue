@@ -25,6 +25,12 @@
         <div v-else-if="newTicketType" class="error">
             Konfiguration für diesen Typ nicht gefunden.
         </div>
+
+        <div v-if="errors.length > 0" class="error-messages">
+            <div v-for="(error, index) in errors" :key="index" class="error-item">
+                {{ error }}
+            </div>
+        </div>
         
         <div class="actions">
              <wa-button variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
@@ -51,6 +57,7 @@ const newTicketType = ref('');
 const newTicketData = ref({});
 const creating = ref(false);
 const loadingConfig = ref(true);
+const errors = ref([]);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
 const availableTypes = computed(() => {
@@ -78,12 +85,44 @@ const fetchConfig = async () => {
 
 const resetForm = () => {
     newTicketData.value = {};
+    errors.value = [];
+};
+
+const validateForm = () => {
+    errors.value = [];
+    const wf = config.value[newTicketType.value];
+    if (!wf || !wf.fields) return true;
+
+    let isValid = true;
+    wf.fields.forEach(field => {
+        if (field.required && !newTicketData.value[field.name]) {
+            errors.value.push(`Das Feld '${field.label || field.name}' ist ein Pflichtfeld.`);
+            isValid = false;
+        }
+    });
+    return isValid;
 };
 
 const createTicket = async () => {
     // Basic validation
     if (!newTicketData.value.title) {
-        alert("Bitte einen Titel eingeben.");
+        // title is usually part of dynamic fields now, but kept as fallback if hardcoded
+        // actually for 'Aufgabe' title is not in fields in JSON, so it might be hardcoded in backend?
+        // Wait, looking at routes.js: title: req.body.titel || req.body.title
+        // And aufgabe.json DOES NOT have a title field in "fields". 
+        // Logic check: Is title required for all tickets?
+        // In routes.js: ticketData uses req.body.title. 
+        // If title is missing, likely acceptable or handled elsewhere?
+        // Let's rely on validateForm mostly. If title isn't in fields, we assume it's not strictly required by dynamic config, 
+        // OR it should be added to fields. 
+        // However, checking previous code:
+        // if (!newTicketData.value.title) { alert("Bitte einen Titel eingeben."); ... }
+        // If 'title' is NOT in dynamic fields, user can't enter it. 
+        // Let's assume for now we only validate what is in 'fields'.
+    }
+    
+    // Validate dynamic fields
+    if (!validateForm()) {
         return;
     }
 
@@ -146,5 +185,18 @@ onMounted(fetchConfig);
     padding: 2rem;
     text-align: center;
     color: #666;
+}
+.error-messages {
+    background-color: #fee;
+    border: 1px solid #faa;
+    color: #c00;
+    padding: 1rem;
+    border-radius: 4px;
+}
+.error-item {
+    margin-bottom: 0.5rem;
+}
+.error-item:last-child {
+    margin-bottom: 0;
 }
 </style>

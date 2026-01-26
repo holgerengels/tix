@@ -1,8 +1,49 @@
 <template>
   <div class="ticket-list" ref="ticketListRef">
+    <details class="filter-details">
+        <summary>Filter</summary>
+        <div class="filters">
+            <div class="filter-group">
+                <label>Typ:</label>
+                <select v-model="filterType" @change="handleTypeChange">
+                    <option value="">Alle</option>
+                    <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select v-model="filterStatus" @change="applyFilters">
+                    <option value="">Alle</option>
+                    <option v-for="status in availableStatuses" :key="status" :value="status">{{ status }}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Ersteller:</label>
+                <input type="text" v-model="filterCreator" @input="applyFiltersDebounced" placeholder="Name..." />
+            </div>
+            <div class="filter-group">
+                <label>Erstellt:</label>
+                <select v-model="filterDateRange" @change="handleDateRangeChange">
+                    <option value="">Zeitraum wählen</option>
+                    <option value="week">Letzte Woche</option>
+                    <option value="month">Letzter Monat</option>
+                    <option value="custom">Benutzerdefiniert</option>
+                </select>
+            </div>
+            <div class="filter-group" v-if="filterDateRange === 'custom'">
+                <input type="date" v-model="filterDateFrom" @change="applyFilters" />
+                <span>-</span>
+                <input type="date" v-model="filterDateTo" @change="applyFilters" />
+            </div>
+            <div class="filter-group">
+                <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
+            </div>
+        </div>
+    </details>
+
     <wa-spinner v-if="loading"></wa-spinner>
     
-    <div v-else-if="tickets.length === 0">Keine Tickets gefunden.</div>
+    <div v-else-if="tickets.length === 0" class="empty-state">Keine Tickets gefunden.</div>
 
     <table v-else class="ticket-table">
       <thead>
@@ -94,7 +135,7 @@ import { ref, onMounted, defineProps, watch, nextTick, computed } from 'vue';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import TicketComments from './TicketComments.vue';
-import { format } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, subMonths } from 'date-fns';
 
 const props = defineProps({
   filter: String,
@@ -105,10 +146,34 @@ const tickets = ref([]);
 const loading = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+// Filters
+const filterType = ref('');
+const filterStatus = ref('');
+const filterCreator = ref('');
+const filterDateRange = ref('');
+const filterDateFrom = ref('');
+const filterDateTo = ref('');
+
 const currentAction = ref(null);
 const currentTicket = ref(null);
 const actionFormData = ref({});
 const currentFormDef = ref(null);
+
+const availableTypes = computed(() => {
+    return props.config ? Object.keys(props.config) : [];
+});
+
+const availableStatuses = computed(() => {
+    if (!filterType.value) {
+        return ['offen.*', 'geschlossen.*'];
+    }
+    
+    // Exact states for the selected type
+    if (props.config && props.config[filterType.value] && props.config[filterType.value].states) {
+        return props.config[filterType.value].states.map(s => s.name);
+    }
+    return [];
+});
 
 const canComment = computed(() => {
     if (!currentTicket.value || !props.config || !props.config[currentTicket.value.type]) return false;
@@ -142,8 +207,17 @@ const fetchTickets = async (newFilter) => {
         const requestId = ++lastRequestId;
         
         try {
+            const params = {
+                filter: newFilter || props.filter,
+                type: filterType.value,
+                status: filterStatus.value,
+                creator: filterCreator.value,
+                dateFrom: filterDateFrom.value,
+                dateTo: filterDateTo.value
+            };
+
             const res = await axios.get('/api/tickets', {
-                params: { filter: newFilter },
+                params: params,
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             
@@ -160,6 +234,46 @@ const fetchTickets = async (newFilter) => {
     }, 300);
 };
 
+const applyFilters = () => {
+    fetchTickets(props.filter);
+};
+
+const applyFiltersDebounced = () => {
+    fetchTickets(props.filter); // fetchTickets already debounces
+};
+
+const handleDateRangeChange = () => {
+    const now = new Date();
+    if (filterDateRange.value === 'week') {
+        filterDateFrom.value = format(subDays(now, 7), 'yyyy-MM-dd');
+        filterDateTo.value = format(now, 'yyyy-MM-dd');
+    } else if (filterDateRange.value === 'month') {
+        filterDateFrom.value = format(subMonths(now, 1), 'yyyy-MM-dd');
+        filterDateTo.value = format(now, 'yyyy-MM-dd');
+    } else if (filterDateRange.value === '') {
+        filterDateFrom.value = '';
+        filterDateTo.value = '';
+    }
+    // For 'custom', we leave fields as is (user fills them)
+    
+    applyFilters();
+};
+
+const handleTypeChange = () => {
+    filterStatus.value = ''; // Reset status when type changes
+    applyFilters();
+};
+
+const resetFilters = () => {
+    filterType.value = '';
+    filterStatus.value = '';
+    filterCreator.value = '';
+    filterDateRange.value = '';
+    filterDateFrom.value = '';
+    filterDateTo.value = '';
+    applyFilters();
+};
+
 // Watch prop change. 
 watch(() => props.filter, (newVal) => {
     fetchTickets(newVal);
@@ -170,16 +284,9 @@ onMounted(() => {
 });
 
 const getStatusColor = (ticket) => {
-    if (!props.config || !props.config[ticket.type] || !props.config[ticket.type].states) {
-        // Fallback
-        if (ticket.state.includes('neu')) return 'primary';
-        if (ticket.state.includes('genehmigt') || ticket.state.includes('ok') || ticket.state.includes('erledigt')) return 'success';
-        if (ticket.state.includes('abgelehnt') || ticket.state.includes('storniert')) return 'danger';
-        return 'neutral';
-    }
     const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
     const colorMap = {
-        'blue': 'primary',
+        'blue': 'brand',
         'green': 'success',
         'yellow': 'warning',
         'red': 'danger',
@@ -482,5 +589,96 @@ wa-dialog::part(panel) {
 .footer {
     display: flex;
     gap: 1rem;
+}
+
+.filter-details {
+    margin-bottom: 1.5rem;
+    background: white;
+    border-radius: var(--wa-border-radius-large);
+    box-shadow: var(--wa-shadow-small);
+    border: 1px solid var(--wa-color-neutral-200);
+}
+
+.filter-details summary {
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--wa-color-neutral-700);
+    list-style: none; /* Hide default triangle */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-details summary::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--wa-color-neutral-500);
+    border-bottom: 2px solid var(--wa-color-neutral-500);
+    transform: rotate(45deg);
+    margin-left: auto;
+    transition: transform 0.2s;
+}
+
+.filter-details[open] summary::after {
+    transform: rotate(225deg);
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0 1.5rem 1.5rem 1.5rem; /* Remove top padding as summary has it */
+    background: transparent; /* Parent has bg */
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--wa-color-neutral-700);
+    font-size: 0.9rem;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--wa-color-neutral-300);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 140px;
+    transition: all 0.2s;
+    background-color: var(--wa-color-neutral-50);
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: var(--wa-color-primary-500);
+    box-shadow: 0 0 0 2px var(--wa-color-primary-100);
+    background-color: white;
+}
+
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+    color: var(--wa-color-neutral-500);
+    background: white;
+    border-radius: var(--wa-border-radius-large);
+    border: 1px dashed var(--wa-color-neutral-300);
 }
 </style>

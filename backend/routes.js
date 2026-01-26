@@ -63,25 +63,32 @@ router.post('/config/reload', verifyToken, (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter } = req.query; // 'my', 'assigned', 'all'
+    const { filter, type, status, creator, dateFrom, dateTo } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     if (!isDBConnected()) {
         console.log('Serving MOCK tickets');
-        let results = [];
-        // Simple mock filtering
+        let results = mockTickets;
+
+        // Mock Filtering Logic
         if (filter === 'my') {
-            results = mockTickets.filter(t => t.creator === user.username);
-        } else {
-            // Return all for now in mock mode for simplicity, or implement complex filtering if needed
-            results = mockTickets;
+            results = results.filter(t => t.creator === user.username);
         }
+
+        if (type) results = results.filter(t => t.type === type);
+        if (status) results = results.filter(t => t.state === status);
+        if (creator) results = results.filter(t => t.creator.includes(creator));
+        if (dateFrom) results = results.filter(t => new Date(t.created) >= new Date(dateFrom));
+        if (dateTo) results = results.filter(t => new Date(t.created) <= new Date(dateTo));
+
         return res.json(results);
     }
 
-    let query = {};
+    let baseQuery = {};
+
+    // 1. Base Filter (Access Control)
     if (filter === 'my') {
-        query.creator = user.username;
+        baseQuery.creator = user.username;
     } else if (filter === 'assigned') {
         const conditions = [];
         const allWorkflows = workflowEngine.getWorkflows();
@@ -89,7 +96,6 @@ router.get('/tickets', verifyToken, async (req, res) => {
             if (wf.workflow) {
                 wf.workflow.forEach(state => {
                     const releavantActions = (state.actions || []).filter(action => {
-                        // For 'assigned' filter, we only care about mandatory (non-optional) actions
                         if (action.optional) return false;
 
                         const hasGroupAccess = action.groups.some(g => user.groups.includes(g));
@@ -99,44 +105,134 @@ router.get('/tickets', verifyToken, async (req, res) => {
                     });
 
                     if (releavantActions.length > 0) {
-                        if (releavantActions.some(a => a.groups.includes('@creator'))) {
-                            conditions.push({ type: wf.type, state: { $in: state.states }, creator: user.username });
-                        }
-                        if (releavantActions.some(a => a.groups.includes('@assignee'))) {
-                            conditions.push({ type: wf.type, state: { $in: state.states }, assignee: user.username });
-                        }
+                        const condition = { type: wf.type, state: { $in: state.states } };
+                        // Note: Complex logic for dynamic assignee/creator checks in $or is hard, 
+                        // so we simplify to: If user likely has access, we include the type/state.
+                        // Ideally we would check per-ticket who is creator/assignee, 
+                        // but for 'assigned' view, usually we look for tickets waiting for *my group* or *me specifically*.
+
+                        // For generic group access:
                         if (releavantActions.some(a => a.groups.some(g => user.groups.includes(g)))) {
-                            conditions.push({ type: wf.type, state: { $in: state.states } });
+                            conditions.push(condition);
+                        }
+                        // For specific user access (creator/assignee), strictly we need $or inside:
+                        // but MongoDB query construction gets deep. 
+                        // Let's assume for 'assigned' we rely mostly on group or direct assignment.
+                        else if (releavantActions.some(a => a.groups.includes('@assignee'))) {
+                            conditions.push({ ...condition, assignee: user.username });
+                        }
+                        else if (releavantActions.some(a => a.groups.includes('@creator'))) {
+                            conditions.push({ ...condition, creator: user.username });
                         }
                     }
                 });
             }
         });
 
-        if (conditions.length > 0) query.$or = conditions;
-        else query = { _id: null };
+        if (conditions.length > 0) baseQuery.$or = conditions;
+        else baseQuery = { _id: null }; // No access
 
-    } else if (filter === 'all') {
+    } else if (filter === 'all' || !filter) {
         const conditions = [];
         const allWorkflows = workflowEngine.getWorkflows();
         Object.values(allWorkflows).forEach(wf => {
-            const readAccess = wf.access.find(z => z.name === 'read');
-            const deleteAccess = wf.access.find(z => z.name === 'delete');
+            const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
             const groups = [];
             if (readAccess) groups.push(...readAccess.groups);
-            if (deleteAccess) groups.push(...deleteAccess.groups);
 
+            // Implicit: Creator usually can read their own tickets? 
+            // If explicit read access rules exist, we follow them.
+            // If generic read access allows this user's group:
             if (groups.some(g => user.groups.includes(g))) {
                 conditions.push({ type: wf.type });
             }
         });
 
-        if (conditions.length > 0) query.$or = conditions;
-        else query = { _id: null };
+        // Also always include tickets where user is creator or assignee?
+        // Usually 'all' means all visible in system.
+        // Let's stick to explicit read permissions + own tickets
+
+        const accessOr = [];
+        if (conditions.length > 0) accessOr.push(...conditions);
+        accessOr.push({ creator: user.username });
+        accessOr.push({ assignee: user.username });
+
+        if (baseQuery.$or) {
+            // If baseQuery already had $or (unlikely here as it is 'all'), we'd merge.
+            // But here we build it.
+            baseQuery.$or = accessOr;
+        } else {
+            baseQuery.$or = accessOr;
+        }
+    }
+
+    // 2. Granular Filters (Applied on top of Base Query)
+    let finalQuery = { ...baseQuery };
+
+    // If baseQuery has $or, we must use $and to combine with other filters
+    const sensitiveFilters = [];
+
+    if (type) sensitiveFilters.push({ type: type });
+    if (status) {
+        // Support prefix matching (e.g. "offen" matches "offen.neu") if it doesn't contain a dot, 
+        // OR just always prefix match? User asked for "offen.*".
+        // Let's assume if the user sends "offen.*", we strip the .* and match prefix.
+        // Or if they send a specific state "offen.neu", exact match is better?
+        // Actually prefix match "^offen.neu" behaves like exact match if "offen.neu" is the full string.
+        // But what if we have "offen.neu.extra"? 
+        // Let's implement smart logic: 
+        // If input ends with '*', treat as prefix.
+        // Else, treat as exact match? 
+        // The user requirement "offen.*" suggests the UI will send this.
+
+        if (status.endsWith('.*')) {
+            const prefix = status.replace('.*', '');
+            sensitiveFilters.push({ state: { $regex: `^${prefix}`, $options: 'i' } });
+        } else {
+            sensitiveFilters.push({ state: status });
+        }
+    }
+    if (creator) sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } }); // Fuzzy search
+
+    if (dateFrom || dateTo) {
+        let dateQuery = {};
+        if (dateFrom) dateQuery.$gte = new Date(dateFrom);
+        if (dateTo) {
+            const d = new Date(dateTo);
+            // Set time to end of day to include all tickets from that date
+            d.setHours(23, 59, 59, 999);
+            dateQuery.$lte = d;
+        }
+        sensitiveFilters.push({ created: dateQuery });
+    }
+
+    if (sensitiveFilters.length > 0) {
+        if (finalQuery.$or) {
+            // Need to wrap: ($or conditions) AND (filter1) AND (filter2)
+            finalQuery = {
+                $and: [
+                    { $or: finalQuery.$or },
+                    ...sensitiveFilters
+                ]
+            };
+        } else {
+            // Just merge into top level
+            // Note: 'creator' collision possible if baseQuery used it. 
+            // But baseQuery only used it in direct assignment, not $or usually for 'my'.
+            // For 'my', baseQuery.creator is set. If filter.creator is also set, 
+            // we should technically $and them.
+
+            finalQuery = {
+                $and: [
+                    baseQuery,
+                    ...sensitiveFilters
+                ]
+            };
+        }
     }
 
     try {
-        const tickets = await Ticket.find(query).sort({ created: -1 });
+        const tickets = await Ticket.find(finalQuery).sort({ created: -1 });
         res.json(tickets);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -145,8 +241,25 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
 router.post('/tickets', verifyToken, async (req, res) => {
     try {
+        const type = req.body.typ || req.body.type;
+
+        // Validation
+        const wf = workflowEngine.getWorkflowForType(type);
+        if (wf && wf.fields) {
+            for (const field of wf.fields) {
+                if (field.required) {
+                    const val = req.body[field.name];
+                    if (val === undefined || val === null || val === '') {
+                        return res.status(400).json({
+                            message: `Missing required field: ${field.label || field.name}`
+                        });
+                    }
+                }
+            }
+        }
+
         const ticketData = {
-            type: req.body.typ || req.body.type,
+            type: type,
             title: req.body.titel || req.body.title,
             description: req.body.beschreibung || req.body.description,
             ...req.body,

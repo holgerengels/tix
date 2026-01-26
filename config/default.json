@@ -10,7 +10,7 @@
             "name": "description",
             "type": "RichText",
             "label": "Beschreibung",
-            "required": true
+            "required": false
         },
         {
             "name": "assignee",

@@ -7,6 +7,10 @@
             "visible": true
         },
         {
+            "name": "description",
+            "required": true
+        },
+        {
             "name": "location",
             "label": "Ort",
             "type": "Autocomplete",
@@ -133,47 +137,47 @@
     "states": [
         {
             "name": "offen",
-            "label": "Offen",
+            "label": "offen",
             "color": "blue"
         },
         {
             "name": "offen.neu",
-            "label": "Neu",
+            "label": "neu",
             "color": "blue"
         },
         {
             "name": "offen.inArbeit",
-            "label": "In Arbeit",
+            "label": "in Arbeit",
             "color": "yellow"
         },
         {
             "name": "offen.erledigt",
-            "label": "Erledigt",
+            "label": "erledigt",
             "color": "green"
         },
         {
             "name": "offen.abgelehnt",
-            "label": "Abgelehnt",
+            "label": "abgelehnt",
             "color": "red"
         },
         {
             "name": "geschlossen.storniert",
-            "label": "Storniert",
+            "label": "storniert",
             "color": "red"
         },
         {
             "name": "geschlossen.ok",
-            "label": "Geschlossen",
+            "label": "geschlossen",
             "color": "green"
         },
         {
             "name": "geschlossen.abgelehnt",
-            "label": "Abgelehnt",
-            "color": "green"
+            "label": "abgelehnt",
+            "color": "red"
         },
         {
             "name": "geschlossen",
-            "label": "Geschlossen",
+            "label": "geschlossen",
             "color": "green"
         }
     ]

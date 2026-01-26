@@ -19,6 +19,7 @@
   font-family: var(--wa-font-sans);
   line-height: 1.5;
   font-weight: 400;
+  font-size: 1rem;
 
   /* Enforce Light Theme for "Beautiful" look */
   color-scheme: light;
