@@ -110,22 +110,27 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte",
-                "Admin"
+                "Lehrkräfte"
             ]
         },
         {
             "name": "read",
             "groups": [
                 "Schulleitung",
-                "Admin"
+                "Stundenplanung"
             ]
         },
         {
             "name": "delete",
             "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
                 "Schulleitung",
-                "Admin"
+                "Stundenplanung"
             ]
         }
     ],

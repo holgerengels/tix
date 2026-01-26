@@ -154,6 +154,7 @@ body {
     flex: 2;
     padding: 2rem;
     overflow-y: auto;
+    position: relative;
 }
 sl-dialog {
     --width: 60%;

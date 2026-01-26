@@ -1,5 +1,5 @@
 <template>
-  <div class="ticket-list">
+  <div class="ticket-list" ref="ticketListRef">
     <sl-spinner v-if="loading"></sl-spinner>
     
     <div v-else-if="tickets.length === 0">Keine Tickets gefunden.</div>
@@ -48,8 +48,8 @@
     </table>
 
     <!-- Action Dialog -->
-    <!-- Action Dialog -->
     <sl-dialog 
+        ref="dialogRef"
         :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" 
         :open="!!currentAction" 
         @sl-after-hide="currentAction = null"
@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, watch } from 'vue';
+import { ref, onMounted, defineProps, watch, nextTick } from 'vue';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import { format } from 'date-fns';
@@ -98,6 +98,10 @@ const currentAction = ref(null);
 const currentTicket = ref(null);
 const actionFormData = ref({});
 const currentFormDef = ref(null);
+
+
+
+
 
 let lastRequestId = 0;
 let debounceTimer = null;
@@ -120,7 +124,6 @@ const fetchTickets = async (newFilter) => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             
-            // Only update if this is the latest request (simple race condition check)
             if (requestId === lastRequestId) {
                 tickets.value = res.data;
                 loading.value = false;
@@ -340,10 +343,22 @@ const submitAction = async (btn = null) => {
 </script>
 
 <style scoped>
+/* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
+sl-dialog::part(base),
+sl-dialog::part(overlay) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
 .ticket-list {
     width: 100%;
     overflow-x: auto;
 }
+
+
 .ticket-table {
     width: 100%;
     border-collapse: collapse;

@@ -104,6 +104,14 @@
                 "Schulleitung",
                 "Netzwerkteam"
             ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "Schulleitung",
+                "Netzwerkteam",
+                "Hausmeister"
+            ]
         }
     ],
     "forms": [
