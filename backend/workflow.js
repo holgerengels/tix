@@ -75,9 +75,19 @@ const getVisibleTicketTypes = (userGroups) => {
     return Object.keys(workflows).filter(type => canCreate(type, userGroups));
 };
 
+const canComment = (type, userGroups) => {
+    const wf = workflows[type];
+    if (!wf) return false;
+    // Default to strict: explicit comment permission required
+    const rule = wf.access.find(z => z.name === 'comment');
+    if (!rule) return false;
+    return rule.groups.some(g => userGroups.includes(g));
+};
+
 module.exports = {
     getWorkflows,
     getWorkflowForType,
     getVisibleTicketTypes,
-    loadWorkflows
+    loadWorkflows,
+    canComment
 };

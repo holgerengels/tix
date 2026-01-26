@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { login, verifyToken } = require('./auth');
 const Ticket = require('./models/ticket');
+const Comment = require('./models/comment');
 const workflowEngine = require('./workflow');
+const { canComment } = require('./workflow');
 const mongoose = require('mongoose');
 
 // Mock Data Store
@@ -269,6 +271,58 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         res.json(ticket);
     } catch (err) {
         console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// Comments
+router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
+    try {
+        if (!isDBConnected()) return res.json([]);
+        const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
+        res.json(comments);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ message: 'Text required' });
+
+        let ticket;
+        if (!isDBConnected()) {
+            // Mock mode doesn't support comments really, but fail gracefully
+            return res.status(503).json({ message: 'Not available in mock mode' });
+        }
+
+        ticket = await Ticket.findById(req.params.id);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        // Access Control
+        let authorized = false;
+        if (ticket.creator === req.user.username) authorized = true;
+        if (ticket.assignee === req.user.username) authorized = true;
+
+        // Check group access via workflow config
+        if (!authorized && canComment(ticket.type, req.user.groups)) {
+            authorized = true;
+        }
+
+        if (!authorized) return res.status(403).json({ message: 'Not authorized to comment' });
+
+        const comment = new Comment({
+            ticket: ticket._id,
+            text,
+            creator: req.user.username,
+            created: new Date()
+        });
+        await comment.save();
+        res.status(201).json(comment);
+
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });

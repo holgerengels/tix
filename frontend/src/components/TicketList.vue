@@ -54,10 +54,19 @@
         :open="!!currentAction" 
         @sl-after-hide="currentAction = null"
         @sl-request-close="handleRequestClose"
+        class="action-dialog"
     >
-        <DynamicForm v-if="currentFormDef && currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
-        <div v-else>
-            Sicher, dass diese Aktion ausgeführt werden soll?
+        <div class="dialog-content-wrapper">
+            <div class="dialog-main">
+                <DynamicForm v-if="currentFormDef && currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
+                <div v-else>
+                    Sicher, dass diese Aktion ausgeführt werden soll?
+                </div>
+            </div>
+            
+            <aside class="dialog-sidebar" v-if="canComment">
+                <TicketComments :ticket="currentTicket" />
+            </aside>
         </div>
         
         <div slot="footer" class="footer">
@@ -80,9 +89,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, watch, nextTick } from 'vue';
+import { ref, onMounted, defineProps, watch, nextTick, computed } from 'vue';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
+import TicketComments from './TicketComments.vue';
 import { format } from 'date-fns';
 
 const props = defineProps({
@@ -99,9 +109,21 @@ const currentTicket = ref(null);
 const actionFormData = ref({});
 const currentFormDef = ref(null);
 
+const canComment = computed(() => {
+    if (!currentTicket.value || !props.config || !props.config[currentTicket.value.type]) return false;
+    
+    // Creator and Assignee always allowed (conceptually, though backend enforces too)
+    if (currentTicket.value.creator === user.username) return true;
+    if (currentTicket.value.assignee === user.username) return true;
 
-
-
+    const access = props.config[currentTicket.value.type].access;
+    if (!access) return false;
+    
+    const rule = access.find(r => r.name === 'comment');
+    if (!rule) return false;
+    
+    return rule.groups.some(g => user.groups.includes(g));
+});
 
 let lastRequestId = 0;
 let debounceTimer = null;
@@ -344,6 +366,7 @@ const submitAction = async (btn = null) => {
 
 <style scoped>
 /* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
+/* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
 sl-dialog::part(base),
 sl-dialog::part(overlay) {
     position: absolute;
@@ -351,6 +374,41 @@ sl-dialog::part(overlay) {
     right: 0;
     bottom: 0;
     left: 0;
+}
+
+sl-dialog::part(body) {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+sl-dialog::part(panel) {
+    max-height: 90vh;
+    min-width: 800px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-content-wrapper {
+    display: flex;
+    flex: 1;
+    min-height: 400px;
+    height: 100%; 
+}
+
+.dialog-main {
+    flex: 2;
+    padding: var(--sl-spacing-large);
+    overflow-y: auto;
+}
+
+.dialog-sidebar {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
 }
 
 .ticket-list {
