@@ -100,8 +100,8 @@
         ref="dialogRef"
         :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" 
         :open="!!currentAction" 
-        @after-hide="currentAction = null"
-        @request-close="handleRequestClose"
+        @wa-after-hide="onDialogHide"
+        @wa-request-close="handleRequestClose"
         class="action-dialog"
     >
         <div class="dialog-content-wrapper">
@@ -138,7 +138,7 @@
 
 <script setup>
 import { ref, onMounted, defineProps, watch, nextTick, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import TicketComments from './TicketComments.vue';
@@ -165,6 +165,9 @@ const currentAction = ref(null);
 const currentTicket = ref(null);
 const actionFormData = ref({});
 const currentFormDef = ref(null);
+
+const route = useRoute();
+const router = useRouter();
 
 const availableTypes = computed(() => {
     return props.config ? Object.keys(props.config) : [];
@@ -383,7 +386,7 @@ const getActions = (ticket) => {
     const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
     if (editAccess && editAccess.groups.some(g => user.groups.includes(g))) {
         authorizedActions.push({
-            name: 'hacken',
+            name: 'editieren',
             form: 'edit',
             groups: editAccess.groups // Just for context, already checked
         });
@@ -491,7 +494,7 @@ const handleAction = async (ticket, action) => {
     }
 };
 
-const route = useRoute();
+
 
 const checkDeepLink = async () => {
     const deepLinkId = route.params.id;
@@ -507,15 +510,9 @@ const checkDeepLink = async () => {
                 const ticket = res.data[0];
                 // Trigger 'read' action
                 tickets.value = [ticket];
+                currentTicket.value = ticket; // Set current ticket immediately
                 
-                const tryOpen = () => {
-                     if (props.config && props.config[ticket.type]) {
-                        handleAction(ticket, { name: 'Details', form: 'read', groups: [] });
-                     } else {
-                         setTimeout(tryOpen, 100);
-                     }
-                };
-                tryOpen();
+                tryOpenDeepLinkTicket();
             }
         } catch (e) {
             console.error('Deep link fetch failed', e);
@@ -523,11 +520,36 @@ const checkDeepLink = async () => {
     }
 };
 
+const tryOpenDeepLinkTicket = () => {
+    if (!currentTicket.value) return;
+    const ticket = currentTicket.value;
+    
+    if (props.config && props.config[ticket.type]) {
+        // Only open if not already open
+        if (!currentAction.value) {
+            handleAction(ticket, { name: 'Details', form: 'read', groups: [] });
+        }
+    }
+};
+
+// Watch for config changes in case config loads after ticket
+watch(() => props.config, () => {
+    if (route.params.id && tickets.value.length === 1) {
+        tryOpenDeepLinkTicket();
+    }
+}, { deep: true });
+
 watch(() => route.params.id, (newId) => {
     if (newId) {
         checkDeepLink();
     } else {
-        // If navigating back to root/list, fetch list
+        // Navigating back to root/list
+        
+        // 1. Close any open dialog
+        currentAction.value = null;
+        currentTicket.value = null; // Clear current ticket
+        
+        // 2. Fetch full list
         fetchTickets(props.filter);
     }
 });
@@ -541,9 +563,23 @@ onMounted(async () => {
 });
 
 const handleRequestClose = (event) => {
-    console.log(event.detail.source);
     if (event.detail.source === 'overlay') {
         event.preventDefault();
+    }
+};
+
+const onDialogHide = () => {
+    currentAction.value = null;
+    
+    // If we are currently on a deep link route, migrate back
+    if (route.params.id) {
+        // Check if we can go back in history (window.history.state check is a heuristic)
+        if (window.history.length > 1) {
+            router.back();
+        } else {
+            // Fallback for direct deep links (e.g. bookmarks)
+            router.push({ path: '/', query: route.query });
+        }
     }
 };
 

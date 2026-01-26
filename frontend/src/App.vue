@@ -93,7 +93,7 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 260px;
+    width: 210px;
     background: linear-gradient(180deg, #ffffff 0%, var(--wa-color-neutral-50) 100%);
     border-right: 1px solid var(--wa-color-neutral-200);
     display: flex;
