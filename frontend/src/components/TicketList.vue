@@ -289,7 +289,7 @@ const handleAction = async (ticket, action) => {
         const success = await executeActionApi(ticket, action, {});
         if (!success) return; // Stop if script execution failed
 
-        await fetchTickets();
+        await fetchTickets(props.filter);
         // Update local ticket reference to the latest version after script
         const updatedTicket = tickets.value.find(t => t._id === ticket._id);
         if (updatedTicket) {
@@ -343,7 +343,7 @@ const handleAction = async (ticket, action) => {
     else if (!action.script) {
         const success = await executeActionApi(ticket, action, {});
         if (success) {
-            fetchTickets();
+            fetchTickets(props.filter);
         }
     }
 };
@@ -359,7 +359,7 @@ const submitAction = async (btn = null) => {
     const success = await executeActionApi(currentTicket.value, currentAction.value, actionFormData.value, btn ? btn.name : null);
     if (success) {
         currentAction.value = null;
-        fetchTickets();
+        fetchTickets(props.filter);
     }
 };
 </script>

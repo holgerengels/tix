@@ -140,11 +140,11 @@
             "title": "Abwesenheit bearbeiten",
             "actions": [
                 {
-                    "name": "fertig",
+                    "name": "erledigt",
                     "script": "ticket.state = 'offen.erledigt'"
                 },
                 {
-                    "name": "nicht fertig",
+                    "name": "in Arbeit",
                     "script": "ticket.state = 'offen.inArbeit'"
                 }
             ]
