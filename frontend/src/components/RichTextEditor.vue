@@ -34,24 +34,24 @@ const emit = defineEmits(['update:modelValue']);
   margin-bottom: 1rem;
 }
 .editor-label {
-    font-size: var(--sl-input-label-font-size-medium);
-    color: var(--sl-input-label-color);
+    font-size: var(--wa-input-label-font-size-medium);
+    color: var(--wa-input-label-color);
 }
 .quill-wrapper {
     background: white;
-    border-radius: var(--sl-input-border-radius-medium);
+    border-radius: var(--wa-input-border-radius-medium);
 }
 :deep(.ql-editor) {
     min-height: 150px;
 }
 :deep(.ql-toolbar) {
-    border-top-left-radius: var(--sl-input-border-radius-medium);
-    border-top-right-radius: var(--sl-input-border-radius-medium);
-    border-color: var(--sl-input-border-color);
+    border-top-left-radius: var(--wa-input-border-radius-medium);
+    border-top-right-radius: var(--wa-input-border-radius-medium);
+    border-color: var(--wa-input-border-color);
 }
 :deep(.ql-container) {
-    border-bottom-left-radius: var(--sl-input-border-radius-medium);
-    border-bottom-right-radius: var(--sl-input-border-radius-medium);
-    border-color: var(--sl-input-border-color);
+    border-bottom-left-radius: var(--wa-input-border-radius-medium);
+    border-bottom-right-radius: var(--wa-input-border-radius-medium);
+    border-color: var(--wa-input-border-color);
 }
 </style>

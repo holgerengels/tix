@@ -1,6 +1,6 @@
 <template>
   <div class="ticket-list" ref="ticketListRef">
-    <sl-spinner v-if="loading"></sl-spinner>
+    <wa-spinner v-if="loading"></wa-spinner>
     
     <div v-else-if="tickets.length === 0">Keine Tickets gefunden.</div>
 
@@ -20,7 +20,7 @@
         <tr v-for="ticket in tickets" :key="ticket._id">
           <td>{{ ticket.type }}</td>
           <td><strong>{{ ticket.title }}</strong></td>
-          <td><sl-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</sl-tag></td>
+          <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
           <td>{{ ticket.creator }}</td>
           <td>{{ formatDate(ticket.created) }}</td>
           <td>
@@ -34,26 +34,27 @@
             </div>
           </td>
           <td class="actions-cell">
-             <sl-button 
+             <wa-button 
                 v-for="action in getActions(ticket)" 
                 :key="action.name"
                 size="small"
+                appearance="plain"
                 @click="handleAction(ticket, action)"
             >
                 {{ action.name }}
-            </sl-button>
+            </wa-button>
           </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Action Dialog -->
-    <sl-dialog 
+    <wa-dialog 
         ref="dialogRef"
         :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" 
         :open="!!currentAction" 
-        @sl-after-hide="currentAction = null"
-        @sl-request-close="handleRequestClose"
+        @after-hide="currentAction = null"
+        @request-close="handleRequestClose"
         class="action-dialog"
     >
         <div class="dialog-content-wrapper">
@@ -71,7 +72,7 @@
         
         <div slot="footer" class="footer">
             <template v-if="currentFormDef && currentFormDef.actions">
-                 <sl-button 
+                 <wa-button 
                     v-for="btn in currentFormDef.actions" 
                     :key="btn.name" 
                     variant="primary"
@@ -79,11 +80,11 @@
                     @click="submitAction(btn)"
                  >
                     {{ btn.name }}
-                 </sl-button>
+                 </wa-button>
             </template>
-            <sl-button v-else variant="primary" type="button" @click="submitAction(null)">Ausführen</sl-button>
+            <wa-button v-else variant="primary" type="button" @click="submitAction(null)">Ausführen</wa-button>
         </div>
-    </sl-dialog>
+    </wa-dialog>
 
   </div>
 </template>
@@ -366,9 +367,8 @@ const submitAction = async (btn = null) => {
 
 <style scoped>
 /* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
-/* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
-sl-dialog::part(base),
-sl-dialog::part(overlay) {
+wa-dialog::part(base),
+wa-dialog::part(overlay) {
     position: absolute;
     top: 0;
     right: 0;
@@ -376,39 +376,46 @@ sl-dialog::part(overlay) {
     left: 0;
 }
 
-sl-dialog::part(body) {
+wa-dialog::part(body) {
     padding: 0;
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
-sl-dialog::part(panel) {
+wa-dialog::part(panel) {
     max-height: 90vh;
-    min-width: 800px;
+    min-width: 900px;
     width: 90%;
     display: flex;
     flex-direction: column;
+    border-radius: var(--wa-border-radius-large);
+    box-shadow: var(--wa-shadow-large);
 }
 
 .dialog-content-wrapper {
     display: flex;
     flex: 1;
+    gap: 2rem;
     min-height: 400px;
-    height: 100%; 
+    height: 100%;
+    padding: 2rem;
 }
 
 .dialog-main {
     flex: 2;
-    padding: var(--sl-spacing-large);
+    padding: var(--wa-spacing-large);
     overflow-y: auto;
+    background: white;
 }
 
 .dialog-sidebar {
     flex: 1;
-    min-width: 300px;
+    min-width: 320px;
     display: flex;
     flex-direction: column;
+    background: white;
+    overflow: hidden;
 }
 
 .ticket-list {
@@ -416,27 +423,40 @@ sl-dialog::part(panel) {
     overflow-x: auto;
 }
 
-
 .ticket-table {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 1.5rem;
     background: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    border-radius: var(--sl-border-radius-medium);
+    box-shadow: var(--wa-shadow-small);
+    border-radius: var(--wa-border-radius-large);
+    overflow: hidden;
+    border: 1px solid var(--wa-color-neutral-200);
 }
 
 .ticket-table th, .ticket-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--sl-color-neutral-200);
+    border-bottom: 1px solid var(--wa-color-neutral-100);
     vertical-align: middle;
 }
 
 .ticket-table th {
-    background-color: var(--sl-color-neutral-50);
+    background-color: var(--wa-color-neutral-50);
     font-weight: 600;
-    color: var(--sl-color-neutral-700);
+    color: var(--wa-color-neutral-600);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.ticket-table tr {
+    transition: background-color 0.2s;
+}
+
+.ticket-table tr:hover {
+    background-color: var(--wa-color-primary-50);
 }
 
 .ticket-table tr:last-child td {
@@ -454,8 +474,13 @@ sl-dialog::part(panel) {
     padding: 0;
     white-space: nowrap;
     line-height: 1;
+    color: var(--wa-color-neutral-600);
 }
-.actions-cell sl-button {
+.actions-cell wa-button {
     margin-right: 4px;
+}
+.footer {
+    display: flex;
+    gap: 1rem;
 }
 </style>

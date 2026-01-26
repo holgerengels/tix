@@ -2,44 +2,44 @@
   <div class="dynamic-form">
     <div v-for="field in visibleFields(fields)" :key="field.name" class="form-field">
       <!-- Date -->
-      <sl-input 
+      <wa-input 
         v-if="field.type === 'Date'"
         type="date"
         :label="field.label"
         :required="field.required === true"
         :value="modelValue[field.name] || ''"
-        @sl-input="updateField(field.name, $event.target.value)"
-      ></sl-input>
+        @input="updateField(field.name, $event.target.value)"
+      ></wa-input>
 
       <!-- Time -->
-      <sl-input 
+      <wa-input 
         v-else-if="field.type === 'Time'"
         type="time"
         :label="field.label"
         :required="field.required === true"
         :value="modelValue[field.name] || ''"
-        @sl-input="updateField(field.name, $event.target.value)"
-      ></sl-input>
+        @input="updateField(field.name, $event.target.value)"
+      ></wa-input>
 
       <!-- Select -->
-      <sl-select
+      <wa-select
         v-else-if="field.type === 'Select'"
         hoist
         :label="field.label"
         :required="field.required === true"
         :value="modelValue[field.name] || ''"
-        @sl-change.stop="updateField(field.name, $event.target.value)"
-        @sl-input.stop
-        @sl-after-hide.stop="isOpen = false"
+        @change.stop="updateField(field.name, $event.target.value)"
+        @input.stop
+        @after-hide.stop="isOpen = false"
       >
-        <sl-option v-for="opt in field.options" :key="opt" :value="opt">
+        <wa-option v-for="opt in field.options" :key="opt" :value="opt">
             {{ opt }}
-        </sl-option>
-      </sl-select>
+        </wa-option>
+      </wa-select>
 
       <!-- Autocomplete -->
       <div v-else-if="field.type === 'Autocomplete'">
-        <SLAutocomplete
+        <WAAutocomplete
             :label="field.label"
             :required="field.required === true"
             :modelValue="modelValue[field.name] || ''"
@@ -57,29 +57,29 @@
       />
 
       <!-- User Select -->
-      <sl-select
+      <wa-select
         v-else-if="field.type === 'User'"
         hoist
         :label="field.label"
         :required="field.required === true"
         :value="modelValue[field.name] || ''"
-        @sl-change.stop="updateField(field.name, $event.target.value)"
-        @sl-input.stop
-        @sl-after-hide.stop="isOpen = false"
+        @change.stop="updateField(field.name, $event.target.value)"
+        @input.stop
+        @after-hide.stop="isOpen = false"
       >
-        <sl-option v-for="user in getFilteredUsers(field.groups)" :key="user.username" :value="user.username">
+        <wa-option v-for="user in getFilteredUsers(field.groups)" :key="user.username" :value="user.username">
             {{ user.username }}
-        </sl-option>
-      </sl-select>
+        </wa-option>
+      </wa-select>
 
       <!-- Standard Text -->
-      <sl-input 
+      <wa-input 
         v-else
         :label="field.label"
         :required="field.required === true"
         :value="modelValue[field.name] || ''"
-        @sl-input="updateField(field.name, $event.target.value)"
-      ></sl-input>
+        @input="updateField(field.name, $event.target.value)"
+      ></wa-input>
     </div>
   </div>
 </template>
@@ -88,7 +88,7 @@
 import { defineProps, defineEmits, ref, onMounted } from 'vue';
 import axios from 'axios';
 import RichTextEditor from './RichTextEditor.vue';
-import SLAutocomplete from './SLAutocomplete.vue';
+import WAAutocomplete from './WAAutocomplete.vue';
 
 const props = defineProps({
   fields: { type: Array, required: true },

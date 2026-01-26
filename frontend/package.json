@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@shoelace-style/shoelace": "^2.20.1",
+    "@awesome.me/webawesome": "^3.1.0",
     "@vueup/vue-quill": "^1.2.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",

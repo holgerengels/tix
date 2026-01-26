@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue({
     template: {
       compilerOptions: {
-        isCustomElement: tag => tag.startsWith('sl-')
+        isCustomElement: tag => tag.startsWith('wa-')
       }
     }
   })],

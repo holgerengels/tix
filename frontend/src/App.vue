@@ -6,16 +6,16 @@
         
         <nav>
             <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
-                <sl-icon name="person"></sl-icon> Meine Tickets
+                <wa-icon name="person"></wa-icon> Meine Tickets
             </router-link>
             <router-link to="/?filter=assigned" class="nav-item" :class="{ active: $route.query.filter === 'assigned' }">
-                <sl-icon name="list-task"></sl-icon> Mir zugewiesen
+                <wa-icon name="list-task"></wa-icon> Mir zugewiesen
             </router-link>
             <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
-                <sl-icon name="collection"></sl-icon> Alle Tickets
+                <wa-icon name="collection"></wa-icon> Alle Tickets
             </router-link>
              <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path.includes('/new') }">
-                <sl-icon name="plus-circle"></sl-icon> Neues Ticket
+                <wa-icon name="plus-circle"></wa-icon> Neues Ticket
             </router-link>
         </nav>
 
@@ -23,13 +23,13 @@
              <div class="user-info" v-if="user">
                 <small>{{ user.username }}</small>
              </div>
-             <sl-button variant="text" @click="logout" size="small">
-                <sl-icon slot="prefix" name="box-arrow-right"></sl-icon> Logout
-             </sl-button>
+             <wa-button variant="text" @click="logout" size="small" appearance="plain">
+                <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> Logout
+             </wa-button>
              
-             <sl-button v-if="isDev" variant="text" @click="reloadConfig" size="small" title="Reload Config form Disk">
-                <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon> Reload
-             </sl-button>
+             <wa-button v-if="isDev" variant="text" @click="reloadConfig" size="small" appearance="plain" title="Reload Config form Disk">
+                <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> Reload
+             </wa-button>
         </div>
     </aside>
 
@@ -72,8 +72,8 @@ const reloadConfig = async () => {
 
 <style>
 body {
-    font-family: var(--sl-font-sans);
-    background-color: var(--sl-color-neutral-50);
+    font-family: var(--wa-font-sans);
+    background-color: var(--wa-color-neutral-50);
     margin: 0;
     height: 100vh;
 }
@@ -93,70 +93,84 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 250px;
-    background: white;
-    border-right: 1px solid var(--sl-color-neutral-200);
+    width: 260px;
+    background: linear-gradient(180deg, #ffffff 0%, var(--wa-color-neutral-50) 100%);
+    border-right: 1px solid var(--wa-color-neutral-200);
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
     flex-shrink: 0;
+    box-shadow: 1px 0 10px rgba(0,0,0,0.02);
 }
 
 .logo {
-    font-size: 1.25rem;
-    font-weight: bold;
-    margin-bottom: 2rem;
-    color: var(--sl-color-primary-600);
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 2.5rem;
+    color: var(--wa-color-primary-700);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--wa-color-primary-600), var(--wa-color-primary-800));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    color: var(--sl-color-neutral-700);
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    color: var(--wa-color-neutral-600);
     text-decoration: none;
-    border-radius: var(--sl-border-radius-medium);
-    margin-bottom: 0.25rem;
-    transition: background 0.2s;
-}
-
-.nav-item:hover {
-    background: var(--sl-color-neutral-100);
-    color: var(--sl-color-primary-600);
-}
-
-.nav-item.active {
-    background: var(--sl-color-primary-50);
-    color: var(--sl-color-primary-700);
+    border-radius: var(--wa-border-radius-medium);
+    margin-bottom: 0.375rem;
+    transition: all 0.2s ease;
     font-weight: 500;
 }
 
-.nav-item sl-icon {
-    font-size: 1.1rem;
+.nav-item:hover {
+    background: var(--wa-color-primary-50);
+    color: var(--wa-color-primary-700);
+    transform: translateX(2px);
+}
+
+.nav-item.active {
+    background: var(--wa-color-primary-100);
+    color: var(--wa-color-primary-800);
+    font-weight: 600;
+}
+
+.nav-item wa-icon {
+    font-size: 1.25rem;
+    opacity: 0.8;
+}
+.nav-item.active wa-icon {
+    opacity: 1;
 }
 
 .footer {
     margin-top: auto;
-    border-top: 1px solid var(--sl-color-neutral-200);
-    padding-top: 1rem;
+    padding-top: 1.5rem;
+    text-align: center;
 }
-.footer sl-button {
-    margin-left: 1rem;
-}
+
 .user-info {
-    margin-bottom: 0.5rem;
-    color: var(--sl-color-neutral-500);
+    margin-bottom: 1rem;
+    color: var(--wa-color-neutral-500);
+    font-size: 0.875rem;
+    padding-left: 0.5rem;
+    font-weight: 500;
 }
 
 /* Main Content */
 .main-content {
     flex: 2;
-    padding: 2rem;
+    padding: 2.5rem 3rem;
     overflow-y: auto;
     position: relative;
+    background-color: var(--wa-color-neutral-50);
 }
-sl-dialog {
+wa-dialog {
     --width: 60%;
     --max-width: 800px;
 }

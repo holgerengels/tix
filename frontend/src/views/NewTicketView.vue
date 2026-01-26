@@ -1,20 +1,20 @@
 <template>
   <div class="new-ticket-view">
-    <div class="header" style="margin-bottom: 1.5rem;">
-        <h1>Neues Ticket</h1>
+    <div class="header" style="margin-bottom: 1rem;">
+        <h2>Neues Ticket</h2>
     </div>
 
-    <sl-card class="form-card">
+    <wa-card class="form-card">
       <div v-if="loadingConfig" class="loading">
-        <sl-spinner></sl-spinner> Lade Konfiguration...
+        <wa-spinner></wa-spinner> Lade Konfiguration...
       </div>
 
       <div v-else class="form-content">
-        <sl-select label="Ticket Typ" :value="newTicketType" @sl-change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen">
-           <sl-option v-for="type in availableTypes" :key="type" :value="type">
+        <wa-select label="Ticket Typ" :value="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen">
+           <wa-option v-for="type in availableTypes" :key="type" :value="type">
               {{ type }}
-           </sl-option>
-        </sl-select>
+           </wa-option>
+        </wa-select>
 
         <div v-if="newTicketType && config[newTicketType]" class="dynamic-section">
             <DynamicForm 
@@ -27,10 +27,10 @@
         </div>
         
         <div class="actions">
-             <sl-button variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</sl-button>
+             <wa-button variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
         </div>
       </div>
-    </sl-card>
+    </wa-card>
   </div>
 </template>
 

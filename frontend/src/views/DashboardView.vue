@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
-    <div class="header">
-        <h1>{{ pageTitle }}</h1>
+    <div class="header" style="margin-bottom: 0">
+        <h2>{{ pageTitle }}</h2>
     </div>
 
     <!-- Ticket List -->

@@ -1,29 +1,29 @@
 <template>
   <div class="login-container">
-    <sl-card class="login-card">
+    <wa-card class="login-card">
       <h2 slot="header">Login</h2>
       <form @submit.prevent="handleLogin">
-        <sl-input 
+        <wa-input 
             label="Username" 
             v-model="username" 
             required
-        ></sl-input>
+        ></wa-input>
         <br />
-        <sl-input 
+        <wa-input 
             label="Password" 
             type="password" 
             v-model="password" 
             password-toggle 
             required
-        ></sl-input>
+        ></wa-input>
         <br />
-        <sl-button type="submit" variant="primary" :loading="loading">Login</sl-button>
+        <wa-button type="submit" variant="primary" :loading="loading">Login</wa-button>
       </form>
-      <sl-alert v-if="error" variant="danger" open>
-        <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
+      <wa-callout v-if="error" variant="danger">
+        <wa-icon slot="icon" name="exclamation-octagon"></wa-icon>
         {{ error }}
-      </sl-alert>
-    </sl-card>
+      </wa-callout>
+    </wa-card>
   </div>
 </template>
 

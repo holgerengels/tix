@@ -1,27 +1,27 @@
 <template>
-  <sl-dropdown class="autocomplete-dropdown" :open="isOpen" @sl-after-hide.stop="isOpen = false" hoist>
-    <sl-input
+  <wa-dropdown class="autocomplete-dropdown" :open="isOpen" @after-hide.stop="isOpen = false" hoist>
+    <wa-input
       slot="trigger"
       :label="label"
       :value="modelValue"
       :required="required"
-      @sl-input="handleInput"
-      @sl-focus="handleFocus"
-      @sl-blur="handleBlur"
+      @input="handleInput"
+      @focus="handleFocus"
+      @blur="handleBlur"
       @keydown.down.prevent="focusMenu"
       @keydown.space.stop
       autocomplete="off"
     >
-        <sl-icon slot="suffix" name="chevron-down"></sl-icon>
-    </sl-input>
+        <wa-icon slot="suffix" name="chevron-down"></wa-icon>
+    </wa-input>
 
-    <sl-menu v-if="filteredOptions.length > 0" @sl-select="handleSelect">
-      <sl-menu-item v-for="opt in filteredOptions" :key="opt" :value="opt">
+    <div v-if="filteredOptions.length > 0" class="dropdown-list">
+      <wa-dropdown-item v-for="opt in filteredOptions" :key="opt" :value="opt" @click="handleItemClick(opt)">
         {{ opt }}
-      </sl-menu-item>
-    </sl-menu>
+      </wa-dropdown-item>
+    </div>
     <!-- Optional: Show message if no options match? Or just hide menu -->
-  </sl-dropdown>
+  </wa-dropdown>
 </template>
 
 <script setup>
@@ -75,11 +75,13 @@ const handleBlur = () => {
     }, 150);
 };
 
-const handleSelect = (event) => {
-  const selectedItem = event.detail.item;
-  emit('update:modelValue', selectedItem.value);
+const handleItemClick = (option) => {
+  emit('update:modelValue', option);
   isOpen.value = false;
 };
+
+// Removed handleSelect as we now use direct click
+
 
 const focusMenu = () => {
     if (!isOpen.value) {
@@ -87,8 +89,8 @@ const focusMenu = () => {
         return;
     }
     // Logic to focus first menu item if needed, but standard Tab/Arrow keys might work if menu is focused.
-    // Shoelace dropdown might handle arrow keys if trigger is focused? 
-    // Usually sl-dropdown manages focus transfer. Let's rely on standard behavior or keep it simple.
+    // Web Awesome dropdown might handle arrow keys if trigger is focused? 
+    // Usually wa-dropdown manages focus transfer. Let's rely on standard behavior or keep it simple.
 };
 </script>
 

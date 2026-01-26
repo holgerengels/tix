@@ -20,17 +20,17 @@
     </div>
 
     <div class="comment-input">
-      <sl-textarea 
+      <wa-textarea 
         v-model="newComment" 
         placeholder="Kommentar schreiben..." 
         rows="2"
         resize="auto"
         @keydown.enter.prevent="sendComment"
         :disabled="sending"
-      ></sl-textarea>
-      <sl-button size="small" variant="primary" @click="sendComment" :loading="sending" :disabled="!newComment.trim()">
+      ></wa-textarea>
+      <wa-button size="small" variant="primary" @click="sendComment" :loading="sending" :disabled="!newComment.trim()">
         Senden
-      </sl-button>
+      </wa-button>
     </div>
   </div>
 </template>
@@ -112,67 +112,74 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: var(--sl-color-neutral-50);
-    margin-right: 1rem;
+    background-color: transparent;
 }
 
 .comments-header {
-    padding: .7rem;
+    padding: 0.75rem 1rem;
     font-weight: 600;
-    border-bottom: 1px solid var(--sl-color-neutral-200);
-    background: white;
+    background: transparent;
+    color: var(--wa-color-neutral-600);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
 }
 
 .comments-list {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
+    background-color: var(--wa-color-neutral-300);;
+    border-radius: var(--wa-border-radius-medium);
+    box-shadow: var(--wa-shadow-x-small);
 }
 
 .comment-item {
     background: white;
-    padding: 0.75rem;
-    border-radius: var(--sl-border-radius-medium);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    border: 1px solid var(--sl-color-neutral-200);
+    padding: 1rem;
+    border-radius: var(--wa-border-radius-medium);
+    box-shadow: var(--wa-shadow-x-small);
+    border: 1px solid var(--wa-color-neutral-100);
+    position: relative;
 }
 
 .comment-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
     font-size: 0.85em;
-    color: var(--sl-color-neutral-500);
+    color: var(--wa-color-neutral-500);
 }
 
 .author {
     font-weight: 600;
-    color: var(--sl-color-primary-600);
+    color: var(--wa-color-primary-700);
 }
 
 .comment-body {
     white-space: pre-wrap;
     font-size: 0.95em;
-    line-height: 1.4;
-    color: var(--sl-color-neutral-900);
+    line-height: 1.5;
+    color: var(--wa-color-neutral-900);
 }
 
 .comment-input {
-    padding: 1rem 0rem;
+    padding-top: 1rem;
     background: white;
-    border-top: 1px solid var(--sl-color-neutral-200);
+    border-top: 1px solid var(--wa-color-neutral-200);
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .loading, .empty {
     text-align: center;
-    color: var(--sl-color-neutral-500);
-    margin-top: 2rem;
+    color: var(--wa-color-neutral-500);
+    margin-top: 3rem;
     font-style: italic;
+    font-size: 0.9rem;
 }
 </style>
