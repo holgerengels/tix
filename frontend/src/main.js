@@ -35,7 +35,8 @@ const router = createRouter({
     routes: [
         { path: '/login', component: LoginView },
         { path: '/', component: DashboardView, meta: { requiresAuth: true } },
-        { path: '/tickets/new', component: NewTicketView, meta: { requiresAuth: true } }
+        { path: '/tickets/new', component: NewTicketView, meta: { requiresAuth: true } },
+        { path: '/tickets/:id', component: DashboardView, meta: { requiresAuth: true } }
     ]
 })
 

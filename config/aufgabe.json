@@ -1,5 +1,6 @@
 {
     "type": "Aufgabe",
+    "abbreviation": "AUF",
     "template": "{{location}}",
     "fields": [
         {

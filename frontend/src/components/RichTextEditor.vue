@@ -6,6 +6,7 @@
         theme="snow" 
         :content="modelValue" 
         contentType="html"
+        :readOnly="disabled"
         @update:content="$emit('update:modelValue', $event)" 
         toolbar="essential"
       />
@@ -20,7 +21,8 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  label: { type: String, default: '' }
+  label: { type: String, default: '' },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -53,5 +55,9 @@ const emit = defineEmits(['update:modelValue']);
     border-bottom-left-radius: var(--wa-input-border-radius-medium);
     border-bottom-right-radius: var(--wa-input-border-radius-medium);
     border-color: var(--wa-input-border-color);
+}
+:deep(.ql-editor[contenteditable=false]) {
+    background-color: var(--wa-color-neutral-50);
+    color: var(--wa-color-neutral-600);
 }
 </style>

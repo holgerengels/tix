@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { login, verifyToken } = require('./auth');
 const Ticket = require('./models/ticket');
+const Counter = require('./models/counter');
 const Comment = require('./models/comment');
 const workflowEngine = require('./workflow');
 const { canComment } = require('./workflow');
@@ -193,6 +194,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
         }
     }
     if (creator) sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } }); // Fuzzy search
+    if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.g. ABW-1)
 
     if (dateFrom || dateTo) {
         let dateQuery = {};
@@ -269,6 +271,24 @@ router.post('/tickets', verifyToken, async (req, res) => {
             log: [{ editor: req.user.username, text: 'Ticket erstellt', edited: new Date() }]
         };
 
+        // Generate ID if abbreviation exists
+        if (wf && wf.abbreviation) {
+            try {
+                const counter = await Counter.findByIdAndUpdate(
+                    wf.abbreviation,
+                    { $inc: { seq: 1 } },
+                    { new: true, upsert: true }
+                );
+                ticketData.id = `${wf.abbreviation}-${counter.seq}`;
+            } catch (err) {
+                console.error('Error generating ticket ID:', err);
+                // Continue without ID or handle error? 
+                // Better to log and maybe fail if ID is critical, but for now let's proceed or maybe fallback?
+                // If ID is required by business logic, we should probably fail. 
+                // But schema didn't mark it required.
+            }
+        }
+
         if (!isDBConnected()) {
             console.log('Creating MOCK ticket');
             const newTicket = {
@@ -320,8 +340,20 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         if (!action) {
-            console.log(`Debug: Action not found. Requested: ${actionName}, Available in blocks: ${currentStates.map(block => block.actions.map(a => a.name).join(', ')).join(' | ')}`);
-            return res.status(400).json({ message: 'Invalid action' });
+            // Check for generic 'edit' permission if action not found in state
+            // This allows global actions like 'Bearbeiten' (or 'hacken') to work in any state
+            // provided the user has 'edit' access.
+            const { canEdit } = require('./workflow');
+            if (canEdit(ticket.type, req.user.groups)) {
+                action = {
+                    name: actionName,
+                    groups: req.user.groups, // Implicitly allowed
+                    script: '' // No state transition by default, just data update
+                };
+            } else {
+                console.log(`Debug: Action not found. Requested: ${actionName}, Available in blocks: ${currentStates.map(block => block.actions.map(a => a.name).join(', ')).join(' | ')}`);
+                return res.status(400).json({ message: 'Invalid action' });
+            }
         }
 
         // Check permission

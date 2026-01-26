@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Ticket = require('../models/ticket');
+const Counter = require('../models/counter');
 
 const connectDB = async () => {
     try {
@@ -14,6 +15,7 @@ const connectDB = async () => {
 const mockTickets = [
     // Aufgabe: Standard (Title, Desc, Assignee) + Dynamic (Location)
     {
+        id: 'AUF-1',
         title: 'Whiteboard reinigen',
         description: 'Das Whiteboard in Raum 101 ist sehr schmutzig.',
         type: 'Aufgabe',
@@ -25,6 +27,7 @@ const mockTickets = [
         log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-20T08:00:00') }]
     },
     {
+        id: 'AUF-2',
         title: 'Netzwerkdose defekt',
         description: 'Kein Signal auf Dose 3.',
         type: 'Aufgabe',
@@ -39,6 +42,7 @@ const mockTickets = [
         ]
     },
     {
+        id: 'AUF-3',
         title: 'Stuhl reparieren',
         description: 'Bein wackelt.',
         type: 'Aufgabe',
@@ -55,6 +59,7 @@ const mockTickets = [
 
     // Abwesenheit: Standard (Title, Desc) + Dynamic (Dates, Time, Reason) - Assignee hidden/unused
     {
+        id: 'ABW-1',
         title: 'Fortbildung Digitalisierung',
         description: 'Teilnahme an der Landesfortbildung.',
         type: 'Abwesenheit',
@@ -70,6 +75,7 @@ const mockTickets = [
         log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-25T10:00:00') }]
     },
     {
+        id: 'ABW-2',
         title: 'Dienstgeschäft Ministerium',
         description: 'Abordnung.',
         type: 'Abwesenheit',
@@ -87,6 +93,7 @@ const mockTickets = [
         ]
     },
     {
+        id: 'ABW-3',
         title: 'Fortbildung Sport',
         description: 'Abgelehnt wegen Personalmangel.',
         type: 'Abwesenheit',
@@ -110,10 +117,19 @@ const seedTickets = async () => {
 
     try {
         await Ticket.deleteMany({});
-        console.log('Old tickets removed');
+        await Counter.deleteMany({});
+        console.log('Old tickets and counters removed');
 
         await Ticket.insertMany(mockTickets);
         console.log('New mock tickets created successfully');
+
+        // Reset Counters
+        await Counter.insertMany([
+            { _id: 'AUF', seq: 3 },
+            { _id: 'ABW', seq: 3 }
+        ]);
+        console.log('Counters initialized');
+
     } catch (err) {
         console.error('Error seeding tickets:', err);
     } finally {

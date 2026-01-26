@@ -48,6 +48,7 @@
     <table v-else class="ticket-table">
       <thead>
         <tr>
+          <th>ID</th>
           <th>Typ</th>
           <th>Titel</th>
           <th>Status</th>
@@ -59,6 +60,11 @@
       </thead>
       <tbody>
         <tr v-for="ticket in tickets" :key="ticket._id">
+          <td>
+            <router-link :to="'/tickets/' + ticket.id" style="text-decoration: none;" @click.stop>
+                <span class="id-tag">{{ ticket.id }}</span>
+            </router-link>
+          </td>
           <td>{{ ticket.type }}</td>
           <td><strong>{{ ticket.title }}</strong></td>
           <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
@@ -132,6 +138,7 @@
 
 <script setup>
 import { ref, onMounted, defineProps, watch, nextTick, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import axios from 'axios';
 import DynamicForm from './DynamicForm.vue';
 import TicketComments from './TicketComments.vue';
@@ -279,9 +286,11 @@ watch(() => props.filter, (newVal) => {
     fetchTickets(newVal);
 });
 
+/* 
 onMounted(() => {
     fetchTickets(props.filter);
 });
+*/
 
 const getStatusColor = (ticket) => {
     const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
@@ -369,6 +378,17 @@ const getActions = (ticket) => {
         return authorizedActions.filter(a => a.optional === true);
     }
     
+    // Inject Global 'Edit' action if authorized
+    const wf = props.config[ticket.type];
+    const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
+    if (editAccess && editAccess.groups.some(g => user.groups.includes(g))) {
+        authorizedActions.push({
+            name: 'hacken',
+            form: 'edit',
+            groups: editAccess.groups // Just for context, already checked
+        });
+    }
+
     // Default / 'all': Show all authorized
     return authorizedActions;
 };
@@ -392,25 +412,24 @@ const executeActionApi = async (ticket, action, formData, btnName = null) => {
 };
 
 const handleAction = async (ticket, action) => {
-    // 1. Script Case: If script exists, execute it immediately
+    // 1. Script Case
     if (action.script) {
         const success = await executeActionApi(ticket, action, {});
-        if (!success) return; // Stop if script execution failed
+        if (!success) return; 
 
         await fetchTickets(props.filter);
-        // Update local ticket reference to the latest version after script
         const updatedTicket = tickets.value.find(t => t._id === ticket._id);
         if (updatedTicket) {
             ticket = updatedTicket;
         }
     }
 
-    // 2. Form Case: If form exists, show it (potentially after script)
+    // 2. Form Case
     if (action.form) {
         currentTicket.value = ticket;
-        currentAction.value = { ...action }; // Cloned to be safe
+        currentAction.value = { ...action };
         
-        // Pre-fill form data with current ticket values
+        // Pre-fill form data
         actionFormData.value = { 
             title: ticket.title,
             description: ticket.description,
@@ -420,33 +439,49 @@ const handleAction = async (ticket, action) => {
         currentFormDef.value = null;
         
         const wf = props.config[ticket.type];
-        const specificFormDef = wf.forms?.find(f => f.name === action.form);
         
-        // Base fields from ticket definition
-        let fields = [...(wf.fields || [])];
-        
-        if (specificFormDef && specificFormDef.fields) {
-            specificFormDef.fields.forEach(sf => {
-                if (!fields.find(f => f.name === sf.name)) {
-                    fields.push(sf);
-                }
-            });
-        }
-        
-        if (specificFormDef && specificFormDef.fields) {
-            specificFormDef.fields.forEach(sf => {
-                if (!fields.find(f => f.name === sf.name)) {
-                    fields.push(sf);
-                }
-            });
-        }
+        // Implicit Forms: 'read' and 'edit'
+        if (action.form === 'read' || action.form === 'edit') {
+             // Base fields from ticket definition - Deep copy
+            let fields = wf.fields ? JSON.parse(JSON.stringify(wf.fields)) : [];
+            
+            if (action.form === 'read') {
+                fields.forEach(f => f.readonly = true);
+            }
+            // 'edit' leaves fields as is (writable)
 
-        // Construct a composite form definition
-        currentFormDef.value = {
-            ...specificFormDef,
-            fields: fields,
-            actions: specificFormDef ? specificFormDef.actions : [] // Preserve actions (buttons)
-        };
+            currentFormDef.value = {
+                name: action.form,
+                title: action.form === 'read' ? 'Details' : 'Ticket bearbeiten',
+                fields: fields,
+                actions: action.form === 'edit' ? [
+                    { name: 'Speichern', script: '' } // Empty script, just saves data via API
+                ] : []
+            };
+        } else {
+            // Explicit Forms defined in config
+            const specificFormDef = wf.forms?.find(f => f.name === action.form);
+            
+            // Base fields from ticket definition - Deep copy
+            let fields = wf.fields ? JSON.parse(JSON.stringify(wf.fields)) : [];
+            
+            if (specificFormDef && specificFormDef.fields) {
+                specificFormDef.fields.forEach(sf => {
+                    const existingIndex = fields.findIndex(f => f.name === sf.name);
+                    if (existingIndex !== -1) {
+                        fields[existingIndex] = { ...fields[existingIndex], ...sf };
+                    } else {
+                        fields.push(sf);
+                    }
+                });
+            }
+
+            currentFormDef.value = {
+                ...specificFormDef,
+                fields: fields,
+                actions: specificFormDef ? specificFormDef.actions : []
+            };
+        }
     } 
     else if (!action.script) {
         const success = await executeActionApi(ticket, action, {});
@@ -455,6 +490,55 @@ const handleAction = async (ticket, action) => {
         }
     }
 };
+
+const route = useRoute();
+
+const checkDeepLink = async () => {
+    const deepLinkId = route.params.id;
+    if (deepLinkId) {
+        try {
+             // Fetch specific ticket by ID
+             const res = await axios.get('/api/tickets', {
+                params: { id: deepLinkId },
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            if (res.data && res.data.length > 0) {
+                const ticket = res.data[0];
+                // Trigger 'read' action
+                tickets.value = [ticket];
+                
+                const tryOpen = () => {
+                     if (props.config && props.config[ticket.type]) {
+                        handleAction(ticket, { name: 'Details', form: 'read', groups: [] });
+                     } else {
+                         setTimeout(tryOpen, 100);
+                     }
+                };
+                tryOpen();
+            }
+        } catch (e) {
+            console.error('Deep link fetch failed', e);
+        }
+    }
+};
+
+watch(() => route.params.id, (newId) => {
+    if (newId) {
+        checkDeepLink();
+    } else {
+        // If navigating back to root/list, fetch list
+        fetchTickets(props.filter);
+    }
+});
+
+onMounted(async () => {
+    if (route.params.id) {
+        checkDeepLink();
+    } else {
+        fetchTickets(props.filter);
+    }
+});
 
 const handleRequestClose = (event) => {
     console.log(event.detail.source);
@@ -543,7 +627,7 @@ wa-dialog::part(panel) {
 }
 
 .ticket-table th, .ticket-table td {
-    padding: 0.5rem 1rem;
+    padding: 0.3rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--wa-color-neutral-100);
     vertical-align: middle;
@@ -680,5 +764,16 @@ wa-dialog::part(panel) {
     background: white;
     border-radius: var(--wa-border-radius-large);
     border: 1px dashed var(--wa-color-neutral-300);
+}
+
+.id-tag {
+    white-space: nowrap;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.id-tag:hover {
+    opacity: 0.8;
+    text-decoration: underline;
 }
 </style>

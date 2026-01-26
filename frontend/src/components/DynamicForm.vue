@@ -7,6 +7,7 @@
         type="date"
         :label="field.label"
         :required="field.required === true"
+        :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>
@@ -17,6 +18,7 @@
         type="time"
         :label="field.label"
         :required="field.required === true"
+        :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>
@@ -27,6 +29,7 @@
         hoist
         :label="field.label"
         :required="field.required === true"
+        :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
         @change.stop="updateField(field.name, $event.target.value)"
         @input.stop
@@ -42,6 +45,7 @@
         <WAAutocomplete
             :label="field.label"
             :required="field.required === true"
+            :disabled="field.readonly === true"
             :modelValue="modelValue[field.name] || ''"
             :options="field.options"
             @update:modelValue="updateField(field.name, $event)"
@@ -52,6 +56,7 @@
       <RichTextEditor
         v-else-if="field.type === 'RichText'"
         :label="field.label"
+        :disabled="field.readonly === true"
         :modelValue="modelValue[field.name] || ''"
         @update:modelValue="updateField(field.name, $event)"
       />
@@ -62,6 +67,7 @@
         hoist
         :label="field.label"
         :required="field.required === true"
+        :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
         @change.stop="updateField(field.name, $event.target.value)"
         @input.stop
@@ -77,6 +83,7 @@
         v-else
         :label="field.label"
         :required="field.required === true"
+        :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>

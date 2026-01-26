@@ -1,5 +1,6 @@
 {
     "type": "Abwesenheit",
+    "abbreviation": "ABW",
     "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} ({{reason}})",
     "fields": [
         {
@@ -111,6 +112,13 @@
             "name": "create",
             "groups": [
                 "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "edit",
+            "groups": [
+                "Lehrkräfte",
+                "Schulleitung"
             ]
         },
         {
