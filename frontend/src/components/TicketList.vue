@@ -61,7 +61,7 @@
       <tbody>
         <tr v-for="ticket in tickets" :key="ticket._id">
           <td>
-            <router-link :to="'/tickets/' + ticket.id" style="text-decoration: none;" @click.stop>
+            <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
                 <span class="id-tag">{{ ticket.id }}</span>
             </router-link>
           </td>
@@ -95,54 +95,14 @@
       </tbody>
     </table>
 
-    <!-- Action Dialog -->
-    <wa-dialog 
-        ref="dialogRef"
-        :label="(currentTicket?.type || '') + ' ' + (currentAction?.name || '')" 
-        :open="!!currentAction" 
-        @wa-after-hide="onDialogHide"
-        @wa-request-close="handleRequestClose"
-        class="action-dialog"
-    >
-        <div class="dialog-content-wrapper">
-            <div class="dialog-main">
-                <DynamicForm v-if="currentFormDef && currentFormDef.fields" :fields="currentFormDef.fields" v-model="actionFormData" />
-                <div v-else>
-                    Sicher, dass diese Aktion ausgeführt werden soll?
-                </div>
-            </div>
-            
-            <aside class="dialog-sidebar" v-if="canComment">
-                <TicketComments :ticket="currentTicket" />
-            </aside>
-        </div>
-        
-        <div slot="footer" class="footer">
-            <template v-if="currentFormDef && currentFormDef.actions">
-                 <wa-button 
-                    v-for="btn in currentFormDef.actions" 
-                    :key="btn.name" 
-                    variant="primary"
-                    type="button"
-                    @click="submitAction(btn)"
-                 >
-                    {{ btn.name }}
-                 </wa-button>
-            </template>
-            <wa-button v-else variant="primary" type="button" @click="submitAction(null)">Ausführen</wa-button>
-        </div>
-    </wa-dialog>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, watch, nextTick, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, onMounted, defineProps, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
-import DynamicForm from './DynamicForm.vue';
-import TicketComments from './TicketComments.vue';
-import { format, subDays, startOfDay, endOfDay, subMonths } from 'date-fns';
+import { format, subDays, subMonths } from 'date-fns';
 
 const props = defineProps({
   filter: String,
@@ -161,12 +121,6 @@ const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
 
-const currentAction = ref(null);
-const currentTicket = ref(null);
-const actionFormData = ref({});
-const currentFormDef = ref(null);
-
-const route = useRoute();
 const router = useRouter();
 
 const availableTypes = computed(() => {
@@ -183,22 +137,6 @@ const availableStatuses = computed(() => {
         return props.config[filterType.value].states.map(s => s.name);
     }
     return [];
-});
-
-const canComment = computed(() => {
-    if (!currentTicket.value || !props.config || !props.config[currentTicket.value.type]) return false;
-    
-    // Creator and Assignee always allowed (conceptually, though backend enforces too)
-    if (currentTicket.value.creator === user.username) return true;
-    if (currentTicket.value.assignee === user.username) return true;
-
-    const access = props.config[currentTicket.value.type].access;
-    if (!access) return false;
-    
-    const rule = access.find(r => r.name === 'comment');
-    if (!rule) return false;
-    
-    return rule.groups.some(g => user.groups.includes(g));
 });
 
 let lastRequestId = 0;
@@ -288,12 +226,6 @@ const resetFilters = () => {
 watch(() => props.filter, (newVal) => {
     fetchTickets(newVal);
 });
-
-/* 
-onMounted(() => {
-    fetchTickets(props.filter);
-});
-*/
 
 const getStatusColor = (ticket) => {
     const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
@@ -396,255 +328,22 @@ const getActions = (ticket) => {
     return authorizedActions;
 };
 
-const executeActionApi = async (ticket, action, formData, btnName = null) => {
-    const payload = {
-        actionName: action.name,
-        formData: formData
-    };
-    if (btnName) payload.formButtonName = btnName;
-
-    try {
-        await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        return true;
-    } catch (err) {
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
-        return false;
-    }
-};
-
-const handleAction = async (ticket, action) => {
-    // 1. Script Case
-    if (action.script) {
-        const success = await executeActionApi(ticket, action, {});
-        if (!success) return; 
-
-        await fetchTickets(props.filter);
-        const updatedTicket = tickets.value.find(t => t._id === ticket._id);
-        if (updatedTicket) {
-            ticket = updatedTicket;
-        }
-    }
-
-    // 2. Form Case
-    if (action.form) {
-        currentTicket.value = ticket;
-        currentAction.value = { ...action };
-        
-        // Pre-fill form data
-        actionFormData.value = { 
-            title: ticket.title,
-            description: ticket.description,
-            assignee: ticket.assignee,
-            ...getDynamicFields(ticket) 
-        };
-        currentFormDef.value = null;
-        
-        const wf = props.config[ticket.type];
-        
-        // Implicit Forms: 'read' and 'edit'
-        if (action.form === 'read' || action.form === 'edit') {
-             // Base fields from ticket definition - Deep copy
-            let fields = wf.fields ? JSON.parse(JSON.stringify(wf.fields)) : [];
-            
-            if (action.form === 'read') {
-                fields.forEach(f => f.readonly = true);
-            }
-            // 'edit' leaves fields as is (writable)
-
-            currentFormDef.value = {
-                name: action.form,
-                title: action.form === 'read' ? 'Details' : 'Ticket bearbeiten',
-                fields: fields,
-                actions: action.form === 'edit' ? [
-                    { name: 'Speichern', script: '' } // Empty script, just saves data via API
-                ] : []
-            };
-        } else {
-            // Explicit Forms defined in config
-            const specificFormDef = wf.forms?.find(f => f.name === action.form);
-            
-            // Base fields from ticket definition - Deep copy
-            let fields = wf.fields ? JSON.parse(JSON.stringify(wf.fields)) : [];
-            
-            if (specificFormDef && specificFormDef.fields) {
-                specificFormDef.fields.forEach(sf => {
-                    const existingIndex = fields.findIndex(f => f.name === sf.name);
-                    if (existingIndex !== -1) {
-                        fields[existingIndex] = { ...fields[existingIndex], ...sf };
-                    } else {
-                        fields.push(sf);
-                    }
-                });
-            }
-
-            currentFormDef.value = {
-                ...specificFormDef,
-                fields: fields,
-                actions: specificFormDef ? specificFormDef.actions : []
-            };
-        }
-    } 
-    else if (!action.script) {
-        const success = await executeActionApi(ticket, action, {});
-        if (success) {
-            fetchTickets(props.filter);
-        }
-    }
-};
-
-
-
-const checkDeepLink = async () => {
-    const deepLinkId = route.params.id;
-    if (deepLinkId) {
-        try {
-             // Fetch specific ticket by ID
-             const res = await axios.get('/api/tickets', {
-                params: { id: deepLinkId },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            
-            if (res.data && res.data.length > 0) {
-                const ticket = res.data[0];
-                // Trigger 'read' action
-                tickets.value = [ticket];
-                currentTicket.value = ticket; // Set current ticket immediately
-                
-                tryOpenDeepLinkTicket();
-            }
-        } catch (e) {
-            console.error('Deep link fetch failed', e);
-        }
-    }
-};
-
-const tryOpenDeepLinkTicket = () => {
-    if (!currentTicket.value) return;
-    const ticket = currentTicket.value;
-    
-    if (props.config && props.config[ticket.type]) {
-        // Only open if not already open
-        if (!currentAction.value) {
-            handleAction(ticket, { name: 'Details', form: 'read', groups: [] });
-        }
-    }
-};
-
-// Watch for config changes in case config loads after ticket
-watch(() => props.config, () => {
-    if (route.params.id && tickets.value.length === 1) {
-        tryOpenDeepLinkTicket();
-    }
-}, { deep: true });
-
-watch(() => route.params.id, (newId) => {
-    if (newId) {
-        checkDeepLink();
+const handleAction = (ticket, action) => {
+    if (action.form === 'read') {
+        router.push(`/tickets/${ticket.id}/view`);
+    } else if (action.form === 'edit') {
+        router.push(`/tickets/${ticket.id}/edit`);
     } else {
-        // Navigating back to root/list
-        
-        // 1. Close any open dialog
-        currentAction.value = null;
-        currentTicket.value = null; // Clear current ticket
-        
-        // 2. Fetch full list
-        fetchTickets(props.filter);
+        router.push(`/tickets/${ticket.id}/action/${action.name}`);
     }
-});
+};
 
 onMounted(async () => {
-    if (route.params.id) {
-        checkDeepLink();
-    } else {
-        fetchTickets(props.filter);
-    }
+    fetchTickets(props.filter);
 });
-
-const handleRequestClose = (event) => {
-    if (event.detail.source === 'overlay') {
-        event.preventDefault();
-    }
-};
-
-const onDialogHide = () => {
-    currentAction.value = null;
-    
-    // If we are currently on a deep link route, migrate back
-    if (route.params.id) {
-        // Check if we can go back in history (window.history.state check is a heuristic)
-        if (window.history.length > 1) {
-            router.back();
-        } else {
-            // Fallback for direct deep links (e.g. bookmarks)
-            router.push({ path: '/', query: route.query });
-        }
-    }
-};
-
-const submitAction = async (btn = null) => {
-    const success = await executeActionApi(currentTicket.value, currentAction.value, actionFormData.value, btn ? btn.name : null);
-    if (success) {
-        currentAction.value = null;
-        fetchTickets(props.filter);
-    }
-};
 </script>
 
 <style scoped>
-/* Force dialog to be absolute within the nearest positioned ancestor (main-content) */
-wa-dialog::part(base),
-wa-dialog::part(overlay) {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-}
-
-wa-dialog::part(body) {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-wa-dialog::part(panel) {
-    max-height: 90vh;
-    min-width: 900px;
-    width: 90%;
-    display: flex;
-    flex-direction: column;
-    border-radius: var(--wa-border-radius-large);
-    box-shadow: var(--wa-shadow-large);
-}
-
-.dialog-content-wrapper {
-    display: flex;
-    flex: 1;
-    gap: 2rem;
-    min-height: 400px;
-    height: 100%;
-    padding: 2rem;
-}
-
-.dialog-main {
-    flex: 2;
-    padding: var(--wa-spacing-large);
-    overflow-y: auto;
-    background: white;
-}
-
-.dialog-sidebar {
-    flex: 1;
-    min-width: 320px;
-    display: flex;
-    flex-direction: column;
-    background: white;
-    overflow: hidden;
-}
-
 .ticket-list {
     width: 100%;
     overflow-x: auto;
@@ -706,11 +405,6 @@ wa-dialog::part(panel) {
 .actions-cell wa-button {
     margin-right: 4px;
 }
-.footer {
-    display: flex;
-    gap: 1rem;
-}
-
 .filter-details {
     margin-bottom: 1.5rem;
     background: white;

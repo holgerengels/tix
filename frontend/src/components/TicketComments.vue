@@ -135,6 +135,7 @@ onMounted(() => {
     background-color: var(--wa-color-neutral-300);;
     border-radius: var(--wa-border-radius-medium);
     box-shadow: var(--wa-shadow-x-small);
+    /* max-height removed, layout handles it */
 }
 
 .comment-item {

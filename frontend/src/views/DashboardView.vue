@@ -4,7 +4,6 @@
         <h2>{{ pageTitle }}</h2>
     </div>
 
-    <!-- Ticket List -->
     <div class="content">
         <TicketList :filter="currentFilter" :config="config" />
     </div>

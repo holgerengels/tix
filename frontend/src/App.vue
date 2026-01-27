@@ -166,8 +166,6 @@ body {
 .main-content {
     flex: 2;
     padding: 2.5rem 3rem;
-    overflow-y: auto;
-    position: relative;
     background-color: var(--wa-color-neutral-50);
 }
 wa-dialog {
