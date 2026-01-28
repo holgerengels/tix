@@ -15,11 +15,8 @@
         {{ error }}
     </div>
 
-    <wa-card v-else-if="ticket" class="ticket-card">
-      <div class="card-wrapper">
-        <div class="ticket-header">
-             <h3 class="ticket-title">{{ ticket.id }} {{ ticket.title }}</h3>
-        </div>
+    <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer>
+        <h3 slot="header">{{ ticket.id }} {{ ticket.title }}</h3>
         
         <div class="ticket-body">
             <DynamicForm 
@@ -29,11 +26,8 @@
             />
         </div>
 
-        <div class="actions">
-            <wa-button @click="goBack" appearance="plain">Abbrechen</wa-button>
-            <wa-button variant="primary" @click="save" :loading="saving">Speichern</wa-button>
-        </div>
-      </div>
+        <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
+        <wa-button slot="footer-actions" variant="primary" @click="save" :loading="saving">Speichern</wa-button>
     </wa-card>
   </div>
 </template>
@@ -167,9 +161,9 @@ onMounted(fetchData);
 <style scoped>
 .edit-ticket-view {
     max-width: 1000px;
+    height: 100%;
     margin: 0 auto;
-    padding: 1rem;
-    height: calc(100vh - 100px);
+    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -181,40 +175,46 @@ onMounted(fetchData);
     flex-shrink: 0;
 }
 .ticket-card {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    height: calc(100% - 70px);
 }
-.ticket-card::part(base) {
+.ticket-card::part(body) {
     height: 100%;
     display: flex;
-    flex-direction: column;
-}
-.ticket-header {
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--wa-color-neutral-200);
-    padding-bottom: 1rem;
-    flex-shrink: 0;
-}
-.ticket-title {
-    margin: 0;
+    flex-direction: row;
+    gap: 2rem;
+    align-items: stretch;
+    min-height: 0; /* Crucial for nested scrolling */
 }
 .ticket-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto; /* Form scrolls here */
+    height: 100%;
+    display: contents;
+}
+.ticket-card::part(footer) {
+    justify-content: end;
+    gap: 1rem;
+}
+.dynamic-form {
+    height: 100%;
+    flex: 2;
+    min-width: 0; 
+    overflow-y: auto;
     padding-right: 0.5rem;
 }
-.actions {
+.comments-sidebar {
+    height: 100%;
+    flex: 1;
+    min-width: 300px;
+    border-left: 1px solid var(--wa-color-neutral-200);
+    padding-left: 2rem;
     display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--wa-color-neutral-200);
-    flex-shrink: 0;
+    flex-direction: column;
+    overflow: hidden; /* Comments component handles internal scrolling */
+}
+.confirmation-message {
+    padding: 2rem;
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--wa-color-neutral-700);
 }
 .loading, .error {
     text-align: center;
@@ -223,11 +223,5 @@ onMounted(fetchData);
 }
 .error {
     color: var(--wa-color-danger-700);
-}
-.card-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
 }
 </style>

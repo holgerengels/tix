@@ -8,42 +8,35 @@
     </div>
 
     <div v-if="loading" class="loading">
-        <wa-spinner></wa-spinner> Lade Daten...
+        <wa-spinner></wa-spinner> Lade Ticket...
     </div>
 
     <div v-else-if="error" class="error">
         {{ error }}
     </div>
 
-    <wa-card v-else-if="ticket && actionDef" class="ticket-card">
-      <div class="card-wrapper">
-        <div class="ticket-header">
-             <h3 class="ticket-title">{{ ticket.id }} {{ ticket.title }}</h3>
-        </div>
+    <wa-card v-else-if="ticket && actionDef" class="ticket-card" with-header with-footer>
+        <h3 slot="header">{{ ticket.id }} {{ ticket.title }}</h3>
         
         <div class="ticket-body">
-            <div class="form-section">
-                <DynamicForm 
-                   v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
-                   :fields="currentFormDef.fields" 
-                   v-model="actionFormData" 
-                />
-                <div v-else class="confirmation-message">
-                    Sicher, dass die Aktion <strong>{{ actionDef.name }}</strong> ausgeführt werden soll?
-                </div>
+            <DynamicForm 
+               v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
+               :fields="currentFormDef.fields" 
+               v-model="actionFormData" 
+            />
+            <div v-else class="confirmation-message">
+                Sicher, dass die Aktion <strong>{{ actionDef.name }}</strong> ausgeführt werden soll?
             </div>
 
             <aside class="comments-sidebar" v-if="canComment">
-                <h3>Kommentare</h3>
                 <TicketComments :ticket="ticket" />
             </aside>
         </div>
 
-        <div class="actions">
-            <wa-button @click="goBack" appearance="plain">Abbrechen</wa-button>
+            <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
             
             <template v-if="currentFormDef && currentFormDef.actions">
-                 <wa-button 
+                 <wa-button slot="footer-actions"
                     v-for="btn in currentFormDef.actions" 
                     :key="btn.name" 
                     variant="primary"
@@ -54,9 +47,7 @@
                     {{ btn.name }}
                  </wa-button>
             </template>
-            <wa-button v-else variant="primary" type="button" :loading="executing" @click="execute(null)">Ausführen</wa-button>
-        </div>
-      </div>
+            <wa-button v-else slot="footer-actions" variant="primary" type="button" :loading="executing" @click="execute(null)">Ausführen</wa-button>
     </wa-card>
   </div>
 </template>
@@ -252,10 +243,10 @@ onMounted(fetchData);
 
 <style scoped>
 .action-view {
-    max-width: 1200px; /* Increased max-width for better side-by-side */
+    max-width: 1200px;
+    height: 100%;
     margin: 0 auto;
-    padding: 1rem;
-    height: calc(100vh - 100px); /* Fill available vertical space approx */
+    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -263,45 +254,36 @@ onMounted(fetchData);
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
     flex-shrink: 0;
 }
 .ticket-card {
-    width: 100%;
-    flex: 1;
-    min-height: 0; /* Crucial for nested scrolling */
-    display: flex; 
-    flex-direction: column;
-}
-.ticket-card::part(base) {
+    height: calc(100% - 70px);
+}   
+.ticket-card::part(body) {
     height: 100%;
     display: flex;
-    flex-direction: column;
-}
-
-.ticket-header {
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--wa-color-neutral-200);
-    padding-bottom: 1rem;
-    flex-shrink: 0;
-}
-.ticket-title {
-    margin: 0;
+    flex-direction: row;
+    gap: 2rem;
+    align-items: stretch;
+    min-height: 0; /* Crucial for nested scrolling */
 }
 .ticket-body {
-    display: flex;
-    gap: 2rem;
-    flex: 1;
-    min-height: 0; /* Crucial for nested scrolling */
-    overflow: hidden;
+    height: 100%;
+    display: contents;
 }
-.form-section {
+.ticket-card::part(footer) {
+    justify-content: end;
+    gap: 1rem;
+}
+.dynamic-form {
+    height: 100%;
     flex: 2;
     min-width: 0; 
     overflow-y: auto;
     padding-right: 0.5rem;
 }
 .comments-sidebar {
+    height: 100%;
     flex: 1;
     min-width: 300px;
     border-left: 1px solid var(--wa-color-neutral-200);
@@ -316,15 +298,6 @@ onMounted(fetchData);
     text-align: center;
     color: var(--wa-color-neutral-700);
 }
-.actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--wa-color-neutral-200);
-    flex-shrink: 0;
-}
 .loading, .error {
     text-align: center;
     padding: 3rem;
@@ -332,10 +305,5 @@ onMounted(fetchData);
 }
 .error {
     color: var(--wa-color-danger-700);
-}
-.card-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
 }
 </style>

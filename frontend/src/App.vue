@@ -164,12 +164,8 @@ body {
 
 /* Main Content */
 .main-content {
-    flex: 2;
-    padding: 2.5rem 3rem;
+    flex: 1;
+    padding: 1rem;
     background-color: var(--wa-color-neutral-50);
-}
-wa-dialog {
-    --width: 60%;
-    --max-width: 800px;
 }
 </style>

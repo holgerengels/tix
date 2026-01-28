@@ -147,8 +147,8 @@ onMounted(fetchData);
 .view-ticket-view {
     max-width: 1200px; /* Match ActionView */
     margin: 0 auto;
-    padding: 1rem;
-    height: calc(100vh - 100px);
+    padding: 0; /* Let main-content padding handle spacing, or keep 1rem if needed inside */
+    height: 100%; /* Fill main-content */
     display: flex;
     flex-direction: column;
 }

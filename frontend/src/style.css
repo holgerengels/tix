@@ -105,23 +105,3 @@ wa-card {
 wa-card:hover {
   box-shadow: var(--wa-shadow-medium);
 }
-
-wa-button::part(base) {
-  border-radius: var(--wa-border-radius-medium);
-  font-weight: 500;
-  transition: all 0.2s;
-  /* Reduce "power" / weight */
-  font-size: 0.9375rem;
-  /* 15px */
-  letter-spacing: 0.01em;
-}
-
-wa-button[size="small"]::part(base) {
-  font-size: 0.8125rem;
-  /* 13px */
-}
-
-/* Default standard button override to make it less bulky if not specified */
-wa-button:not([size]) {
-  --height: 2.25rem;
-}

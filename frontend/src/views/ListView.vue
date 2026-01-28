@@ -1,119 +1,123 @@
 <template>
-  <div class="ticket-list" ref="ticketListRef">
-    <details class="filter-details">
-        <summary>Filter</summary>
-        <div class="filters">
-            <div class="filter-group">
-                <label>Typ:</label>
-                <select v-model="filterType" @change="handleTypeChange">
-                    <option value="">Alle</option>
-                    <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Status:</label>
-                <select v-model="filterStatus" @change="applyFilters">
-                    <option value="">Alle</option>
-                    <option v-for="status in availableStatuses" :key="status" :value="status">{{ status }}</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Ersteller:</label>
-                <input type="text" v-model="filterCreator" @input="applyFiltersDebounced" placeholder="Name..." />
-            </div>
-            <div class="filter-group">
-                <label>Erstellt:</label>
-                <select v-model="filterDateRange" @change="handleDateRangeChange">
-                    <option value="">Zeitraum wählen</option>
-                    <option value="week">Letzte Woche</option>
-                    <option value="month">Letzter Monat</option>
-                    <option value="custom">Benutzerdefiniert</option>
-                </select>
-            </div>
-            <div class="filter-group" v-if="filterDateRange === 'custom'">
-                <input type="date" v-model="filterDateFrom" @change="applyFilters" />
-                <span>-</span>
-                <input type="date" v-model="filterDateTo" @change="applyFilters" />
-            </div>
-            <div class="filter-group">
-                <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
-            </div>
-        </div>
-    </details>
+  <div class="dashboard">
+    <div class="header">
+        <h2>{{ pageTitle }}</h2>
+    </div>
 
-    <wa-spinner v-if="loading"></wa-spinner>
-    
-    <div v-else-if="tickets.length === 0" class="empty-state">Keine Tickets gefunden.</div>
-
-    <table v-else class="ticket-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Typ</th>
-          <th>Titel</th>
-          <th>Status</th>
-          <th>Ersteller</th>
-          <th>Erstellt</th>
-          <th>Daten</th>
-          <th>Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="ticket in tickets" :key="ticket._id">
-          <td>
-            <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
-                <span class="id-tag">{{ ticket.id }}</span>
-            </router-link>
-          </td>
-          <td>{{ ticket.type }}</td>
-          <td><strong>{{ ticket.title }}</strong></td>
-          <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
-          <td>{{ ticket.creator }}</td>
-          <td>{{ formatDate(ticket.created) }}</td>
-          <td>
-            <div class="dynamic-data">
-                <div v-if="hasTemplate(ticket)" class="template-data">
-                    {{ getFormattedData(ticket) }}
+    <div class="ticket-list-container">
+        <details class="filter-details">
+            <summary>Filter</summary>
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Typ:</label>
+                    <select v-model="filterType" @change="handleTypeChange">
+                        <option value="">Alle</option>
+                        <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
+                    </select>
                 </div>
-                <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
-                    <strong>{{ key }}:</strong> {{ val }}
-                </span>
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select v-model="filterStatus" @change="applyFilters">
+                        <option value="">Alle</option>
+                        <option v-for="status in availableStatuses" :key="status" :value="status">{{ status }}</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Ersteller:</label>
+                    <input type="text" v-model="filterCreator" @input="applyFiltersDebounced" placeholder="Name..." />
+                </div>
+                <div class="filter-group">
+                    <label>Erstellt:</label>
+                    <select v-model="filterDateRange" @change="handleDateRangeChange">
+                        <option value="">Zeitraum wählen</option>
+                        <option value="week">Letzte Woche</option>
+                        <option value="month">Letzter Monat</option>
+                        <option value="custom">Benutzerdefiniert</option>
+                    </select>
+                </div>
+                <div class="filter-group" v-if="filterDateRange === 'custom'">
+                    <input type="date" v-model="filterDateFrom" @change="applyFilters" />
+                    <span>-</span>
+                    <input type="date" v-model="filterDateTo" @change="applyFilters" />
+                </div>
+                <div class="filter-group">
+                    <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
+                </div>
             </div>
-          </td>
-          <td class="actions-cell">
-             <wa-button 
-                v-for="action in getActions(ticket)" 
-                :key="action.name"
-                size="small"
-                appearance="plain"
-                @click="handleAction(ticket, action)"
-            >
-                {{ action.name }}
-            </wa-button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        </details>
 
+        <wa-spinner v-if="loading"></wa-spinner>
+        
+        <div v-else-if="tickets.length === 0" class="empty-state">Keine Tickets gefunden.</div>
+
+        <div v-else class="table-container">
+            <table class="ticket-table">
+            <thead>
+                <tr>
+                <th>ID</th>
+                <th>Typ</th>
+                <th>Titel</th>
+                <th>Status</th>
+                <th>Ersteller</th>
+                <th>Erstellt</th>
+                <th>Daten</th>
+                <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="ticket in tickets" :key="ticket._id">
+                <td>
+                    <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
+                        <span class="id-tag">{{ ticket.id }}</span>
+                    </router-link>
+                </td>
+                <td>{{ ticket.type }}</td>
+                <td><strong>{{ ticket.title }}</strong></td>
+                <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
+                <td>{{ ticket.creator }}</td>
+                <td>{{ formatDate(ticket.created) }}</td>
+                <td>
+                    <div class="dynamic-data">
+                        <div v-if="hasTemplate(ticket)" class="template-data">
+                            {{ getFormattedData(ticket) }}
+                        </div>
+                        <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
+                            <strong>{{ key }}:</strong> {{ val }}
+                        </span>
+                    </div>
+                </td>
+                <td class="actions-cell">
+                    <wa-button 
+                        v-for="action in getActions(ticket)" 
+                        :key="action.name"
+                        size="small"
+                        appearance="plain"
+                        @click="handleAction(ticket, action)"
+                    >
+                        {{ action.name }}
+                    </wa-button>
+                </td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, defineProps, watch, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 
-const props = defineProps({
-  filter: String,
-  config: Object
-});
-
+const route = useRoute();
+const router = useRouter();
+const config = ref({});
+const user = JSON.parse(localStorage.getItem('user') || '{}');
 const tickets = ref([]);
 const loading = ref(false);
-const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-// Filters
 const filterType = ref('');
 const filterStatus = ref('');
 const filterCreator = ref('');
@@ -121,10 +125,22 @@ const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
 
-const router = useRouter();
+let lastRequestId = 0;
+let debounceTimer = null;
+
+const currentFilter = computed(() => route.query.filter || 'my');
+
+const pageTitle = computed(() => {
+    switch(currentFilter.value) {
+        case 'my': return 'Meine Tickets';
+        case 'assigned': return 'Mir zugewiesen';
+        case 'all': return 'Alle Tickets';
+        default: return 'Tickets';
+    }
+});
 
 const availableTypes = computed(() => {
-    return props.config ? Object.keys(props.config) : [];
+    return config.value ? Object.keys(config.value) : [];
 });
 
 const availableStatuses = computed(() => {
@@ -132,23 +148,27 @@ const availableStatuses = computed(() => {
         return ['offen.*', 'geschlossen.*'];
     }
     
-    // Exact states for the selected type
-    if (props.config && props.config[filterType.value] && props.config[filterType.value].states) {
-        return props.config[filterType.value].states.map(s => s.name);
+    if (config.value && config.value[filterType.value] && config.value[filterType.value].states) {
+        return config.value[filterType.value].states.map(s => s.name);
     }
     return [];
 });
 
-let lastRequestId = 0;
-let debounceTimer = null;
+const fetchConfig = async () => {
+    try {
+        const res = await axios.get('/api/config', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        config.value = res.data;
+    } catch (err) {
+        console.error(err);
+    }
+};
 
-const fetchTickets = async (newFilter) => {
-    // Clear existing timer
+const fetchTickets = async () => {
     if (debounceTimer) {
         clearTimeout(debounceTimer);
     }
-    
-    // UI Feedback immediately
     loading.value = true;
     
     debounceTimer = setTimeout(async () => {
@@ -156,7 +176,7 @@ const fetchTickets = async (newFilter) => {
         
         try {
             const params = {
-                filter: newFilter || props.filter,
+                filter: currentFilter.value,
                 type: filterType.value,
                 status: filterStatus.value,
                 creator: filterCreator.value,
@@ -183,11 +203,11 @@ const fetchTickets = async (newFilter) => {
 };
 
 const applyFilters = () => {
-    fetchTickets(props.filter);
+    fetchTickets();
 };
 
 const applyFiltersDebounced = () => {
-    fetchTickets(props.filter); // fetchTickets already debounces
+    fetchTickets();
 };
 
 const handleDateRangeChange = () => {
@@ -202,13 +222,11 @@ const handleDateRangeChange = () => {
         filterDateFrom.value = '';
         filterDateTo.value = '';
     }
-    // For 'custom', we leave fields as is (user fills them)
-    
     applyFilters();
 };
 
 const handleTypeChange = () => {
-    filterStatus.value = ''; // Reset status when type changes
+    filterStatus.value = ''; 
     applyFilters();
 };
 
@@ -222,13 +240,8 @@ const resetFilters = () => {
     applyFilters();
 };
 
-// Watch prop change. 
-watch(() => props.filter, (newVal) => {
-    fetchTickets(newVal);
-});
-
 const getStatusColor = (ticket) => {
-    const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
+    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
     const colorMap = {
         'blue': 'brand',
         'green': 'success',
@@ -240,10 +253,10 @@ const getStatusColor = (ticket) => {
 };
 
 const getStatusLabel = (ticket) => {
-    if (!props.config || !props.config[ticket.type] || !props.config[ticket.type].states) {
+    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
         return ticket.state;
     }
-    const stateDef = props.config[ticket.type].states.find(s => s.name === ticket.state);
+    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
     return stateDef ? stateDef.label : ticket.state;
 };
 
@@ -255,20 +268,18 @@ const getDynamicFields = (ticket) => {
 };
 
 const hasTemplate = (ticket) => {
-    return props.config && props.config[ticket.type] && props.config[ticket.type].template;
+    return config.value && config.value[ticket.type] && config.value[ticket.type].template;
 };
 
 const getFormattedData = (ticket) => {
     if (!hasTemplate(ticket)) return '';
-    let template = props.config[ticket.type].template;
+    let template = config.value[ticket.type].template;
     const fields = getDynamicFields(ticket);
-    const fieldDefs = props.config[ticket.type].fields || [];
+    const fieldDefs = config.value[ticket.type].fields || [];
     
-    // Replace all placeholders {{Key}} or ${Key} with value
     for (const [key, val] of Object.entries(fields)) {
         let displayVal = val;
         
-        // Find field definition to check type
         const fieldDef = fieldDefs.find(f => f.name === key);
 
         if (fieldDef && fieldDef.type === 'Date' && val) {
@@ -279,26 +290,22 @@ const getFormattedData = (ticket) => {
             }
         }
 
-        // Replace {{Key}}
         template = template.replace(new RegExp(`{{${key}}}`, 'g'), displayVal);
-        // Replace ${Key}
         template = template.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), displayVal);
     }
     return template;
 };
 
 const getActions = (ticket) => {
-    if (!props.config || !props.config[ticket.type]) return [];
+    if (!config.value || !config.value[ticket.type]) return [];
     
-    const workflow = props.config[ticket.type].workflow;
-    // Support multiple workflow blocks for the same state
+    const workflow = config.value[ticket.type].workflow;
     const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
     
     if (matchingBlocks.length === 0) return [];
     
     const allActions = matchingBlocks.flatMap(block => block.actions);
 
-    // Filter actions by user group
     const authorizedActions = allActions.filter(action => {
         const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
         const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
@@ -306,25 +313,22 @@ const getActions = (ticket) => {
         return allowedByCreator || allowedByAssignee || allowedByGroup;
     });
 
-    // Filter by View Context
-    if (props.filter === 'assigned') {
+    if (currentFilter.value === 'assigned') {
         return authorizedActions.filter(a => !a.optional);
-    } else if (props.filter === 'my') {
+    } else if (currentFilter.value === 'my') {
         return authorizedActions.filter(a => a.optional === true);
     }
     
-    // Inject Global 'Edit' action if authorized
-    const wf = props.config[ticket.type];
+    const wf = config.value[ticket.type];
     const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
     if (editAccess && editAccess.groups.some(g => user.groups.includes(g))) {
         authorizedActions.push({
             name: 'editieren',
             form: 'edit',
-            groups: editAccess.groups // Just for context, already checked
+            groups: editAccess.groups 
         });
     }
 
-    // Default / 'all': Show all authorized
     return authorizedActions;
 };
 
@@ -338,15 +342,44 @@ const handleAction = (ticket, action) => {
     }
 };
 
+watch(currentFilter, () => {
+    fetchTickets();
+});
+
 onMounted(async () => {
-    fetchTickets(props.filter);
+    await fetchConfig();
+    fetchTickets();
 });
 </script>
 
 <style scoped>
-.ticket-list {
+/* Dashboard Base Layout */
+.dashboard {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
+}
+
+/* Ticket List Styles */
+.ticket-list-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container {
     width: 100%;
-    overflow-x: auto;
+    height: 100%;
+    overflow: auto;
 }
 
 .ticket-table {
@@ -357,7 +390,7 @@ onMounted(async () => {
     background: white;
     box-shadow: var(--wa-shadow-small);
     border-radius: var(--wa-border-radius-large);
-    overflow: hidden;
+    /* overflow: hidden; Removed to allow sticky head in future if needed, but keeping simple for now */
     border: 1px solid var(--wa-color-neutral-200);
 }
 
@@ -375,6 +408,9 @@ onMounted(async () => {
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .ticket-table tr {
@@ -411,6 +447,7 @@ onMounted(async () => {
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
     border: 1px solid var(--wa-color-neutral-200);
+    flex-shrink: 0;
 }
 
 .filter-details summary {
@@ -418,7 +455,7 @@ onMounted(async () => {
     font-weight: 600;
     cursor: pointer;
     color: var(--wa-color-neutral-700);
-    list-style: none; /* Hide default triangle */
+    list-style: none;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -448,8 +485,8 @@ onMounted(async () => {
     flex-wrap: wrap;
     align-items: center;
     gap: 1.5rem;
-    padding: 0 1.5rem 1.5rem 1.5rem; /* Remove top padding as summary has it */
-    background: transparent; /* Parent has bg */
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    background: transparent;
     border-radius: 0;
     box-shadow: none;
     border: none;
