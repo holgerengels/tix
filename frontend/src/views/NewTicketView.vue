@@ -1,29 +1,29 @@
 <template>
   <div class="new-ticket-view">
-    <div class="header" style="margin-bottom: 1rem;">
+    <div class="header">
         <h2>Neues Ticket</h2>
     </div>
 
-    <wa-card class="form-card">
-      <div v-if="loadingConfig" class="loading">
+    <div v-if="loadingConfig" class="loading">
         <wa-spinner></wa-spinner> Lade Konfiguration...
-      </div>
+    </div>
 
-      <div v-else class="form-content">
-        <wa-select label="Ticket Typ" :value="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen">
+    <wa-card v-else class="ticket-card" with-footer>
+        <div slot="header" class="card-header">Ticket Typ<wa-select :value="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen">
            <wa-option v-for="type in availableTypes" :key="type" :value="type">
               {{ type }}
            </wa-option>
-        </wa-select>
+        </wa-select></div>
 
-        <div v-if="newTicketType && config[newTicketType]" class="dynamic-section">
-            <DynamicForm 
+        <div class="ticket-body">
+            <DynamicForm
+                v-if="newTicketType && config[newTicketType]" 
                 :fields="config[newTicketType].fields" 
                 v-model="newTicketData" 
             />
-        </div>
-        <div v-else-if="newTicketType" class="error">
-            Konfiguration für diesen Typ nicht gefunden.
+            <div v-else-if="newTicketType" class="error">
+                Konfiguration für diesen Typ nicht gefunden.
+            </div>
         </div>
 
         <div v-if="errors.length > 0" class="error-messages">
@@ -32,10 +32,7 @@
             </div>
         </div>
         
-        <div class="actions">
-             <wa-button variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
-        </div>
-      </div>
+        <wa-button slot="footer-actions" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
     </wa-card>
   </div>
 </template>
@@ -150,41 +147,55 @@ onMounted(fetchConfig);
 
 <style scoped>
 .new-ticket-view {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    max-width: 1200px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 .header {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 2rem;
+    flex-shrink: 0;
+    margin-bottom: 1rem;
 }
-.form-card {
-    width: 100%;
+.header h2 {
+    margin: 0;
 }
-.form-content {
+.ticket-card {
+    height: calc(100% - 70px);
+}
+.card-header {
     display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-.dynamic-section {
-    display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
 }
-.actions {
+.ticket-card::part(body) {
+    height: 100%;
     display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
+    flex-direction: row;
+    gap: 2rem;
+    align-items: stretch;
+    min-height: 0; /* Crucial for nested scrolling */
+}
+.ticket-body {
+    height: 100%;
+    display: contents;
+}
+.ticket-card::part(footer) {
+    justify-content: end;
+    gap: 1rem;
+}
+.dynamic-form {
+    height: 100%;
+    flex: 2;
+    min-width: 0; 
+    overflow-y: auto;
+    padding-right: 0.5rem;
 }
 .loading, .error {
-    padding: 2rem;
     text-align: center;
-    color: #666;
 }
 .error-messages {
     background-color: #fee;

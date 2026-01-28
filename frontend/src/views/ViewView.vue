@@ -29,7 +29,7 @@
                 :fields="formFields" 
                 v-model="ticketData"
             />
-            <div v-else>
+            <div v-else class="message">
                 Keine weiteren Details verfügbar.
             </div>
 
@@ -141,8 +141,6 @@ onMounted(fetchData);
 .view-ticket-view {
     max-width: 1200px;
     height: 100%;
-    margin: 0 auto;
-    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -151,6 +149,10 @@ onMounted(fetchData);
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
+    margin-bottom: 1rem;
+}
+.header h2 {
+    margin: 0;
 }
 .ticket-card {
     height: calc(100% - 70px);
@@ -187,6 +189,12 @@ onMounted(fetchData);
     display: flex;
     flex-direction: column;
     overflow: hidden; 
+}
+.message {
+    padding: 2rem;
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--wa-color-neutral-700);
 }
 .loading, .error {
     text-align: center;

@@ -162,8 +162,6 @@ onMounted(fetchData);
 .edit-ticket-view {
     max-width: 1000px;
     height: 100%;
-    margin: 0 auto;
-    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -209,12 +207,6 @@ onMounted(fetchData);
     display: flex;
     flex-direction: column;
     overflow: hidden; /* Comments component handles internal scrolling */
-}
-.confirmation-message {
-    padding: 2rem;
-    font-size: 1.1rem;
-    text-align: center;
-    color: var(--wa-color-neutral-700);
 }
 .loading, .error {
     text-align: center;

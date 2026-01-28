@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard">
+  <div class="list-view">
     <div class="header">
         <h2>{{ pageTitle }}</h2>
     </div>
@@ -353,27 +353,27 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Dashboard Base Layout */
-.dashboard {
+.list-view {
+    max-width: 1200px;
     height: 100%;
     display: flex;
     flex-direction: column;
 }
-
 .header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    gap: 1rem;
     flex-shrink: 0;
+    margin-bottom: 1rem;
 }
-
-/* Ticket List Styles */
+.header h2 {
+    margin: 0;
+}
 .ticket-list-container {
-    flex: 1;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+    height: calc(100% - 70px);
 }
 
 .table-container {
@@ -386,11 +386,9 @@ onMounted(async () => {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    margin-top: 1.5rem;
     background: white;
     box-shadow: var(--wa-shadow-small);
     border-radius: var(--wa-border-radius-large);
-    /* overflow: hidden; Removed to allow sticky head in future if needed, but keeping simple for now */
     border: 1px solid var(--wa-color-neutral-200);
 }
 
@@ -442,7 +440,6 @@ onMounted(async () => {
     margin-right: 4px;
 }
 .filter-details {
-    margin-bottom: 1.5rem;
     background: white;
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
@@ -451,7 +448,7 @@ onMounted(async () => {
 }
 
 .filter-details summary {
-    padding: 1rem 1.5rem;
+    padding: 1rem;
     font-weight: 600;
     cursor: pointer;
     color: var(--wa-color-neutral-700);

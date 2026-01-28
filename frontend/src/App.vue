@@ -76,6 +76,8 @@ body {
     background-color: var(--wa-color-neutral-50);
     margin: 0;
     height: 100vh;
+    width: 100vw;
+    overflow: hidden;
 }
 #app {
     height: 100%;

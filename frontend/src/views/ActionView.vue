@@ -24,7 +24,7 @@
                :fields="currentFormDef.fields" 
                v-model="actionFormData" 
             />
-            <div v-else class="confirmation-message">
+            <div v-else class="message">
                 Sicher, dass die Aktion <strong>{{ actionDef.name }}</strong> ausgeführt werden soll?
             </div>
 
@@ -245,8 +245,6 @@ onMounted(fetchData);
 .action-view {
     max-width: 1200px;
     height: 100%;
-    margin: 0 auto;
-    padding: 0;
     display: flex;
     flex-direction: column;
 }
@@ -255,6 +253,10 @@ onMounted(fetchData);
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
+    margin-bottom: 1rem;
+}
+.header h2 {
+    margin: 0;
 }
 .ticket-card {
     height: calc(100% - 70px);
@@ -292,7 +294,7 @@ onMounted(fetchData);
     flex-direction: column;
     overflow: hidden;
 }
-.confirmation-message {
+.message {
     padding: 2rem;
     font-size: 1.1rem;
     text-align: center;
