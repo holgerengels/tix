@@ -290,7 +290,7 @@ onMounted(fetchData);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Comments component handles internal scrolling */
+    overflow: hidden;
 }
 .confirmation-message {
     padding: 2rem;
