@@ -36,28 +36,29 @@ const emit = defineEmits(['update:modelValue']);
   margin-bottom: 1rem;
 }
 .editor-label {
-    font-size: var(--wa-input-label-font-size-medium);
-    color: var(--wa-input-label-color);
+    font-size: var(--wa-label-font-size-medium);
+    color: var(--wa-label-color);
 }
 .quill-wrapper {
     background: white;
-    border-radius: var(--wa-input-border-radius-medium);
+    border-radius: var(--wa-border-radius-medium);
+    border-color: var(--wa-form-control-border-color);
 }
 :deep(.ql-editor) {
     min-height: 150px;
 }
 :deep(.ql-toolbar) {
-    border-top-left-radius: var(--wa-input-border-radius-medium);
-    border-top-right-radius: var(--wa-input-border-radius-medium);
-    border-color: var(--wa-input-border-color);
+    border-top-left-radius: var(--wa-border-radius-medium);
+    border-top-right-radius: var(--wa-border-radius-medium);
 }
 :deep(.ql-container) {
-    border-bottom-left-radius: var(--wa-input-border-radius-medium);
-    border-bottom-right-radius: var(--wa-input-border-radius-medium);
-    border-color: var(--wa-input-border-color);
+    border-bottom-left-radius: var(--wa-border-radius-medium);
+    border-bottom-right-radius: var(--wa-border-radius-medium);
 }
 :deep(.ql-editor[contenteditable=false]) {
     background-color: var(--wa-color-neutral-50);
+    border-bottom-left-radius: var(--wa-border-radius-medium);
+    border-bottom-right-radius: var(--wa-border-radius-medium);
     color: var(--wa-color-neutral-600);
 }
 </style>

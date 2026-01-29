@@ -5,6 +5,7 @@
       :label="label"
       :value="modelValue"
       :required="required"
+      :disabled="disabled"
       @input="handleInput"
       @focus="handleFocus"
       @blur="handleBlur"
@@ -31,7 +32,8 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   label: { type: String, default: '' },
   required: { type: Boolean, default: false },
-  options: { type: Array, default: () => [] }
+  options: { type: Array, default: () => [] },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue']);
