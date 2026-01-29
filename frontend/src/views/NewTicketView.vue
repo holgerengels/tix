@@ -38,9 +38,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
-import { useRouter } from 'vue-router';
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
 const getFieldLabel = (name) => {
@@ -55,7 +55,14 @@ const newTicketData = ref({});
 const creating = ref(false);
 const loadingConfig = ref(true);
 const errors = ref([]);
+const isDirty = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+watch(newTicketData, () => {
+    if (Object.keys(newTicketData.value).length > 0) {
+        isDirty.value = true;
+    }
+}, { deep: true });
 
 const availableTypes = computed(() => {
     return Object.keys(config.value).filter(type => {
@@ -83,6 +90,15 @@ const fetchConfig = async () => {
 const resetForm = () => {
     newTicketData.value = {};
     errors.value = [];
+    // Reset dirty flag next tick to avoid triggering watch immediately if strictly needed, 
+    // but usually setting value triggers watch. 
+    // Actually, setting newTicketData triggers watch. 
+    // We want to reset state.
+    // Let's set it to false AFTER the change, or use nextTick logic? 
+    // Simpler: just set it false. The watch might trigger if newTicketData changes, 
+    // but if we set isDirty = false immediately after, it might be racey.
+    // Better: setTimeout or nextTick.
+    setTimeout(() => { isDirty.value = false; }, 0);
 };
 
 const validateForm = () => {
@@ -134,13 +150,27 @@ const createTicket = async () => {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         // Success
-        router.push('/'); 
+        isDirty.value = false;
+        router.push('/');  
     } catch (err) {
         alert('Fehler beim Erstellen: ' + (err.response?.data?.error || err.message));
     } finally {
         creating.value = false;
     }
 };
+
+onBeforeRouteLeave((to, from, next) => {
+    if (isDirty.value) {
+        const answer = window.confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
+        if (answer) {
+            next();
+        } else {
+            next(false);
+        }
+    } else {
+        next();
+    }
+});
 
 onMounted(fetchConfig);
 </script>
