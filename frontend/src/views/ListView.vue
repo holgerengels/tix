@@ -79,7 +79,6 @@
                 </td>
                 <td>{{ ticket.type }}</td>
                 <td><strong>{{ ticket.title }}</strong>
-                    <div class="badges-container" v-if="ticket.badges && ticket.badges.length > 0">
                         <span 
                             v-for="badge in ticket.badges" 
                             :key="badge" 
@@ -88,7 +87,6 @@
                         >
                             {{ badge }}
                         </span>
-                    </div>
                 </td>
                 <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
                 <td>{{ ticket.creator }}</td>
@@ -397,7 +395,7 @@ onMounted(async () => {
 
 <style scoped>
 .list-view {
-    max-width: 1200px;
+    max-width: 1600px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -599,6 +597,7 @@ onMounted(async () => {
     font-weight: 500;
     line-height: 1;
     border: 1px solid transparent;
+    margin-left: 1em;
 }
 
 .badge-red {

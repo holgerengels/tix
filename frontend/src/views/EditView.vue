@@ -160,7 +160,7 @@ onMounted(fetchData);
 
 <style scoped>
 .edit-ticket-view {
-    max-width: 1000px;
+    max-width: 1600px;
     height: 100%;
     display: flex;
     flex-direction: column;

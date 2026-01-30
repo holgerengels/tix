@@ -139,7 +139,7 @@ onMounted(fetchData);
 
 <style scoped>
 .view-ticket-view {
-    max-width: 1200px;
+    max-width: 1600px;
     height: 100%;
     display: flex;
     flex-direction: column;
