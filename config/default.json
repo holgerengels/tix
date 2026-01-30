@@ -7,6 +7,12 @@
             "required": true
         },
         {
+            "name": "badges",
+            "type": "Badges",
+            "label": "Labels",
+            "required": false
+        },
+        {
             "name": "description",
             "type": "RichText",
             "label": "Beschreibung",

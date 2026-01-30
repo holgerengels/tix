@@ -23,6 +23,7 @@ const mockTickets = [
         creator: 'lehrer1',
         assignee: 'hausmeister', // visible: true for Aufgabe
         location: 'Raum 101',
+        badges: ['dringend', 'wichtig'],
         created: new Date('2024-05-20T08:00:00'),
         log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-20T08:00:00') }]
     },
@@ -35,6 +36,7 @@ const mockTickets = [
         creator: 'lehrer2',
         assignee: 'netzwerker',
         location: 'Raum 202',
+        badges: ['eskaliert'],
         created: new Date('2024-05-21T09:30:00'),
         log: [
             { editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-05-21T09:30:00') },
@@ -50,6 +52,7 @@ const mockTickets = [
         creator: 'lehrer1',
         assignee: 'hausmeister',
         location: 'Raum 102',
+        badges: ['obsolet', 'unwichtig'],
         created: new Date('2024-05-10T11:00:00'),
         log: [
             { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-10T11:00:00') },
@@ -71,6 +74,7 @@ const mockTickets = [
         dateUntil: '2024-06-12',
         timeUntil: '17:00',
         reason: 'Fortbildung',
+        badges: ['langfristig'],
         created: new Date('2024-05-25T10:00:00'),
         log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-25T10:00:00') }]
     },
@@ -86,6 +90,7 @@ const mockTickets = [
         dateUntil: '2024-06-15',
         timeUntil: '16:00',
         reason: 'Dienstgeschäft',
+        badges: ['wichtig'],
         created: new Date('2024-05-26T08:00:00'),
         log: [
             { editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-05-26T08:00:00') },
@@ -104,6 +109,7 @@ const mockTickets = [
         dateUntil: '2024-06-20',
         timeUntil: '16:00',
         reason: 'Fortbildung',
+        badges: ['wartet'],
         created: new Date('2024-05-28T08:00:00'),
         log: [
             { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-28T08:00:00') },

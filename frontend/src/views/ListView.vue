@@ -27,12 +27,18 @@
                     <input type="text" v-model="filterCreator" @input="applyFiltersDebounced" placeholder="Name..." />
                 </div>
                 <div class="filter-group">
-                    <label>Erstellt:</label>
                     <select v-model="filterDateRange" @change="handleDateRangeChange">
                         <option value="">Zeitraum wählen</option>
                         <option value="week">Letzte Woche</option>
                         <option value="month">Letzter Monat</option>
                         <option value="custom">Benutzerdefiniert</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Label:</label>
+                    <select v-model="filterBadge" @change="applyFilters">
+                        <option value="">Alle</option>
+                        <option v-for="badge in availableBadges" :key="badge" :value="badge">{{ badge }}</option>
                     </select>
                 </div>
                 <div class="filter-group" v-if="filterDateRange === 'custom'">
@@ -72,7 +78,18 @@
                     </router-link>
                 </td>
                 <td>{{ ticket.type }}</td>
-                <td><strong>{{ ticket.title }}</strong></td>
+                <td><strong>{{ ticket.title }}</strong>
+                    <div class="badges-container" v-if="ticket.badges && ticket.badges.length > 0">
+                        <span 
+                            v-for="badge in ticket.badges" 
+                            :key="badge" 
+                            class="badge-pill"
+                            :class="getBadgeColorClass(badge)"
+                        >
+                            {{ badge }}
+                        </span>
+                    </div>
+                </td>
                 <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
                 <td>{{ ticket.creator }}</td>
                 <td>{{ formatDate(ticket.created) }}</td>
@@ -124,6 +141,7 @@ const filterCreator = ref('');
 const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
+const filterBadge = ref('');
 
 let lastRequestId = 0;
 let debounceTimer = null;
@@ -154,6 +172,12 @@ const availableStatuses = computed(() => {
     return [];
 });
 
+const availableBadges = [
+  'dringend', 'wichtig', 'eskaliert', 
+  'langfristig', 'unwichtig', 
+  'obsolet', 'wartet'
+];
+
 const fetchConfig = async () => {
     try {
         const res = await axios.get('/api/config', {
@@ -181,7 +205,8 @@ const fetchTickets = async () => {
                 status: filterStatus.value,
                 creator: filterCreator.value,
                 dateFrom: filterDateFrom.value,
-                dateTo: filterDateTo.value
+                dateTo: filterDateTo.value,
+                badge: filterBadge.value
             };
 
             const res = await axios.get('/api/tickets', {
@@ -237,7 +262,25 @@ const resetFilters = () => {
     filterDateRange.value = '';
     filterDateFrom.value = '';
     filterDateTo.value = '';
+    filterBadge.value = '';
     applyFilters();
+};
+
+const getBadgeColorClass = (badge) => {
+    switch (badge) {
+        case 'dringend':
+        case 'wichtig':
+        case 'eskaliert':
+            return 'badge-red';
+        case 'langfristig':
+        case 'unwichtig':
+            return 'badge-blue';
+        case 'obsolet':
+        case 'wartet':
+            return 'badge-green';
+        default:
+            return 'badge-gray';
+    }
 };
 
 const getStatusColor = (ticket) => {
@@ -539,5 +582,46 @@ onMounted(async () => {
 .id-tag:hover {
     opacity: 0.8;
     text-decoration: underline;
+}
+
+.badges-container {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.badge-pill {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    font-weight: 500;
+    line-height: 1;
+    border: 1px solid transparent;
+}
+
+.badge-red {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.badge-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+}
+
+.badge-green {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.badge-gray {
+    background-color: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
 }
 </style>

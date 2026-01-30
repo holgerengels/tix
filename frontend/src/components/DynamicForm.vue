@@ -78,6 +78,13 @@
         </wa-option>
       </wa-select>
 
+      <!-- Badges -->
+      <BadgeEditor
+        v-else-if="field.type === 'Badges'"
+        :modelValue="modelValue[field.name] || []"
+        @update:modelValue="updateField(field.name, $event)"
+      />
+
       <!-- Standard Text -->
       <wa-input 
         v-else
@@ -96,6 +103,7 @@ import { defineProps, defineEmits, ref, onMounted } from 'vue';
 import axios from 'axios';
 import RichTextEditor from './RichTextEditor.vue';
 import WAAutocomplete from './WAAutocomplete.vue';
+import BadgeEditor from './BadgeEditor.vue';
 
 const props = defineProps({
   fields: { type: Array, required: true },

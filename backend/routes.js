@@ -64,7 +64,7 @@ router.post('/config/reload', verifyToken, (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter, type, status, creator, dateFrom, dateTo } = req.query; // 'my', 'assigned', 'all' AND granular filters
+    const { filter, type, status, creator, dateFrom, dateTo, badge } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     if (!isDBConnected()) {
@@ -206,6 +206,11 @@ router.get('/tickets', verifyToken, async (req, res) => {
             dateQuery.$lte = d;
         }
         sensitiveFilters.push({ created: dateQuery });
+    }
+
+    if (badge) {
+        const badges = Array.isArray(badge) ? badge : [badge];
+        sensitiveFilters.push({ badges: { $in: badges } });
     }
 
     if (sensitiveFilters.length > 0) {
