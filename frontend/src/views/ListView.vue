@@ -36,10 +36,13 @@
                 </div>
                 <div class="filter-group">
                     <label>Label:</label>
-                    <select v-model="filterBadge" @change="applyFilters">
-                        <option value="">Alle</option>
-                        <option v-for="badge in availableBadges" :key="badge" :value="badge">{{ badge }}</option>
-                    </select>
+                    <div style="min-width: 200px;">
+                        <wa-select multiple clearable v-model="filterBadges" @change="applyFilters">
+                            <wa-option v-for="badge in availableBadges" :key="badge" :value="badge">
+                                <wa-badge :variant="getBadgeVariant(badge)" size="small" appearance="filled-outlined" pill>{{ badge }}</wa-badge>
+                            </wa-option>
+                        </wa-select>
+                    </div>
                 </div>
                 <div class="filter-group" v-if="filterDateRange === 'custom'">
                     <input type="date" v-model="filterDateFrom" @change="applyFilters" />
@@ -139,7 +142,7 @@ const filterCreator = ref('');
 const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
-const filterBadge = ref('');
+const filterBadges = ref([]);
 
 let lastRequestId = 0;
 let debounceTimer = null;
@@ -204,7 +207,7 @@ const fetchTickets = async () => {
                 creator: filterCreator.value,
                 dateFrom: filterDateFrom.value,
                 dateTo: filterDateTo.value,
-                badge: filterBadge.value
+                badge: filterBadges.value
             };
 
             const res = await axios.get('/api/tickets', {
@@ -260,7 +263,7 @@ const resetFilters = () => {
     filterDateRange.value = '';
     filterDateFrom.value = '';
     filterDateTo.value = '';
-    filterBadge.value = '';
+    filterBadges.value = [];
     applyFilters();
 };
 
@@ -278,6 +281,23 @@ const getBadgeColorClass = (badge) => {
             return 'badge-green';
         default:
             return 'badge-gray';
+    }
+};
+
+const getBadgeVariant = (badge) => {
+    switch (badge) {
+        case 'dringend':
+        case 'wichtig':
+        case 'eskaliert':
+            return 'danger';
+        case 'langfristig':
+        case 'unwichtig':
+            return 'brand';
+        case 'obsolet':
+        case 'wartet':
+            return 'success';
+        default:
+            return 'neutral';
     }
 };
 
@@ -395,7 +415,6 @@ onMounted(async () => {
 
 <style scoped>
 .list-view {
-    max-width: 1600px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -478,7 +497,8 @@ onMounted(async () => {
     color: var(--wa-color-neutral-600);
 }
 .actions-cell wa-button {
-    margin-right: 4px;
+    margin-right: 0;
+    margin-left: -1rem;
 }
 .filter-details {
     background: white;
@@ -561,6 +581,14 @@ onMounted(async () => {
     box-shadow: 0 0 0 2px var(--wa-color-primary-100);
     background-color: white;
 }
+.filter-group wa-select::part(tag) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    border: 1px solid var(--wa-color-neutral-300);
+}
+
 
 .empty-state {
     padding: 3rem;
