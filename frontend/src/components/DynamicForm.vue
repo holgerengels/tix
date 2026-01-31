@@ -81,6 +81,7 @@
       <!-- Badges -->
       <BadgeEditor
         v-else-if="field.type === 'Badges'"
+        :disabled="field.readonly === true"
         :modelValue="modelValue[field.name] || []"
         @update:modelValue="updateField(field.name, $event)"
       />
