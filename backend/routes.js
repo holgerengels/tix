@@ -237,14 +237,13 @@ router.post('/tickets', verifyToken, async (req, res) => {
                 // But schema didn't mark it required.
             }
         }
-    }
 
-    const ticket = new Ticket(ticketData);
-    await ticket.save();
-    res.status(201).json(ticket);
-} catch (err) {
-    res.status(500).json({ error: err.message });
-}
+        const ticket = new Ticket(ticketData);
+        await ticket.save();
+        res.status(201).json(ticket);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 router.post('/tickets/:id/action', verifyToken, async (req, res) => {
@@ -353,14 +352,14 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
 // Comments
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
+
     try {
-        try {
-            const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
-            res.json(comments);
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
-    });
+        const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
+        res.json(comments);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
     try {
