@@ -8,33 +8,6 @@ const workflowEngine = require('./workflow');
 const { canComment } = require('./workflow');
 const mongoose = require('mongoose');
 
-// Mock Data Store
-let mockTickets = [
-    {
-        _id: 'mock_1',
-        title: 'Beispiel Ticket 1',
-        type: 'Abwesenheit',
-        state: 'neu',
-        creator: 'lehrer1',
-        created: new Date(),
-        data: {},
-        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date() }]
-    },
-    {
-        _id: 'mock_2',
-        title: 'Beispiel Ticket 2',
-        type: 'Abwesenheit',
-        state: 'genehmigt',
-        creator: 'lehrer2',
-        created: new Date(),
-        data: {},
-        log: [{ editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date() }]
-    }
-];
-
-// Helper to check DB status
-const isDBConnected = () => mongoose.connection.readyState === 1;
-
 // Auth
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
@@ -66,24 +39,6 @@ router.post('/config/reload', verifyToken, (req, res) => {
 router.get('/tickets', verifyToken, async (req, res) => {
     const { filter, type, status, creator, dateFrom, dateTo, badge } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
-
-    if (!isDBConnected()) {
-        console.log('Serving MOCK tickets');
-        let results = mockTickets;
-
-        // Mock Filtering Logic
-        if (filter === 'my') {
-            results = results.filter(t => t.creator === user.username);
-        }
-
-        if (type) results = results.filter(t => t.type === type);
-        if (status) results = results.filter(t => t.state === status);
-        if (creator) results = results.filter(t => t.creator.includes(creator));
-        if (dateFrom) results = results.filter(t => new Date(t.created) >= new Date(dateFrom));
-        if (dateTo) results = results.filter(t => new Date(t.created) <= new Date(dateTo));
-
-        return res.json(results);
-    }
 
     let baseQuery = {};
 
@@ -175,17 +130,6 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
     if (type) sensitiveFilters.push({ type: type });
     if (status) {
-        // Support prefix matching (e.g. "offen" matches "offen.neu") if it doesn't contain a dot, 
-        // OR just always prefix match? User asked for "offen.*".
-        // Let's assume if the user sends "offen.*", we strip the .* and match prefix.
-        // Or if they send a specific state "offen.neu", exact match is better?
-        // Actually prefix match "^offen.neu" behaves like exact match if "offen.neu" is the full string.
-        // But what if we have "offen.neu.extra"? 
-        // Let's implement smart logic: 
-        // If input ends with '*', treat as prefix.
-        // Else, treat as exact match? 
-        // The user requirement "offen.*" suggests the UI will send this.
-
         if (status.endsWith('.*')) {
             const prefix = status.replace('.*', '');
             sensitiveFilters.push({ state: { $regex: `^${prefix}`, $options: 'i' } });
@@ -293,35 +237,21 @@ router.post('/tickets', verifyToken, async (req, res) => {
                 // But schema didn't mark it required.
             }
         }
-
-        if (!isDBConnected()) {
-            console.log('Creating MOCK ticket');
-            const newTicket = {
-                _id: 'mock_' + Date.now(),
-                ...ticketData
-            };
-            mockTickets.push(newTicket);
-            return res.status(201).json(newTicket);
-        }
-
-        const ticket = new Ticket(ticketData);
-        await ticket.save();
-        res.status(201).json(ticket);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
     }
+
+    const ticket = new Ticket(ticketData);
+    await ticket.save();
+    res.status(201).json(ticket);
+} catch (err) {
+    res.status(500).json({ error: err.message });
+}
 });
 
 router.post('/tickets/:id/action', verifyToken, async (req, res) => {
     try {
         const { actionName, formData, formButtonName } = req.body;
 
-        let ticket;
-        if (!isDBConnected()) {
-            ticket = mockTickets.find(t => t._id === req.params.id);
-        } else {
-            ticket = await Ticket.findById(req.params.id);
-        }
+        const ticket = await Ticket.findById(req.params.id);
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
@@ -412,11 +342,6 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             });
         }
 
-        if (!isDBConnected()) {
-            // Mock update implicitly done as object is reference, just return
-            return res.json(ticket);
-        }
-
         await ticket.save();
         res.json(ticket);
     } catch (err) {
@@ -429,26 +354,20 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 // Comments
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
     try {
-        if (!isDBConnected()) return res.json([]);
-        const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
-        res.json(comments);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+        try {
+            const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
+            res.json(comments);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
 
 router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
     try {
         const { text } = req.body;
         if (!text) return res.status(400).json({ message: 'Text required' });
 
-        let ticket;
-        if (!isDBConnected()) {
-            // Mock mode doesn't support comments really, but fail gracefully
-            return res.status(503).json({ message: 'Not available in mock mode' });
-        }
-
-        ticket = await Ticket.findById(req.params.id);
+        const ticket = await Ticket.findById(req.params.id);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
         // Access Control
