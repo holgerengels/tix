@@ -129,6 +129,12 @@
         {
             "name": "aufgabe.bearbeiten",
             "title": "Aufgabe bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
             "actions": [
                 {
                     "name": "erledigt",

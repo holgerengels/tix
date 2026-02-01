@@ -91,7 +91,7 @@
                             {{ badge }}
                         </span>
                 </td>
-                <td><wa-tag :variant="getStatusColor(ticket)">{{ getStatusLabel(ticket) }}</wa-tag></td>
+                <td><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
                 <td>{{ ticket.creator }}</td>
                 <td>{{ formatDate(ticket.created) }}</td>
                 <td>

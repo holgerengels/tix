@@ -89,6 +89,11 @@ const prepareForm = () => {
     const wf = config.value[ticket.value.type];
     const fields = wf.fields ? JSON.parse(JSON.stringify(wf.fields)) : [];
     
+    // Force all fields to be visible for editing
+    if (fields) {
+        fields.forEach(f => f.visible = true);
+    }
+    
     formFields.value = fields;
     
     ticketData.value = {

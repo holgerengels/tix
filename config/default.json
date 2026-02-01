@@ -10,7 +10,8 @@
             "name": "badges",
             "type": "Badges",
             "label": "Labels",
-            "required": false
+            "required": false,
+            "visible": false
         },
         {
             "name": "description",

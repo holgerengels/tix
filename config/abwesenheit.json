@@ -146,6 +146,12 @@
         {
             "name": "abwesenheit.bearbeiten",
             "title": "Abwesenheit bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
             "actions": [
                 {
                     "name": "erledigt",
