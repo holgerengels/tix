@@ -4,6 +4,7 @@ const { login, verifyToken } = require('./auth');
 const Ticket = require('./models/ticket');
 const Counter = require('./models/counter');
 const Comment = require('./models/comment');
+const Log = require('./models/log');
 const workflowEngine = require('./workflow');
 const { canComment } = require('./workflow');
 const mongoose = require('mongoose');
@@ -216,8 +217,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
             ...req.body,
             creator: req.user.username,
             created: new Date(),
-            state: 'offen.neu',
-            log: [{ editor: req.user.username, text: 'Ticket erstellt', edited: new Date() }]
+            state: 'offen.neu'
         };
 
         // Generate ID if abbreviation exists
@@ -240,6 +240,15 @@ router.post('/tickets', verifyToken, async (req, res) => {
 
         const ticket = new Ticket(ticketData);
         await ticket.save();
+
+        // Create Log
+        await new Log({
+            ticket: ticket._id,
+            editor: req.user.username,
+            action: 'Ticket erstellt',
+            dataAfter: ticket.toObject()
+        }).save();
+
         res.status(201).json(ticket);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -251,6 +260,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         const { actionName, formData, formButtonName } = req.body;
 
         const ticket = await Ticket.findById(req.params.id);
+        const dataBefore = ticket.toObject();
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
@@ -321,20 +331,6 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             }
         }
 
-        // Add log
-        const newLog = {
-            editor: req.user.username,
-            text: `Aktion: ${actionName} ${formButtonName ? `(${formButtonName})` : ''}`,
-            edited: new Date()
-        };
-
-        if (Array.isArray(ticket.log)) {
-            ticket.log.push(newLog);
-        } else {
-            ticket.log = [newLog];
-        }
-
-        // If formData updates other fields, apply them
         if (formData) {
             Object.keys(formData).forEach(key => {
                 ticket.set(key, formData[key]);
@@ -342,9 +338,30 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         await ticket.save();
+
+        // Create Log
+        await new Log({
+            ticket: ticket._id,
+            editor: req.user.username,
+            action: actionName + (formButtonName ? ` (${formButtonName})` : ''),
+            dataBefore: dataBefore,
+            dataAfter: ticket.toObject()
+        }).save();
+
         res.json(ticket);
     } catch (err) {
         console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// Logs
+router.get('/tickets/:id/logs', verifyToken, async (req, res) => {
+    try {
+        const logs = await Log.find({ ticket: req.params.id }).sort({ timestamp: -1 });
+        res.json(logs);
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
@@ -388,6 +405,16 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
             created: new Date()
         });
         await comment.save();
+
+        // Create Log
+        await new Log({
+            ticket: ticket._id,
+            editor: req.user.username,
+            action: 'Kommentar hinzugefügt',
+            timestamp: new Date(),
+            dataAfter: ticket.toObject() // Snapshot (unchanged, but current state)
+        }).save();
+
         res.status(201).json(comment);
 
     } catch (err) {

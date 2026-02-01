@@ -1,10 +1,6 @@
 const mongoose = require('mongoose');
 
-const entrySchema = new mongoose.Schema({
-    editor: { type: String, required: true },
-    edited: { type: Date, required: true, default: Date.now },
-    text: { type: String }
-});
+
 
 const ticketSchema = new mongoose.Schema({
     type: { type: String, required: true },
@@ -15,8 +11,7 @@ const ticketSchema = new mongoose.Schema({
     creator: { type: String, required: true },
     created: { type: Date, required: true, default: Date.now },
     assignee: { type: String },
-    assigned: { type: Date },
-    log: [entrySchema]
+    assigned: { type: Date }
 }, {
     strict: false,
     timestamps: { createdAt: 'created', updatedAt: 'updated' }

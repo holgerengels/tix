@@ -118,16 +118,41 @@ const mockTickets = [
     }
 ];
 
+const Log = require('../models/log');
+
 const seedTickets = async () => {
     await connectDB();
 
     try {
         await Ticket.deleteMany({});
         await Counter.deleteMany({});
-        console.log('Old tickets and counters removed');
+        await Log.deleteMany({});
+        console.log('Old tickets, counters, and logs removed');
 
-        await Ticket.insertMany(mockTickets);
-        console.log('New mock tickets created successfully');
+        for (const mockTicket of mockTickets) {
+            const logs = mockTicket.log || [];
+            delete mockTicket.log;
+
+            // Fix dates (simple strings in mock to Date objects if needed, 
+            // but schema handles it if passed as Date in array above. 
+            // The array above uses new Date(), so it's fine).
+
+            const ticket = new Ticket(mockTicket);
+            const savedTicket = await ticket.save();
+
+            for (const logEntry of logs) {
+                await new Log({
+                    ticket: savedTicket._id,
+                    editor: logEntry.editor,
+                    action: logEntry.text, // Mapping 'text' to 'action' based on previous schema vs new
+                    timestamp: logEntry.edited,
+                    dataAfter: savedTicket.toObject() // Snapshot of initial state
+                    // dataBefore remains null for creation
+                }).save();
+            }
+        }
+
+        console.log('New mock tickets and logs created successfully');
 
         // Reset Counters
         await Counter.insertMany([

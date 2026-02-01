@@ -625,7 +625,7 @@ onMounted(async () => {
     font-weight: 500;
     line-height: 1;
     border: 1px solid transparent;
-    margin-left: 1em;
+    margin-left: 1ch;
 }
 
 .badge-red {
