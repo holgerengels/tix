@@ -412,53 +412,69 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
 });
 
 
-// Logs
+// LIST LOGS
 router.get('/logs', verifyToken, async (req, res) => {
     try {
         const user = req.user;
         const workflowEngine = require('./workflow');
-        const tickets = await Ticket.find({}, 'id title type creator assignee'); // Get basic info for access check
+        const wfConfig = workflowEngine.getWorkflows();
+        const { type, editor, dateFrom, dateTo } = req.query;
 
-        // Filter tickets based on read access (Reuse logic from /tickets roughly)
-        // Optimization: For now, we fetch all logs and filter in memory or fetch accessible tickets IDs first.
-        // Fetching all tickets first to get IDs is safer for consistent access control.
+        // 1. Get Accessible Ticket IDs (filtered by type if provided)
+        let ticketQuery = {};
+        if (type) {
+            ticketQuery.type = type;
+        }
 
-        // 1. Determine accessible Ticket IDs
+        const allTickets = await Ticket.find(ticketQuery);
         const accessibleTicketIds = [];
-        const allWorkflows = workflowEngine.getWorkflows();
 
-        for (const ticket of tickets) {
-            let hasAccess = false;
+        for (const ticket of allTickets) {
+            const wf = wfConfig[ticket.type];
+            if (!wf) continue;
 
-            // Direct access
-            if (ticket.creator === user.username) hasAccess = true;
-            if (ticket.assignee === user.username) hasAccess = true;
-
-            if (!hasAccess) {
-                const wf = allWorkflows[ticket.type];
-                if (wf) {
-                    const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-                    if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
-                        hasAccess = true;
-                    }
+            // Access check (read) - reuse logic
+            let canRead = false;
+            if (ticket.creator === user.username) canRead = true;
+            else if (ticket.assignee === user.username) canRead = true;
+            else {
+                const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
+                if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                    canRead = true;
                 }
             }
+            if (canRead) accessibleTicketIds.push(ticket._id);
+        }
 
-            if (hasAccess) {
-                accessibleTicketIds.push(ticket._id);
+        // 2. Build Log Query
+        let logQuery = { ticket: { $in: accessibleTicketIds } };
+
+        if (editor) {
+            logQuery.editor = { $regex: editor, $options: 'i' }; // Case insensitive partial match
+        }
+
+        if (dateFrom || dateTo) {
+            logQuery.timestamp = {};
+            if (dateFrom) logQuery.timestamp.$gte = new Date(dateFrom);
+            if (dateTo) {
+                // Set to end of day
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                logQuery.timestamp.$lte = endDate;
             }
         }
 
-        // 2. Fetch Logs for these tickets
-        const logs = await Log.find({ ticket: { $in: accessibleTicketIds } })
-            .select('-dataBefore -dataAfter -published') // Exclude heavy data and internal fields
+        // 3. Fetch Logs
+        const logs = await Log.find(logQuery)
+            .select('-dataBefore -dataAfter -published')
             .populate('ticket', 'id title type')
             .sort({ timestamp: -1 })
-            .limit(100); // Limit to 100 for now
+            .limit(100);
 
         res.json(logs);
 
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
