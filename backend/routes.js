@@ -451,7 +451,7 @@ router.get('/logs', verifyToken, async (req, res) => {
 
         // 2. Fetch Logs for these tickets
         const logs = await Log.find({ ticket: { $in: accessibleTicketIds } })
-            .select('-dataBefore -dataAfter') // Exclude heavy data
+            .select('-dataBefore -dataAfter -published') // Exclude heavy data and internal fields
             .populate('ticket', 'id title type')
             .sort({ timestamp: -1 })
             .limit(100); // Limit to 100 for now
