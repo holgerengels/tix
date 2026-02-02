@@ -356,17 +356,6 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 });
 
 
-// Logs
-router.get('/tickets/:id/logs', verifyToken, async (req, res) => {
-    try {
-        const logs = await Log.find({ ticket: req.params.id }).sort({ timestamp: -1 });
-        res.json(logs);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
 // Comments
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
 
@@ -416,6 +405,58 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
         }).save();
 
         res.status(201).json(comment);
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// Logs
+router.get('/logs', verifyToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const workflowEngine = require('./workflow');
+        const tickets = await Ticket.find({}, 'id title type creator assignee'); // Get basic info for access check
+
+        // Filter tickets based on read access (Reuse logic from /tickets roughly)
+        // Optimization: For now, we fetch all logs and filter in memory or fetch accessible tickets IDs first.
+        // Fetching all tickets first to get IDs is safer for consistent access control.
+
+        // 1. Determine accessible Ticket IDs
+        const accessibleTicketIds = [];
+        const allWorkflows = workflowEngine.getWorkflows();
+
+        for (const ticket of tickets) {
+            let hasAccess = false;
+
+            // Direct access
+            if (ticket.creator === user.username) hasAccess = true;
+            if (ticket.assignee === user.username) hasAccess = true;
+
+            if (!hasAccess) {
+                const wf = allWorkflows[ticket.type];
+                if (wf) {
+                    const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
+                    if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                        hasAccess = true;
+                    }
+                }
+            }
+
+            if (hasAccess) {
+                accessibleTicketIds.push(ticket._id);
+            }
+        }
+
+        // 2. Fetch Logs for these tickets
+        const logs = await Log.find({ ticket: { $in: accessibleTicketIds } })
+            .select('-dataBefore -dataAfter') // Exclude heavy data
+            .populate('ticket', 'id title type')
+            .sort({ timestamp: -1 })
+            .limit(100); // Limit to 100 for now
+
+        res.json(logs);
 
     } catch (err) {
         res.status(500).json({ error: err.message });

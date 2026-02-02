@@ -35,7 +35,6 @@
 
             <aside class="comments-sidebar">
                 <TicketComments v-if="canComment" :ticket="ticket" />
-                <TicketLog :ticketId="ticket._id" />
             </aside>
         </div>
             <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
@@ -50,7 +49,6 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
-import TicketLog from '../components/TicketLog.vue';
 
 const route = useRoute();
 const router = useRouter();

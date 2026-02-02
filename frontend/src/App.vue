@@ -17,6 +17,9 @@
              <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path.includes('/new') }">
                 <wa-icon name="plus-circle"></wa-icon> Neues Ticket
             </router-link>
+            <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
+                <wa-icon name="journal-text"></wa-icon> Protokoll
+            </router-link>
         </nav>
 
         <div class="footer">
