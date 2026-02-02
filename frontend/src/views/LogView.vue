@@ -14,21 +14,25 @@
             <thead>
                 <tr>
                 <th>Zeitpunkt</th>
+                <th>ID</th>
+                <th>Typ</th>
+                <th>Titel</th>
                 <th>User</th>
-                <th>Ticket</th>
                 <th>Aktion</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="log in logs" :key="log._id">
                 <td>{{ formatDate(log.timestamp) }}</td>
-                <td>{{ log.editor }}</td>
                 <td>
                     <router-link v-if="log.ticket" :to="'/tickets/' + log.ticket.id + '/view'" style="text-decoration: none;" @click.stop>
-                        <span class="ticket-link">{{ log.ticket.id }}: {{ log.ticket.title }}</span>
+                        <span class="ticket-link">{{ log.ticket.id }}</span>
                     </router-link>
-                    <span v-else class="text-muted">Gelöschtes Ticket</span>
+                    <span v-else class="text-muted">-</span>
                 </td>
+                <td>{{ log.ticket ? log.ticket.type : '-' }}</td>
+                <td>{{ log.ticket ? log.ticket.title : 'Gelöschtes Ticket' }}</td>
+                <td>{{ log.editor }}</td>
                 <td>{{ log.action }}</td>
                 </tr>
             </tbody>
