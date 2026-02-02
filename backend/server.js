@@ -17,6 +17,11 @@ connectDB();
 // Routes
 app.use('/api', routes);
 
+// Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+
+    // Start Background Jobs
+    const { startPublisher } = require('./publisher');
+    startPublisher();
 });
