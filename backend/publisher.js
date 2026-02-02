@@ -1,11 +1,39 @@
 const axios = require('axios');
 const Log = require('./models/log');
+const path = require('path');
+const fs = require('fs');
+
+let settingsPath = path.join(__dirname, '../config/settings.json');
+let settings = {};
+
+try {
+    if (fs.existsSync(settingsPath)) {
+        const data = fs.readFileSync(settingsPath, 'utf8');
+        settings = JSON.parse(data);
+    } else {
+        console.warn(`[Publisher] Warning: Settings file not found at ${settingsPath}`);
+    }
+} catch (err) {
+    console.error(`[Publisher] Error reading settings file: ${err.message}`);
+}
+
+const BASE_URL = settings.server.url || 'http://localhost:5173';
+
+const NEXTCLOUD_URL = settings.publisher.nextcloud ? settings.publisher.nextcloud.url : '';
+const NEXTCLOUD_AUTH = {
+    username: settings.publisher.nextcloud ? settings.publisher.nextcloud.username : '',
+    password: settings.publisher.nextcloud ? settings.publisher.nextcloud.password : ''
+};
+const DELAY = (settings.publisher.delay || 1) * 60 * 1000;
+
+if (!BASE_URL || !NEXTCLOUD_URL || !NEXTCLOUD_AUTH.username || !NEXTCLOUD_AUTH.password) {
+    console.warn('[Publisher] Warning: Nextcloud configuration is missing or incomplete in settings.json');
+}
 
 async function processLogs() {
     try {
         const now = new Date();
-        const delayLimit = 1 * 60 * 1000; // 1 minute in ms
-        let nextRun = delayLimit;
+        let nextRun = DELAY;
 
         // Find all logs that are not yet published
         // We need to check explicitly for null or undefined (or missing)
@@ -26,14 +54,13 @@ async function processLogs() {
             const logTime = new Date(log.timestamp).getTime();
             const age = now.getTime() - logTime;
 
-            if (age >= delayLimit) {
+            if (age >= DELAY) {
                 // Publish it
                 log.published = now;
                 await log.save();
 
                 let message = `Log published: ${log._id}`;
                 if (log.ticket) {
-                    const BASE_URL = 'http://localhost:5173'; // Dev URL
                     const ticket = log.ticket;
                     const link = `${BASE_URL}/tickets/${ticket.id}/view`;
                     // Format: Type TicketID Title - wurde von Editor bearbeitet
@@ -41,7 +68,7 @@ async function processLogs() {
                 }
 
                 try {
-                    await sendTalkMessageToUser('h.engels', message);
+                    await nextcloud('h.engels', message);
                 } catch (notifyErr) {
                     console.error('[Publisher] Apprise notification failed:', notifyErr.message);
                 }
@@ -75,13 +102,6 @@ async function processLogs() {
     }
 }
 
-// KONFIGURATION
-const NC_URL = 'https://cloud.valckenburgschule.de/nextcloud';
-const AUTH = {
-    username: 'tickets', // Dein Bot-User
-    password: '5eTrZppjUtD55rw' // Hier das App-Passwort einfügen
-};
-
 // Nextcloud benötigt zwingend diesen Header für API Calls
 const HEADERS = {
     'OCS-APIRequest': 'true',
@@ -89,12 +109,12 @@ const HEADERS = {
     'Accept': 'application/json'
 };
 
-async function sendTalkMessageToUser(targetUserId, message) {
+async function nextcloud(targetUserId, message) {
     try {
         // SCHRITT 1: Raum erstellen / finden
         // WICHTIG: '?format=json' an die URL hängen!
         // Upgrade to v4 API
-        const createRoomUrl = `${NC_URL}/ocs/v2.php/apps/spreed/api/v4/room?format=json`;
+        const createRoomUrl = `${NEXTCLOUD_URL}/ocs/v2.php/apps/spreed/api/v4/room?format=json`;
 
         const roomData = {
             invite: targetUserId,
@@ -103,7 +123,7 @@ async function sendTalkMessageToUser(targetUserId, message) {
         };
 
         const roomResponse = await axios.post(createRoomUrl, roomData, {
-            auth: AUTH,
+            auth: NEXTCLOUD_AUTH,
             headers: HEADERS
         });
 
@@ -112,14 +132,14 @@ async function sendTalkMessageToUser(targetUserId, message) {
         console.log(`Chatraum Token: ${roomToken}`);
 
         // SCHRITT 2: Nachricht senden
-        const sendUrl = `${NC_URL}/ocs/v2.php/apps/spreed/api/v1/chat/${roomToken}?format=json`;
+        const sendUrl = `${NEXTCLOUD_URL}/ocs/v2.php/apps/spreed/api/v1/chat/${roomToken}?format=json`;
 
         const messageData = {
             message: message
         };
 
         await axios.post(sendUrl, messageData, {
-            auth: AUTH,
+            auth: NEXTCLOUD_AUTH,
             headers: HEADERS
         });
 

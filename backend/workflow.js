@@ -23,7 +23,7 @@ const loadWorkflows = () => {
         }
 
         files.forEach(file => {
-            if (file.endsWith('.json') && file !== 'default.json') {
+            if (file.endsWith('.json') && file !== 'default.json' && file !== 'settings.json') {
                 const content = fs.readFileSync(path.join(configDir, file), 'utf8');
                 try {
                     const workflow = JSON.parse(content);

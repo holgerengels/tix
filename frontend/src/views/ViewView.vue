@@ -71,7 +71,21 @@ const ticketData = ref({});
 const formFields = ref([]);
 
 const goBack = () => {
-    router.back();
+    // Check for Navigation API support (modern browsers)
+    if (window.navigation && typeof window.navigation.canGoBack === 'boolean') {
+        if (window.navigation.canGoBack) {
+            router.back();
+            return;
+        }
+    } 
+    // Fallback for older browsers or if Navigation API is not present
+    else if (window.history.length > 1) {
+        router.back();
+        return;
+    }
+    
+    // Default fallback: Go to "My Tickets" (which implies home/list view here)
+    router.push('/');
 };
 
 const fetchData = async () => {
