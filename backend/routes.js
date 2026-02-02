@@ -463,4 +463,187 @@ router.get('/logs', verifyToken, async (req, res) => {
     }
 });
 
+
+// Undo Check
+router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
+    try {
+        const ticketId = req.params.id;
+        const user = req.user;
+        const workflowEngine = require('./workflow');
+        const wfConfig = workflowEngine.getWorkflows();
+
+        // 1. Fetch Ticket
+        const ticket = await Ticket.findById(ticketId);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        // 2. Fetch Latest Log
+        const latestLog = await Log.findOne({ ticket: ticketId }).sort({ timestamp: -1 });
+
+        // Checks
+        if (!latestLog) return res.json(null); // No actions yet
+        if (latestLog.published) return res.json(null); // Already published
+
+        // 3. User undo permission
+        const wf = wfConfig[ticket.type];
+        if (!wf) return res.json(null);
+
+        const undoAccess = wf.access ? wf.access.find(a => a.name === 'undo') : null;
+        if (!undoAccess || !undoAccess.groups.some(g => user.groups.includes(g))) {
+            return res.json(null); // User has no undo permission
+        }
+
+        // 4. Action ownership/permission check
+        // "wenn er die action selbst hätte ausführen können bzw. selbst ausgeführt hat"
+
+        let canUndo = false;
+        if (latestLog.editor === user.username) {
+            canUndo = true;
+        } else {
+            // Check if user could have executed this action
+            // relying on state BEFORE action
+            const stateBefore = latestLog.dataBefore ? latestLog.dataBefore.state : null;
+            if (stateBefore) {
+                // Find the action definition in that state
+                const workflowState = wf.workflow.find(s => s.states.includes(stateBefore));
+                if (workflowState) {
+                    // The action name is in latestLog.action. 
+                    // However, log.action might contain suffixes like " (ButtonName)".
+                    // We need to parse or match it loosely, or ideally store actionName separately.
+                    // Current Log format: "actionName" or "actionName (ButtonName)" or "Ticket erstellt" or "Kommentar hinzugefügt"
+
+                    // If it was "Ticket erstellt" (creation), can we undo it? 
+                    // Usually undo is for transitions. "Ticket erstellt" implies deletion? 
+                    // Requirement implies "letzte action", so maybe yes.
+                    // But creation access is generic.
+
+                    // Let's matching against available actions in that state.
+                    // Note: We don't have exact action ID/name in log if it was formatted.
+                    // But usually action starts with...
+
+                    // Simplification: Check if user is in groups allowed for ANY action that matches start of log string?
+                    // Or better: We assume standard actions only.
+
+                    const actionName = latestLog.action.split(' (')[0]; // simple heuristic
+                    const actionDef = workflowState.actions.find(a => a.name === actionName);
+
+                    if (actionDef) {
+                        // Check permissions
+                        if (actionDef.groups.some(g => user.groups.includes(g))) canUndo = true;
+                        if (actionDef.groups.includes('@creator') && latestLog.dataBefore.creator === user.username) canUndo = true; // Use creator from snapshot
+                        if (actionDef.groups.includes('@assignee') && latestLog.dataBefore.assignee === user.username) canUndo = true;
+                    }
+                }
+            }
+        }
+
+        if (canUndo) {
+            return res.json(latestLog);
+        } else {
+            return res.json(null);
+        }
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// Undo Execute
+router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
+    try {
+        const ticketId = req.params.id;
+        const user = req.user;
+        const workflowEngine = require('./workflow');
+        const wfConfig = workflowEngine.getWorkflows();
+
+        // 1. Fetch Ticket
+        const ticket = await Ticket.findById(ticketId);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        // 2. Fetch Latest Log
+        const latestLog = await Log.findOne({ ticket: ticketId }).sort({ timestamp: -1 });
+
+        // Checks
+        if (!latestLog) return res.status(400).json({ message: 'No actions to undo' });
+        if (latestLog.published) return res.status(400).json({ message: 'Action already published, cannot undo' });
+
+        // Ensure no new actions appeared (trivial since we fetched latestLog just now, 
+        // effectively checking if "latestLog" IS the one user wants to undo? 
+        // User intention is matches if we undo the *current* latest. 
+        // If user sees log A, but B happened, doing undo now undoes B.
+        // User might be surprised. But current requirement says: "check if... no further action executed".
+        // This effectively means "Is this log entry valid for undo?".
+        // If we want to be strict, we could pass the log ID we want to undo.
+        // But the requirement says "checking ... if no further action". 
+        // Implicitly means: Proceed only if the latest log is still undoable.
+        // We re-verify permissions on THIS latest log.
+
+        // 3. User undo permission
+        const wf = wfConfig[ticket.type];
+        if (!wf) return res.status(500).json({ message: 'Workflow config missing' });
+
+        const undoAccess = wf.access ? wf.access.find(a => a.name === 'undo') : null;
+        if (!undoAccess || !undoAccess.groups.some(g => user.groups.includes(g))) {
+            return res.status(403).json({ message: 'Not authorized to undo' });
+        }
+
+        // 4. Action ownership/permission check
+        let canUndo = false;
+        if (latestLog.editor === user.username) {
+            canUndo = true;
+        } else {
+            const stateBefore = latestLog.dataBefore ? latestLog.dataBefore.state : null;
+            if (stateBefore) {
+                const workflowState = wf.workflow.find(s => s.states.includes(stateBefore));
+                if (workflowState) {
+                    const actionName = latestLog.action.split(' (')[0];
+                    const actionDef = workflowState.actions.find(a => a.name === actionName);
+
+                    if (actionDef) {
+                        if (actionDef.groups.some(g => user.groups.includes(g))) canUndo = true;
+                        if (actionDef.groups.includes('@creator') && latestLog.dataBefore.creator === user.username) canUndo = true;
+                        if (actionDef.groups.includes('@assignee') && latestLog.dataBefore.assignee === user.username) canUndo = true;
+                    }
+                }
+            }
+        }
+
+        if (!canUndo) {
+            return res.status(403).json({ message: 'Not authorized to undo this specific action' });
+        }
+
+        // 5. Execution
+        if (!latestLog.dataBefore) return res.status(400).json({ message: 'No restore data available' });
+
+        // Restore Ticket
+        // We must be careful not to overwrite things that shouldn't change (like internal IDs if they were in dataBefore?)
+        // dataBefore is a Mongoose object output.
+        // Let's replace the fields that matter.
+        // Actually, requirement says "dataBefore ... ins ticket übernommen".
+        // Simple approach: set all fields from dataBefore.
+
+        const restoreData = latestLog.dataBefore;
+        delete restoreData._id; // Ensure we don't overwrite ID (though it should be same)
+        delete restoreData.__v;
+
+        // Mongoose 'set' or overwrite
+        ticket.set(restoreData);
+
+        // Force the state specifically if it wasn't captured correctly? 
+        // dataBefore should have the old state.
+
+        await ticket.save();
+
+        // 6. Delete Log
+        await Log.findByIdAndDelete(latestLog._id);
+
+        res.json({ message: 'Undo successful', ticket });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

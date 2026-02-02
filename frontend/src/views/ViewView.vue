@@ -5,6 +5,9 @@
             <wa-icon slot="start" name="arrow-left"></wa-icon> zurück
         </wa-button>
         <h2>Ticket Details</h2>
+        <wa-button v-if="undoAction" variant="warning" size="small" appearance="filled" @click="executeUndo">
+             <wa-icon slot="start" name="arrow-counterclockwise"></wa-icon> Undo: {{ undoAction.action }}
+        </wa-button>
     </div>
 
     <div v-if="loading" class="loading">
@@ -16,7 +19,12 @@
     </div>
 
     <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer>
-        <h3 slot="header">{{ ticket.id }} {{ ticket.title }}</h3>
+        <h3 slot="header">
+            <wa-tag :variant="getStatusColor(ticket)" size="small" style="margin-right: 1ch; vertical-align: middle;">
+                {{ getStatusLabel(ticket) }}
+            </wa-tag>
+            {{ ticket.id }} {{ ticket.title }}
+        </h3>
         
         <div slot="header" class="ticket-meta">
             <span>Erstellt von <strong>{{ ticket.creator }}</strong> am {{ formatDate(ticket.created) }}</span>
@@ -57,6 +65,7 @@ const config = ref({});
 const loading = ref(true);
 const error = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+const undoAction = ref(null);
 
 const ticketData = ref({});
 const formFields = ref([]);
@@ -84,6 +93,7 @@ const fetchData = async () => {
         if (ticketRes.data && ticketRes.data.length > 0) {
             ticket.value = ticketRes.data[0];
             prepareForm();
+            checkUndo(); 
         } else {
             error.value = "Ticket nicht gefunden.";
         }
@@ -93,6 +103,31 @@ const fetchData = async () => {
         error.value = "Fehler beim Laden der Daten.";
     } finally {
         loading.value = false;
+    }
+};
+
+const checkUndo = async () => {
+    try {
+        const res = await axios.get(`/api/tickets/${ticket.value._id}/undoable`, {
+             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        undoAction.value = res.data;
+    } catch (err) {
+        console.error("Error checking undo:", err);
+    }
+};
+
+const executeUndo = async () => {
+    if (!confirm('Möchten Sie die letzte Aktion wirklich rückgängig machen?')) return;
+    
+    try {
+        await axios.post(`/api/tickets/${ticket.value._id}/undo`, {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        // Reload data
+        fetchData();
+    } catch (err) {
+        alert('Undo fehlgeschlagen: ' + (err.response?.data?.message || err.message));
     }
 };
 
@@ -134,6 +169,27 @@ const canComment = computed(() => {
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
+const getStatusColor = (ticket) => {
+    if (!config.value || !config.value[ticket.type]) return 'neutral';
+    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
+    const colorMap = {
+        'blue': 'brand',
+        'green': 'success',
+        'yellow': 'warning',
+        'red': 'danger',
+        'gray': 'neutral'
+    };
+    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
+};
+
+const getStatusLabel = (ticket) => {
+    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
+        return ticket.state;
+    }
+    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
+    return stateDef ? stateDef.label : ticket.state;
+};
+
 onMounted(fetchData);
 </script>
 
@@ -153,6 +209,7 @@ onMounted(fetchData);
 }
 .header h2 {
     margin: 0;
+    margin-right: auto;
 }
 .ticket-card {
     height: calc(100% - 70px);
