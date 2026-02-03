@@ -51,7 +51,23 @@
                 </div>
                 <div class="filter-group">
                     <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
+                    <wa-button appearance="plain" @click="saveCurrentFilter">Speichern</wa-button>
                 </div>
+            </div>
+            
+            <div class="saved-filters" v-if="savedFilters.length > 0">
+                <span class="saved-filters-label">Gespeicherte Filter:</span>
+                <wa-tag 
+                    v-for="(filter, index) in savedFilters" 
+                    :key="index" 
+                    with-remove 
+                    @wa-remove="deleteSavedFilter(index)"
+                    @click="applySavedFilter(filter)"
+                    class="saved-filter-tag"
+                    variant="brand"
+                >
+                    {{ filter.name }}
+                </wa-tag>
             </div>
         </details>
 
@@ -143,6 +159,61 @@ const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
 const filterBadges = ref([]);
+
+const savedFilters = ref([]);
+
+const loadSavedFilters = () => {
+    const key = `vin_saved_filters_${currentFilter.value}`;
+    try {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+            savedFilters.value = JSON.parse(saved);
+        } else {
+            savedFilters.value = [];
+        }
+    } catch (e) {
+        console.error('Error loading saved filters:', e);
+        savedFilters.value = [];
+    }
+};
+
+const saveCurrentFilter = () => {
+    const name = prompt('Bitte geben Sie einen Namen für diesen Filter ein:');
+    if (!name) return;
+
+    const newFilter = {
+        name,
+        type: filterType.value,
+        status: filterStatus.value,
+        creator: filterCreator.value,
+        dateRange: filterDateRange.value,
+        dateFrom: filterDateFrom.value,
+        dateTo: filterDateTo.value,
+        badges: [...filterBadges.value]
+    };
+
+    savedFilters.value.push(newFilter);
+    const key = `vin_saved_filters_${currentFilter.value}`;
+    localStorage.setItem(key, JSON.stringify(savedFilters.value));
+};
+
+const deleteSavedFilter = (index) => {
+    // Stop propagation is handled by the component event usually, but let's be safe if UI needs it
+    savedFilters.value.splice(index, 1);
+    const key = `vin_saved_filters_${currentFilter.value}`;
+    localStorage.setItem(key, JSON.stringify(savedFilters.value));
+};
+
+const applySavedFilter = (filter) => {
+    filterType.value = filter.type || '';
+    filterStatus.value = filter.status || '';
+    filterCreator.value = filter.creator || '';
+    filterDateRange.value = filter.dateRange || '';
+    filterDateFrom.value = filter.dateFrom || '';
+    filterDateTo.value = filter.dateTo || '';
+    filterBadges.value = filter.badges || [];
+    applyFilters();
+};
 
 let lastRequestId = 0;
 let debounceTimer = null;
@@ -404,11 +475,14 @@ const handleAction = (ticket, action) => {
 };
 
 watch(currentFilter, () => {
+    loading.value = true; // Show loading immediately
+    loadSavedFilters();
     fetchTickets();
 });
 
 onMounted(async () => {
     await fetchConfig();
+    loadSavedFilters();
     fetchTickets();
 });
 </script>
@@ -650,5 +724,29 @@ onMounted(async () => {
     background-color: #f3f4f6;
     color: #374151;
     border-color: #e5e7eb;
+}
+
+.saved-filters {
+    padding: 0 1.5rem 1rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.saved-filters-label {
+    font-size: 0.85rem;
+    color: var(--wa-color-neutral-500);
+    margin-right: 0.5rem;
+}
+
+.saved-filter-tag {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saved-filter-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--wa-shadow-small);
 }
 </style>
