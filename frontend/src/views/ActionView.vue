@@ -16,7 +16,17 @@
     </div>
 
     <wa-card v-else-if="ticket && actionDef" class="ticket-card" with-header with-footer>
-        <h3 slot="header">{{ ticket.id }} {{ ticket.title }}</h3>
+        <h3 slot="header">
+            <wa-tag :variant="getStatusColor(ticket)" size="small" style="margin-right: 1ch; vertical-align: middle;">
+                {{ getStatusLabel(ticket) }}
+            </wa-tag>
+            {{ ticket.id }} {{ ticket.title }}
+        </h3>
+        
+        <div slot="header" class="ticket-meta">
+            <span>Erstellt von <strong>{{ ticket.creator }}</strong> am {{ formatDate(ticket.created) }}</span>
+            <span v-if="ticket.assignee"> | Zugewiesen an <strong>{{ ticket.assignee }}</strong></span>
+        </div>
         
         <div class="ticket-body">
             <DynamicForm 
@@ -29,7 +39,7 @@
             </div>
 
             <aside class="comments-sidebar" v-if="canComment">
-                <TicketComments :ticket="ticket" />
+                <TicketComments ref="commentsRef" :ticket="ticket" />
             </aside>
         </div>
 
@@ -56,6 +66,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
+import { format } from 'date-fns';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 
@@ -70,6 +81,7 @@ const executing = ref(false);
 const error = ref(null);
 const isDirty = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+const commentsRef = ref(null);
 
 const actionFormData = ref({});
 
@@ -201,6 +213,10 @@ const canComment = computed(() => {
 const execute = async (btnName = null) => {
     executing.value = true;
     try {
+        if (commentsRef.value && commentsRef.value.hasPendingComment()) {
+            await commentsRef.value.sendComment();
+        }
+
         const payload = {
             actionName: actionDef.value.name,
             formData: actionFormData.value
@@ -238,6 +254,29 @@ onBeforeRouteLeave((to, from, next) => {
     }
 });
 
+const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
+
+const getStatusColor = (ticket) => {
+    if (!config.value || !config.value[ticket.type]) return 'neutral';
+    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
+    const colorMap = {
+        'blue': 'brand',
+        'green': 'success',
+        'yellow': 'warning',
+        'red': 'danger',
+        'gray': 'neutral'
+    };
+    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
+};
+
+const getStatusLabel = (ticket) => {
+    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
+        return ticket.state;
+    }
+    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
+    return stateDef ? stateDef.label : ticket.state;
+};
+
 onMounted(fetchData);
 </script>
 
@@ -260,7 +299,12 @@ onMounted(fetchData);
 }
 .ticket-card {
     height: calc(100% - 70px);
-}   
+}
+.ticket-card::part(header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
 .ticket-card::part(body) {
     height: 100%;
     display: flex;

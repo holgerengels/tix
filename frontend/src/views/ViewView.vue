@@ -8,6 +8,9 @@
         <wa-button v-if="undoAction" variant="warning" size="small" appearance="filled" @click="executeUndo">
              <wa-icon slot="start" name="arrow-counterclockwise"></wa-icon> Undo: {{ undoAction.action }}
         </wa-button>
+        <wa-button v-if="canDelete" variant="danger" size="small" appearance="filled" @click="deleteTicket">
+             <wa-icon slot="start" name="trash"></wa-icon> Löschen
+        </wa-button>
     </div>
 
     <div v-if="loading" class="loading">
@@ -145,6 +148,19 @@ const executeUndo = async () => {
     }
 };
 
+const deleteTicket = async () => {
+    if (!confirm('Sind Sie sicher, dass Sie dieses Ticket löschen möchten?')) return;
+    
+    try {
+        await axios.delete(`/api/tickets/${ticket.value._id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        router.push('/');
+    } catch (err) {
+        alert('Löschen fehlgeschlagen: ' + (err.response?.data?.message || err.message));
+    }
+};
+
 const prepareForm = () => {
     if (!ticket.value || !config.value[ticket.value.type]) return;
     
@@ -176,6 +192,18 @@ const canComment = computed(() => {
     if (!access) return false;
     
     const rule = access.find(r => r.name === 'comment');
+    if (!rule) return false;
+    
+    return rule.groups.some(g => user.groups.includes(g));
+});
+
+const canDelete = computed(() => {
+    if (!ticket.value || !config.value[ticket.value.type]) return false;
+    
+    const access = config.value[ticket.value.type].access;
+    if (!access) return false;
+    
+    const rule = access.find(r => r.name === 'delete');
     if (!rule) return false;
     
     return rule.groups.some(g => user.groups.includes(g));
@@ -227,6 +255,11 @@ onMounted(fetchData);
 }
 .ticket-card {
     height: calc(100% - 70px);
+}
+.ticket-card::part(header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 .ticket-card::part(body) {
     height: 100%;

@@ -92,11 +92,20 @@ const canEdit = (type, userGroups) => {
     return rule.groups.some(g => userGroups.includes(g));
 };
 
+const canDelete = (type, userGroups) => {
+    const wf = workflows[type];
+    if (!wf) return false;
+    const rule = wf.access.find(z => z.name === 'delete');
+    if (!rule) return false;
+    return rule.groups.some(g => userGroups.includes(g));
+};
+
 module.exports = {
     getWorkflows,
     getWorkflowForType,
     getVisibleTicketTypes,
     loadWorkflows,
     canComment,
-    canEdit
+    canEdit,
+    canDelete
 };

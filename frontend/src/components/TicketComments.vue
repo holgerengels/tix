@@ -102,6 +102,13 @@ watch(() => props.ticket, (val) => {
     fetchComments();
 });
 
+const hasPendingComment = () => !!newComment.value.trim();
+
+defineExpose({
+    sendComment,
+    hasPendingComment
+});
+
 onMounted(() => {
     fetchComments();
 });

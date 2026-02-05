@@ -6,7 +6,7 @@ const Counter = require('./models/counter');
 const Comment = require('./models/comment');
 const Log = require('./models/log');
 const workflowEngine = require('./workflow');
-const { canComment } = require('./workflow');
+const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
 
 // Auth
@@ -285,7 +285,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         if (!action) {
             // Check for generic 'edit' permission if action not found in state
-            // This allows global actions like 'Bearbeiten' (or 'hacken') to work in any state
+            // This allows global actions like 'Bearbeiten' to work in any state
             // provided the user has 'edit' access.
             const { canEdit } = require('./workflow');
             if (canEdit(ticket.type, req.user.groups)) {
@@ -355,6 +355,25 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
     }
 });
 
+
+router.delete('/tickets/:id', verifyToken, async (req, res) => {
+    try {
+        const ticket = await Ticket.findById(req.params.id);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        if (!canDelete(ticket.type, req.user.groups)) {
+            return res.status(403).json({ message: 'Not authorized to delete' });
+        }
+
+        await Ticket.findByIdAndDelete(req.params.id);
+        await Comment.deleteMany({ ticket: req.params.id });
+        await Log.deleteMany({ ticket: req.params.id });
+
+        res.json({ message: 'Ticket deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Comments
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {

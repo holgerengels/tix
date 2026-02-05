@@ -64,7 +64,7 @@ async function processLogs() {
                     const ticket = log.ticket;
                     const link = `${BASE_URL}/tickets/${ticket.id}/view`;
                     // Format: Type TicketID Title - wurde von Editor bearbeitet
-                    message = `${ticket.type}: [${ticket.id}](${link}) ${ticket.title} - wurde von ${log.editor} bearbeitet`;
+                    message = `${ticket.type} [${ticket.id}](${link}): ${ticket.title} - wurde von ${log.editor} bearbeitet`;
                 }
 
                 try {
@@ -78,7 +78,7 @@ async function processLogs() {
                 // Calculate when it will be old enough
                 // timeToPublish = logTime + delayLimit
                 // wait = timeToPublish - now
-                const wait = (logTime + delayLimit) - now.getTime();
+                const wait = (logTime + DELAY) - now.getTime();
 
                 // Track the earliest wakeup time needed (smallest wait > 0)
                 if (wait > 0 && wait < nextRun) {
