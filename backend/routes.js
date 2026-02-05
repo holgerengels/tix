@@ -10,11 +10,16 @@ const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
 
 // Auth
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    const result = login(username, password);
-    if (result) res.json(result);
-    else res.status(401).json({ message: 'Invalid credentials' });
+    try {
+        const result = await login(username, password);
+        if (result) res.json(result);
+        else res.status(401).json({ message: 'Invalid credentials' });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 router.get('/users', verifyToken, (req, res) => {

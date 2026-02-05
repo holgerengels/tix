@@ -52,7 +52,7 @@ const handleLogin = async () => {
         // but simple push is enough if state is reactive or checked on route change
         window.location.href = '/'; 
     } catch (err) {
-        error.value = 'Invalid credentials';
+        error.value = 'Ungültige Anmeldedaten';
     } finally {
         loading.value = false;
     }

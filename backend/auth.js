@@ -1,4 +1,18 @@
 const jwt = require('jsonwebtoken');
+const ldap = require('ldapjs');
+const fs = require('fs');
+const path = require('path');
+
+// Load Settings
+let settings = {};
+try {
+    const settingsPath = path.join(__dirname, '../config/settings.json');
+    if (fs.existsSync(settingsPath)) {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    }
+} catch (e) {
+    console.error('Error loading settings.json:', e);
+}
 
 const MOCK_USERS = [
     { username: 'admin', password: 'password', groups: ['Admin', 'Schulleitung', 'Stundenplanung'] },
@@ -12,13 +26,147 @@ const MOCK_USERS = [
 
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
 
-const login = (username, password) => {
-    const user = MOCK_USERS.find(u => u.username === username && u.password === password);
-    if (user) {
-        const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: '8h' });
-        return { token, user: { username: user.username, groups: user.groups } };
+const login = async (username, password) => {
+    console.log(`[Auth] Attempting login for user: ${username}`);
+
+    // 1. DevMode / Mock Check
+    if (settings.devmode) {
+        const user = MOCK_USERS.find(u => u.username === username && u.password === password);
+        if (user) {
+            console.log(`[Auth] Mock login successful for ${username}`);
+            const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: '8h' });
+            return { token, user: { username: user.username, groups: user.groups } };
+        }
     }
-    return null;
+
+    // 2. LDAP Auth
+    if (!settings.server || !settings.server.ldap) {
+        console.error('[Auth] LDAP settings missing');
+        return null;
+    }
+
+    const ldapConfig = settings.server.ldap;
+
+    return new Promise((resolve, reject) => {
+        const client = ldap.createClient({
+            url: ldapConfig.url
+        });
+
+        client.on('error', (err) => {
+            console.error('[Auth] LDAP Client Error:', err);
+            resolve(null);
+        });
+
+        // A. Bind with Service Account
+        client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+            if (err) {
+                console.error('[Auth] LDAP Bind Error:', err);
+                client.unbind();
+                return resolve(null);
+            }
+
+            // B. Search for User
+            // Filter: (&(userfilter)(sAMAccountName=username))
+            // Filter: (&(userfilter)(sAMAccountName=username))
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const opts = {
+                filter: filter,
+                scope: 'sub',
+                attributes: ['dn', 'memberOf']
+            };
+
+            client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                if (err) {
+                    console.error('[Auth] LDAP Search Error:', err);
+                    client.unbind();
+                    return resolve(null);
+                }
+
+                let userEntry = null;
+
+                searchRes.on('searchEntry', (entry) => {
+                    if (entry.object) {
+                        userEntry = entry.object;
+                    } else {
+                        // Fallback: Parse attributes manually
+                        userEntry = { dn: entry.objectName.toString() };
+                        if (entry.attributes) {
+                            entry.attributes.forEach(attr => {
+                                // attr.type is the name
+                                const values = attr.values || attr.vals;
+                                userEntry[attr.type] = values;
+                                if (attr.type === 'distinguishedName') {
+                                    userEntry.dn = Array.isArray(values) ? values[0] : values;
+                                }
+                            });
+                        }
+                    }
+                });
+
+                searchRes.on('end', (result) => {
+                    if (result.status !== 0) {
+                        console.error('[Auth] LDAP Search Status:', result.status);
+                        client.unbind();
+                        return resolve(null);
+                    }
+
+                    if (!userEntry) {
+                        console.log(`[Auth] User ${username} not found in LDAP`);
+                        client.unbind();
+                        return resolve(null);
+                    }
+
+                    // C. Verify Password (Bind as User)
+                    const userClient = ldap.createClient({ url: ldapConfig.url });
+
+                    userClient.bind(userEntry.dn, password, (err) => {
+                        if (err) {
+                            console.log(`[Auth] Password check failed for ${username}`);
+                            userClient.unbind();
+                            client.unbind();
+                            return resolve(null);
+                        }
+
+                        // Success! Process Groups
+                        userClient.unbind();
+                        client.unbind();
+
+                        const groups = [];
+                        const rawGroups = Array.isArray(userEntry.memberOf) ? userEntry.memberOf : [userEntry.memberOf];
+
+                        // memberOf format: CN=Groupname,OU=...,DC=...
+                        // We need to parse CN, check prefix, and strip it.
+                        const prefix = ldapConfig.groupprefix || '';
+
+                        if (rawGroups) {
+                            rawGroups.forEach(groupDn => {
+                                if (!groupDn) return;
+                                // Extract CN
+                                const match = groupDn.match(/^CN=([^,]+)/i);
+                                if (match) {
+                                    const cn = match[1];
+                                    if (cn.startsWith(prefix)) {
+                                        groups.push(cn.substring(prefix.length));
+                                    }
+                                }
+                            });
+                        }
+
+                        console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
+
+                        const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: '8h' });
+                        resolve({ token, user: { username: username, groups: groups } });
+                    });
+                });
+
+                searchRes.on('error', (err) => {
+                    console.error('[Auth] LDAP Search Event Error:', err);
+                    client.unbind();
+                    resolve(null);
+                });
+            });
+        });
+    });
 };
 
 const verifyToken = (req, res, next) => {
