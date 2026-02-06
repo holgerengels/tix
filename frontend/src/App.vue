@@ -25,6 +25,9 @@
         <div class="footer">
              <div class="user-info" v-if="user">
                 <small>{{ user.username }}</small>
+                <wa-button variant="text" size="small" appearance="plain" @click="$router.push('/settings')" tooltip="Einstellungen">
+                    <wa-icon name="gear" style="font-size: 1rem;"></wa-icon>
+                </wa-button>
              </div>
              <wa-button variant="text" @click="logout" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> Logout
@@ -43,7 +46,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
@@ -59,7 +62,20 @@ const logout = () => {
     window.location.href = '/login';
 };
 
-const isDev = import.meta.env.DEV;
+const isDev = ref(false);
+
+onMounted(async () => {
+    if (isLoggedIn.value) {
+        try {
+            const res = await axios.get('/api/config/status', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            isDev.value = res.data.devmode;
+        } catch (e) {
+            console.error('Failed to check devmode:', e);
+        }
+    }
+});
 
 const reloadConfig = async () => {
     try {
@@ -165,6 +181,10 @@ body {
     font-size: 0.875rem;
     padding-left: 0.5rem;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 /* Main Content */

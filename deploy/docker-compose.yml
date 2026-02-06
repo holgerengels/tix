@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/app.docker
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/settings.json:/app/config/settings.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mongo
+    restart: always
+
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    restart: always
+
+volumes:
+  mongo-data:

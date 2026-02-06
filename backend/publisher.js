@@ -30,6 +30,35 @@ if (!BASE_URL || !NEXTCLOUD_URL || !NEXTCLOUD_AUTH.username || !NEXTCLOUD_AUTH.p
     console.warn('[Publisher] Warning: Nextcloud configuration is missing or incomplete in settings.json');
 }
 
+const nodemailer = require('nodemailer');
+
+// Mail Transporter Setup
+let transporter = null;
+if (settings.publisher && settings.publisher.mail) {
+    transporter = nodemailer.createTransport(settings.publisher.mail);
+} else {
+    console.warn('[Publisher] Mail configuration missing in settings.json');
+}
+
+async function sendMail(to, subject, text) {
+    if (!transporter) {
+        console.warn('[Publisher] Cannot send mail: No transporter configured');
+        return;
+    }
+    try {
+        const info = await transporter.sendMail({
+            from: settings.publisher.mail.from, // sender address
+            to: to, // list of receivers
+            subject: subject, // Subject line
+            text: text, // plain text body
+            // html: "<b>Hello world?</b>", // html body
+        });
+        console.log(`[Publisher] Mail sent: ${info.messageId}`);
+    } catch (error) {
+        console.error('[Publisher] Error sending mail:', error);
+    }
+}
+
 async function processLogs() {
     try {
         const now = new Date();
@@ -68,9 +97,41 @@ async function processLogs() {
                 }
 
                 try {
-                    await nextcloud('h.engels', message);
+                    // NEW: Dynamic Notification based on User Settings
+                    const targetUser = log.ticket.creator;
+                    const { getUserSettings } = require('./auth');
+                    const userSettings = await getUserSettings(targetUser);
+                    const notificationUri = userSettings.notificationUri;
+
+                    if (notificationUri) {
+                        const [protocol, address] = notificationUri.split(':');
+
+                        // Handle nctalk
+                        if (protocol === 'nctalk') {
+                            if (address) {
+                                await nextcloud(address, message);
+                            } else {
+                                console.warn(`[Publisher] Invalid nctalk URI: ${notificationUri}`);
+                            }
+                        }
+                        // Handle mailto
+                        else if (protocol === 'mailto') {
+                            if (address) {
+                                await sendMail(address, `Ticket Update: ${log.ticket.title}`, message);
+                            } else {
+                                console.warn(`[Publisher] Invalid mailto URI: ${notificationUri}`);
+                            }
+                        }
+                        // Unknown
+                        else {
+                            console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
+                        }
+                    } else {
+                        console.log(`[Publisher] No notification URI configured for ${targetUser}`);
+                    }
+
                 } catch (notifyErr) {
-                    console.error('[Publisher] Apprise notification failed:', notifyErr.message);
+                    console.error('[Publisher] Notification failed:', notifyErr.message);
                 }
 
             } else {
@@ -98,7 +159,7 @@ async function processLogs() {
     } catch (err) {
         console.error('[Publisher] Error:', err);
         // Retry after default delay on error
-        setTimeout(processLogs, delayLimit);
+        setTimeout(processLogs, DELAY);
     }
 }
 

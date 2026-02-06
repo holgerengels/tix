@@ -41,6 +41,33 @@ router.post('/config/reload', verifyToken, (req, res) => {
     }
 });
 
+router.get('/config/status', verifyToken, (req, res) => {
+    const { isDevMode } = require('./auth');
+    res.json({ devmode: isDevMode() });
+});
+
+router.get('/settings', verifyToken, async (req, res) => {
+    try {
+        const { getUserSettings } = require('./auth');
+        const settings = await getUserSettings(req.user.username);
+        res.json(settings);
+    } catch (err) {
+        console.error('Error fetching settings:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/settings', verifyToken, async (req, res) => {
+    try {
+        const { updateUserSettings } = require('./auth');
+        await updateUserSettings(req.user.username, req.body);
+        res.json({ message: 'Settings saved' });
+    } catch (err) {
+        console.error('Error saving settings:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
     const { filter, type, status, creator, dateFrom, dateTo, badge } = req.query; // 'my', 'assigned', 'all' AND granular filters

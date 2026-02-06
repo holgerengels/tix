@@ -13,6 +13,7 @@ try {
 } catch (e) {
     console.error('Error loading settings.json:', e);
 }
+console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 
 const MOCK_USERS = [
     { username: 'admin', password: 'password', groups: ['Admin', 'Schulleitung', 'Stundenplanung'] },
@@ -93,7 +94,7 @@ const login = async (username, password) => {
                         if (entry.attributes) {
                             entry.attributes.forEach(attr => {
                                 // attr.type is the name
-                                const values = attr.values || attr.vals;
+                                const values = attr.values;
                                 userEntry[attr.type] = values;
                                 if (attr.type === 'distinguishedName') {
                                     userEntry.dn = Array.isArray(values) ? values[0] : values;
@@ -182,4 +183,154 @@ const verifyToken = (req, res, next) => {
 
 const getUsers = () => MOCK_USERS.map(({ password, ...u }) => u);
 
-module.exports = { login, verifyToken, getUsers };
+
+const isDevMode = () => !!settings.devmode;
+
+
+// In-memory store for devmode settings
+const devSettingsStore = {};
+
+const getUserSettings = async (username) => {
+    // 2. LDAP
+    if (!settings.server || !settings.server.ldap) {
+        // Fallback to devstore if no LDAP
+        return devSettingsStore[username] || { notificationUri: '' };
+    }
+    const ldapConfig = settings.server.ldap;
+
+    return new Promise((resolve, reject) => {
+        const client = ldap.createClient({ url: ldapConfig.url });
+        client.on('error', (err) => {
+            console.error('[Auth] LDAP Client Error (getSettings):', err);
+            resolve({});
+        });
+
+        client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+            if (err) {
+                console.error('[Auth] LDAP Bind Error (getSettings):', err);
+                client.unbind();
+                return resolve({});
+            }
+
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const opts = {
+                filter: filter,
+                scope: 'sub',
+                attributes: ['otherMailbox']
+            };
+
+            client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                if (err) {
+                    client.unbind();
+                    return resolve({});
+                }
+
+                let notificationUri = '';
+
+                searchRes.on('searchEntry', (entry) => {
+                    if (entry.object && entry.object.otherMailbox) {
+                        notificationUri = entry.object.otherMailbox;
+                    } else if (entry.attributes) {
+                        const attr = entry.attributes.find(a => a.type === 'otherMailbox');
+                        if (attr && attr.values && attr.values.length > 0) {
+                            notificationUri = attr.values[0];
+                        }
+                    }
+                });
+
+                searchRes.on('end', () => {
+                    client.unbind();
+                    resolve({ notificationUri });
+                });
+
+                searchRes.on('error', () => {
+                    client.unbind();
+                    resolve({});
+                });
+            });
+        });
+    });
+};
+
+const updateUserSettings = async (username, newSettings) => {
+    // 2. LDAP
+    if (!settings.server || !settings.server.ldap) {
+        // Fallback to devstore
+        devSettingsStore[username] = { ...devSettingsStore[username], ...newSettings };
+        console.log(`[Auth] No LDAP configured. DevMode Settings updated for ${username}:`, devSettingsStore[username]);
+        return;
+    }
+    const ldapConfig = settings.server.ldap;
+
+    return new Promise((resolve, reject) => {
+        const client = ldap.createClient({ url: ldapConfig.url });
+        client.on('error', (err) => {
+            console.error('[Auth] LDAP Client Error (updateSettings):', err);
+            reject(err);
+        });
+
+        client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+            if (err) {
+                console.error('[Auth] LDAP Bind Error (updateSettings):', err);
+                client.unbind();
+                return reject(err);
+            }
+
+            // Find DN first
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const opts = {
+                filter: filter,
+                scope: 'sub',
+                attributes: ['dn']
+            };
+
+            client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                if (err) {
+                    client.unbind();
+                    return reject(err);
+                }
+
+                let userDn = null;
+
+                searchRes.on('searchEntry', (entry) => {
+                    if (entry.objectName) userDn = entry.objectName.toString();
+                    else if (entry.object && entry.object.dn) userDn = entry.object.dn;
+                });
+
+                searchRes.on('end', (result) => {
+                    if (!userDn) {
+                        client.unbind();
+                        return reject(new Error('User not found'));
+                    }
+
+                    // Prepare Modification
+                    // We only support notificationUri -> otherMailbox for now
+                    if (newSettings.notificationUri !== undefined) {
+                        const change = new ldap.Change({
+                            operation: 'replace',
+                            modification: {
+                                type: 'otherMailbox',
+                                values: [newSettings.notificationUri]
+                            }
+                        });
+
+                        client.modify(userDn, change, (err) => {
+                            client.unbind();
+                            if (err) {
+                                console.error('[Auth] LDAP Modify Error:', err);
+                                return reject(err);
+                            }
+                            console.log(`[Auth] LDAP Settings updated for ${username}`);
+                            resolve();
+                        });
+                    } else {
+                        client.unbind();
+                        resolve();
+                    }
+                });
+            });
+        });
+    });
+};
+
+module.exports = { login, verifyToken, getUsers, isDevMode, getUserSettings, updateUserSettings };
