@@ -106,6 +106,7 @@ import RichTextEditor from './RichTextEditor.vue';
 import WAAutocomplete from './WAAutocomplete.vue';
 import BadgeEditor from './BadgeEditor.vue';
 
+
 const props = defineProps({
   fields: { type: Array, required: true },
   modelValue: { type: Object, required: true }
@@ -126,7 +127,17 @@ const users = ref([]);
 
 const fetchUsers = async () => {
     try {
+        // Collect groups from User fields
+        const allGroups = new Set();
+        props.fields.forEach(f => {
+            if (f.type === 'User' && f.groups) {
+                f.groups.forEach(g => allGroups.add(g));
+            }
+        });
+        const groupsParam = Array.from(allGroups).join(',');
+
         const res = await axios.get('/api/users', {
+            params: { groups: groupsParam },
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         users.value = res.data;
@@ -140,9 +151,11 @@ const getFilteredUsers = (groups) => {
     return users.value.filter(u => u.groups && u.groups.some(g => groups.includes(g)));
 };
 
-onMounted(() => {
+import { watch } from 'vue';
+
+watch(() => props.fields, () => {
     fetchUsers();
-});
+}, { immediate: true });
 </script>
 
 <style scoped>
