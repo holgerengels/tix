@@ -135,23 +135,17 @@ onMounted(() => {
 .comments-list {
     flex: 1;
     overflow-y: auto;
-    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    background-color: var(--wa-color-neutral-300);;
-    border-radius: var(--wa-border-radius-medium);
-    box-shadow: var(--wa-shadow-x-small);
-    /* max-height removed, layout handles it */
+    gap: 1rem;
 }
 
 .comment-item {
-    background: white;
     padding: 1rem;
     border-radius: var(--wa-border-radius-medium);
-    box-shadow: var(--wa-shadow-x-small);
-    border: 1px solid var(--wa-color-neutral-100);
+    box-shadow: var(--wa-shadow-small);
     position: relative;
+    background-color: var(--wa-color-neutral-50);
 }
 
 .comment-header {
@@ -177,7 +171,6 @@ onMounted(() => {
 .comment-input {
     padding-top: 1rem;
     background: white;
-    border-top: 1px solid var(--wa-color-neutral-200);
     display: flex;
     flex-direction: column;
     gap: 0.75rem;

@@ -57,6 +57,7 @@
         v-else-if="field.type === 'RichText'"
         :label="field.label"
         :disabled="field.readonly === true"
+        :required="field.required === true"
         :modelValue="modelValue[field.name] || ''"
         @update:modelValue="updateField(field.name, $event)"
       />
@@ -73,7 +74,7 @@
         @input.stop
         @after-hide.stop="isOpen = false"
       >
-        <wa-option v-for="user in getFilteredUsers(field.groups)" :key="user.username" :value="user.username">
+        <wa-option v-for="user in getDisplayUsers(field)" :key="user.username" :value="user.username">
             {{ user.username }}
         </wa-option>
       </wa-select>
@@ -146,9 +147,20 @@ const fetchUsers = async () => {
     }
 };
 
-const getFilteredUsers = (groups) => {
-    if (!groups || groups.length === 0) return users.value;
-    return users.value.filter(u => u.groups && u.groups.some(g => groups.includes(g)));
+const getDisplayUsers = (field) => {
+    // 1. Start with all fetched users
+    let displayUsers = [...users.value];
+
+    // 2. Check if current value exists
+    const currentValue = props.modelValue[field.name];
+    if (currentValue) {
+        // 3. If current value is not in the list, add it partially
+        const exists = displayUsers.find(u => u.username === currentValue);
+        if (!exists) {
+            displayUsers.push({ username: currentValue });
+        }
+    }
+    return displayUsers;
 };
 
 import { watch } from 'vue';

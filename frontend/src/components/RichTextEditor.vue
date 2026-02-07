@@ -1,6 +1,8 @@
 <template>
   <div class="rich-text-editor">
-    <label v-if="label" class="editor-label">{{ label }}</label>
+    <label v-if="label" class="editor-label" :class="{ 'label-required': required }">
+        {{ label }}
+    </label>
     <div class="quill-wrapper">
       <QuillEditor 
         theme="snow" 
@@ -22,7 +24,8 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css';
 const props = defineProps({
   modelValue: { type: String, default: '' },
   label: { type: String, default: '' },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  required: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -39,6 +42,11 @@ const emit = defineEmits(['update:modelValue']);
     font-size: var(--wa-label-font-size-medium);
     color: var(--wa-label-color);
 }
+.label-required::after {
+    content: "*";
+    color: var(--wa-color-danger-500);
+    margin-left: 0.2rem; 
+}
 .quill-wrapper {
     background: white;
     border-radius: var(--wa-border-radius-medium);
@@ -52,6 +60,7 @@ const emit = defineEmits(['update:modelValue']);
     border-top-right-radius: var(--wa-border-radius-medium);
 }
 :deep(.ql-container) {
+    font-size: var(--wa-label-font-size-medium);
     border-bottom-left-radius: var(--wa-border-radius-medium);
     border-bottom-right-radius: var(--wa-border-radius-medium);
 }
