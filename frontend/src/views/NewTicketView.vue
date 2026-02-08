@@ -69,7 +69,7 @@ const availableTypes = computed(() => {
         const wf = config.value[type];
         if (!wf.access) return true; 
         const rule = wf.access.find(z => z.name === 'create');
-        return rule && rule.groups.some(g => user.groups.includes(g));
+        return rule && rule.groups.some(g => (user.groups || []).includes(g));
     });
 });
 

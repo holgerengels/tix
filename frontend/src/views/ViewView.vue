@@ -74,21 +74,14 @@ const ticketData = ref({});
 const formFields = ref([]);
 
 const goBack = () => {
-    // Check for Navigation API support (modern browsers)
-    if (window.navigation && typeof window.navigation.canGoBack === 'boolean') {
-        if (window.navigation.canGoBack) {
-            router.back();
-            return;
-        }
-    } 
-    // Fallback for older browsers or if Navigation API is not present
-    else if (window.history.length > 1) {
+    // Check if we have a robust "previous" state from Vue Router
+    // window.history.state.back is set by Vue Router to the *path* of the previous entry if internal
+    if (window.history.state && window.history.state.back) {
         router.back();
-        return;
+    } else {
+        // If no internal history (Deep Link -> Login -> Here), go to Home
+        router.push('/');
     }
-    
-    // Default fallback: Go to "My Tickets" (which implies home/list view here)
-    router.push('/');
 };
 
 const fetchData = async () => {
@@ -194,7 +187,7 @@ const canComment = computed(() => {
     const rule = access.find(r => r.name === 'comment');
     if (!rule) return false;
     
-    return rule.groups.some(g => user.groups.includes(g));
+    return rule.groups.some(g => (user.groups || []).includes(g));
 });
 
 const canDelete = computed(() => {
@@ -206,7 +199,7 @@ const canDelete = computed(() => {
     const rule = access.find(r => r.name === 'delete');
     if (!rule) return false;
     
-    return rule.groups.some(g => user.groups.includes(g));
+    return rule.groups.some(g => (user.groups || []).includes(g));
 });
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');

@@ -441,7 +441,7 @@ const getActions = (ticket) => {
     const authorizedActions = allActions.filter(action => {
         const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
         const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
-        const allowedByGroup = action.groups.some(g => user.groups.includes(g));
+        const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
         return allowedByCreator || allowedByAssignee || allowedByGroup;
     });
 
@@ -453,7 +453,7 @@ const getActions = (ticket) => {
     
     const wf = config.value[ticket.type];
     const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
-    if (editAccess && editAccess.groups.some(g => user.groups.includes(g))) {
+    if (editAccess && editAccess.groups.some(g => (user.groups || []).includes(g))) {
         authorizedActions.push({
             name: 'editieren',
             form: 'edit',

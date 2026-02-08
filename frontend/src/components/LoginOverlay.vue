@@ -1,12 +1,13 @@
 <template>
-  <div class="login-container">
+  <div class="login-overlay">
     <wa-card class="login-card">
-      <h2 slot="header">Login</h2>
+      <h2 slot="header">Login Required</h2>
       <form @submit.prevent="handleLogin">
         <wa-input 
             label="Username" 
             v-model="username" 
             required
+            autofocus
         ></wa-input>
         <br />
         <wa-input 
@@ -29,14 +30,14 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { auth } from '../state/auth';
+import { requestQueue } from '../state/requestQueue';
 
 const username = ref('');
 const password = ref('');
 const loading = ref(false);
 const error = ref('');
-const router = useRouter();
 
 const handleLogin = async () => {
     loading.value = true;
@@ -46,12 +47,15 @@ const handleLogin = async () => {
             username: username.value,
             password: password.value
         });
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        // Force reload or push to ensure App.vue re-evaluates auth state if needed, 
-        // but simple push is enough if state is reactive or checked on route change
-        window.location.href = '/'; 
+        
+        // Update global auth state
+        auth.login(res.data.token, res.data.user);
+        
+        // Retry queued requests
+        requestQueue.retryAll(res.data.token);
+        
     } catch (err) {
+        console.error(err);
         error.value = 'Ungültige Anmeldedaten';
     } finally {
         loading.value = false;
@@ -60,13 +64,21 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-container {
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent backdrop */
+    backdrop-filter: blur(5px);
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 80vh;
+    z-index: 1000; /* Ensure on top */
 }
 .login-card {
     width: 400px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 </style>

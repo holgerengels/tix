@@ -1,7 +1,9 @@
 <template>
-  <div class="app-container" :class="{ 'with-sidebar': isLoggedIn }">
+  <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated.value }">
     
-    <aside v-if="isLoggedIn" class="sidebar">
+    <LoginOverlay v-if="auth.state.showLogin" />
+    
+    <aside v-if="auth.isAuthenticated.value" class="sidebar">
         <div class="logo">Ticket System</div>
         
         <nav>
@@ -14,7 +16,7 @@
             <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
                 <wa-icon name="collection"></wa-icon> Alle Tickets
             </router-link>
-             <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path.includes('/new') }">
+            <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path && $route.path.includes('/new') }">
                 <wa-icon name="plus-circle"></wa-icon> Neues Ticket
             </router-link>
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
@@ -23,13 +25,13 @@
         </nav>
 
         <div class="footer">
-             <div class="user-info" v-if="user">
-                <small>{{ user.username }}</small>
+             <div class="user-info" v-if="auth.state.user">
+                <small>{{ auth.state.user.username }}</small>
                 <wa-button variant="text" size="small" appearance="plain" @click="$router.push('/settings')" tooltip="Einstellungen">
                     <wa-icon name="gear" style="font-size: 1rem;"></wa-icon>
                 </wa-button>
              </div>
-             <wa-button variant="text" @click="logout" size="small" appearance="plain">
+             <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> Logout
              </wa-button>
              
@@ -46,47 +48,46 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import { auth } from './state/auth';
+import LoginOverlay from './components/LoginOverlay.vue';
 
 const router = useRouter();
 const route = useRoute();
-const isLoggedIn = computed(() => !!localStorage.getItem('token'));
-const user = computed(() => JSON.parse(localStorage.getItem('user') || '{}'));
-
-const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Force reload to clear state effectively or push login
-    window.location.href = '/login';
-};
-
 const isDev = ref(false);
 
-onMounted(async () => {
-    if (isLoggedIn.value) {
+const checkDevMode = async () => {
+     if (auth.isAuthenticated.value) {
         try {
-            const res = await axios.get('/api/config/status', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const res = await axios.get('/api/config/status');
             isDev.value = res.data.devmode;
         } catch (e) {
             console.error('Failed to check devmode:', e);
         }
     }
+}
+
+onMounted(checkDevMode);
+
+// Re-check dev mode on login
+watch(auth.isAuthenticated, (newVal) => {
+    if (newVal) checkDevMode();
 });
 
+// Since auth state is reactive, we don't need manual reload logic for sidebar anymore!
 const reloadConfig = async () => {
     try {
         await axios.post('/api/config/reload', {}, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            headers: { Authorization: `Bearer ${auth.state.token}` }
         });
         window.location.reload();
     } catch (err) {
         alert('Reload failed: ' + err.message);
     }
 };
+
 </script>
 
 <style>

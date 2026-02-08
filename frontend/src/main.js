@@ -27,14 +27,12 @@ registerIconLibrary('default', {
     resolver: name => `https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/${name}.svg`
 });
 
-import LoginView from './views/LoginView.vue'
 import ListView from './views/ListView.vue'
 import NewTicketView from './views/NewTicketView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        { path: '/login', component: LoginView },
         { path: '/', component: ListView, meta: { requiresAuth: true } },
         { path: '/tickets/new', component: NewTicketView, meta: { requiresAuth: true } },
         { path: '/tickets/:id', component: ListView, meta: { requiresAuth: true } },
@@ -46,10 +44,52 @@ const router = createRouter({
     ]
 })
 
+import axios from 'axios';
+import { auth } from './state/auth';
+import { requestQueue } from './state/requestQueue';
+
+// Request interceptor to add token
+axios.interceptors.request.use(config => {
+    const token = auth.state.token;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// Response interceptor to handle 401
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response && error.response.status === 401) {
+            // Trigger Login Overlay
+            auth.triggerLogin();
+
+            // Create a promise that resolves when the request is retried
+            return new Promise((resolve, reject) => {
+                requestQueue.add((token) => {
+                    const originalRequest = error.config;
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    axios(originalRequest).then(resolve).catch(reject);
+                });
+            });
+        }
+        return Promise.reject(error);
+    }
+);
+
 router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('token');
-    if (to.meta.requiresAuth && !token) next('/login');
-    else next();
+    // Check auth using our state
+    if (to.meta.requiresAuth && !auth.isAuthenticated.value) {
+        // Trigger login overlay
+        auth.triggerLogin();
+        // Allow navigation anyway! The component will mount, try to fetch data,
+        // fail with 401, scan trigger queue, and wait.
+        // This preserves the URL and allows "Deep Link" behavior seamlessly.
+        next();
+    } else {
+        next();
+    }
 })
 
 const app = createApp(App);
@@ -57,6 +97,8 @@ const app = createApp(App);
 app.config.errorHandler = (err, instance, info) => {
     console.error("Global Error:", err);
     console.error("Info:", info);
+    // Alert is too intrusive for 401s handled by interceptor
+    if (err.response && err.response.status === 401) return;
     alert(`Ein Fehler ist aufgetreten: ${err.message}`);
 };
 

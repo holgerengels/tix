@@ -207,7 +207,7 @@ const canComment = computed(() => {
     const rule = access.find(r => r.name === 'comment');
     if (!rule) return false;
     
-    return rule.groups.some(g => user.groups.includes(g));
+    return rule.groups.some(g => (user.groups || []).includes(g));
 });
 
 const execute = async (btnName = null) => {

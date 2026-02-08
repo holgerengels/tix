@@ -1,16 +1,13 @@
-version: '3.8'
-
 services:
   app:
-    build:
-      context: ..
-      dockerfile: deploy/app.docker
+    image: ghcr.io/holgerengels/tix:latest
     ports:
       - "3000:3000"
     volumes:
-      - ./config/settings.json:/app/config/settings.json
+      - ./config:/config
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      # - "myserver.local:192.168.1.50" # Example: Map hostname to IP
     depends_on:
       - mongo
     restart: always
