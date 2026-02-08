@@ -3,8 +3,10 @@
     
     <LoginOverlay v-if="auth.state.showLogin" />
     
+    <div v-if="isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
+
     <aside v-if="auth.isAuthenticated.value" class="sidebar">
-        <div class="logo">Ticket System</div>
+        <div class="logo">TIX</div>
         
         <nav>
             <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
@@ -48,7 +50,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { auth } from './state/auth';
@@ -75,6 +77,40 @@ onMounted(checkDevMode);
 // Re-check dev mode on login
 watch(auth.isAuthenticated, (newVal) => {
     if (newVal) checkDevMode();
+});
+
+const isMobile = ref(false);
+
+const handleResize = (e) => {
+    isMobile.value = e.matches;
+    if (isMobile.value) {
+        ui.setSidebar(false);
+    } else {
+        ui.setSidebar(true);
+    }
+};
+
+onMounted(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1000px)');
+    isMobile.value = mediaQuery.matches;
+    
+    // Initial state check - if mobile, ensure closed. If desktop, ensure open (or whatever was last state? Maybe user wants persistent state)
+    // Requirement says: "standardmäßig zugeklappt" (default collapsed) < 1000px.
+    if (isMobile.value) {
+         ui.setSidebar(false);
+    }
+
+    mediaQuery.addEventListener('change', handleResize);
+    
+    onUnmounted(() => {
+        mediaQuery.removeEventListener('change', handleResize);
+    });
+});
+
+watch(route, () => {
+    if (isMobile.value && ui.state.sidebarOpen) {
+        ui.setSidebar(false);
+    }
 });
 
 // Since auth state is reactive, we don't need manual reload logic for sidebar anymore!
@@ -210,5 +246,55 @@ body {
     opacity: 0;
     border-right: none;
     pointer-events: none; /* Prevent clicks when hidden */
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+}
+
+@media (max-width: 1000px) {
+    .app-container {
+        position: relative;
+    }
+
+    .app-container.with-sidebar {
+         display: block; /* Ensure it's not flex row anymore so sidebar doesn't take space? 
+                            Actually if it's flex row, and sidebar is absolute, it shouldn't take space. 
+                            But let's make sure main-content takes full width. */
+    }
+
+    .sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 210px;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    .app-container.sidebar-collapsed .sidebar {
+        transform: translateX(-100%);
+        width: 210px; 
+        padding-left: 1.5rem; /* Restore padding because default collapsed removes it */
+        padding-right: 1.5rem;
+        border-right: 1px solid var(--wa-color-neutral-200); /* Restore border */
+        opacity: 1; 
+        pointer-events: none;
+    }
+
+    .main-content {
+        width: 100%;
+        height: 100%;
+    }
 }
 </style>
