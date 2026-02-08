@@ -1,6 +1,9 @@
 <template>
   <div class="edit-ticket-view">
     <div class="header">
+        <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
+            <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
+        </wa-button>
         <wa-button variant="neutral" appearance="outlined" size="small" @click="goBack">
             <wa-icon slot="start" name="arrow-left"></wa-icon> zurück
         </wa-button>
@@ -47,6 +50,7 @@ import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { ui } from '../state/ui';
 import DynamicForm from '../components/DynamicForm.vue';
 
 const route = useRoute();
@@ -210,6 +214,9 @@ onMounted(fetchData);
     gap: 1rem;
     margin-bottom: 1rem;
     flex-shrink: 0;
+}
+.header h2 {
+    margin: 0;
 }
 .ticket-card {
     height: calc(100% - 70px);

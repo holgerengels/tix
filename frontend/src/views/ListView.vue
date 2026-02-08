@@ -1,6 +1,9 @@
 <template>
   <div class="list-view">
     <div class="header">
+        <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
+            <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
+        </wa-button>
         <h2>{{ pageTitle }}</h2>
     </div>
 
@@ -144,6 +147,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
+import { ui } from '../state/ui';
 
 const route = useRoute();
 const router = useRouter();

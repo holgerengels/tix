@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated.value }">
+  <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated.value, 'sidebar-collapsed': !ui.state.sidebarOpen && auth.isAuthenticated.value }">
     
     <LoginOverlay v-if="auth.state.showLogin" />
     
@@ -8,35 +8,35 @@
         
         <nav>
             <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
-                <wa-icon name="person"></wa-icon> Meine Tickets
+                <wa-icon name="person"></wa-icon> <span class="nav-text">Meine Tickets</span>
             </router-link>
             <router-link to="/?filter=assigned" class="nav-item" :class="{ active: $route.query.filter === 'assigned' }">
-                <wa-icon name="list-task"></wa-icon> Mir zugewiesen
+                <wa-icon name="list-task"></wa-icon> <span class="nav-text">Mir zugewiesen</span>
             </router-link>
             <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
-                <wa-icon name="collection"></wa-icon> Alle Tickets
+                <wa-icon name="collection"></wa-icon> <span class="nav-text">Alle Tickets</span>
             </router-link>
             <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path && $route.path.includes('/new') }">
-                <wa-icon name="plus-circle"></wa-icon> Neues Ticket
+                <wa-icon name="plus-circle"></wa-icon> <span class="nav-text">Neues Ticket</span>
             </router-link>
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
-                <wa-icon name="journal-text"></wa-icon> Protokoll
+                <wa-icon name="journal-text"></wa-icon> <span class="nav-text">Protokoll</span>
             </router-link>
         </nav>
 
         <div class="footer">
              <div class="user-info" v-if="auth.state.user">
-                <small>{{ auth.state.user.username }}</small>
+                <small class="nav-text">{{ auth.state.user.username }}</small>
                 <wa-button variant="text" size="small" appearance="plain" @click="$router.push('/settings')" tooltip="Einstellungen">
                     <wa-icon name="gear" style="font-size: 1rem;"></wa-icon>
                 </wa-button>
              </div>
              <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
-                <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> Logout
+                <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
              </wa-button>
              
              <wa-button v-if="isDev" variant="text" @click="reloadConfig" size="small" appearance="plain" title="Reload Config form Disk">
-                <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> Reload
+                <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> <span class="nav-text">Reload</span>
              </wa-button>
         </div>
     </aside>
@@ -52,6 +52,7 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { auth } from './state/auth';
+import { ui } from './state/ui';
 import LoginOverlay from './components/LoginOverlay.vue';
 
 const router = useRouter();
@@ -123,6 +124,9 @@ body {
     padding: 1.5rem;
     flex-shrink: 0;
     box-shadow: 1px 0 10px rgba(0,0,0,0.02);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .logo {
@@ -193,5 +197,16 @@ body {
     flex: 1;
     padding: 1rem;
     background-color: var(--wa-color-neutral-50);
+    overflow: hidden; /* Ensure content doesn't spill over when sidebar is toggled */
+}
+
+/* Sidebar Collapsed State */
+.app-container.sidebar-collapsed .sidebar {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    opacity: 0;
+    border-right: none;
+    pointer-events: none; /* Prevent clicks when hidden */
 }
 </style>

@@ -1,6 +1,9 @@
 <template>
   <div class="log-view">
     <div class="header">
+        <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
+            <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
+        </wa-button>
         <h2>Protokoll</h2>
     </div>
 
@@ -79,6 +82,7 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
+import { ui } from '../state/ui';
 
 const logs = ref([]);
 const loading = ref(true);
@@ -179,6 +183,9 @@ onMounted(async () => {
     flex-direction: column;
 }
 .header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 1rem;
     flex-shrink: 0;
 }

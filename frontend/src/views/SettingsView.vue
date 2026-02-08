@@ -1,6 +1,9 @@
 <template>
   <div class="settings-view">
     <div class="header">
+        <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
+            <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
+        </wa-button>
         <h2>Einstellungen</h2>
     </div>
 
@@ -31,6 +34,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { ui } from '../state/ui';
 
 const router = useRouter();
 const notificationUri = ref('');
@@ -80,7 +84,13 @@ const cancel = () => {
     display: flex;
     flex-direction: column;
 }
-
+.header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
 .settings-card {
     width: 100%;
 }
@@ -93,5 +103,10 @@ const cancel = () => {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+}
+
+
+.header h2 {
+    margin: 0;
 }
 </style>
