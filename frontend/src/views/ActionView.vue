@@ -31,7 +31,8 @@
             <span v-if="ticket.assignee"> | Zugewiesen an <strong>{{ ticket.assignee }}</strong></span>
         </div>
         
-        <div class="ticket-body">
+
+        <div class="ticket-content">
             <DynamicForm 
                v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
                :fields="currentFormDef.fields" 
@@ -45,6 +46,7 @@
                 <TicketComments ref="commentsRef" :ticket="ticket" />
             </aside>
         </div>
+
 
             <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
             
@@ -310,17 +312,18 @@ onMounted(fetchData);
     justify-content: space-between;
 }
 .ticket-card::part(body) {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.ticket-content {
     height: 100%;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
     gap: 2rem;
     align-items: stretch;
-    min-height: 0; /* Crucial for nested scrolling */
-}
-.ticket-body {
-    height: 100%;
-    display: contents;
+    min-height: 0;
 }
 .ticket-card::part(footer) {
     justify-content: end;
@@ -329,7 +332,7 @@ onMounted(fetchData);
 .dynamic-form {
     height: 100%;
     flex: 2;
-    min-width: 0; 
+    min-width: 300px; 
     overflow-y: auto;
     padding-right: 0.5rem;
 }
@@ -356,5 +359,29 @@ onMounted(fetchData);
 }
 .error {
     color: var(--wa-color-danger-700);
+}
+
+@container main (max-width: 800px) {
+    .ticket-content {
+        flex-direction: column;
+        display: flex;
+        overflow-y: auto !important;
+    }
+
+    .dynamic-form {
+        flex: none;
+        height: auto;
+        overflow-y: visible;
+        padding-right: 0;
+    }
+
+    .comments-sidebar {
+        flex: none;
+        height: auto;
+        overflow: visible;
+        border-left: none;
+        border-top: 1px solid var(--wa-color-neutral-200);
+        padding-left: 0;
+    }
 }
 </style>

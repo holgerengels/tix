@@ -18,7 +18,7 @@
            </wa-option>
         </wa-select></div>
 
-        <div class="ticket-body">
+        <div class="ticket-content">
             <DynamicForm
                 v-if="newTicketType && config[newTicketType]" 
                 :fields="config[newTicketType].fields" 
@@ -206,16 +206,18 @@ onMounted(fetchConfig);
     gap: 1rem;
 }
 .ticket-card::part(body) {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.ticket-content {
     height: 100%;
     display: flex;
     flex-direction: row;
     gap: 2rem;
     align-items: stretch;
-    min-height: 0; /* Crucial for nested scrolling */
-}
-.ticket-body {
-    height: 100%;
-    display: contents;
+    min-height: 0;
 }
 .ticket-card::part(footer) {
     justify-content: end;
@@ -224,7 +226,7 @@ onMounted(fetchConfig);
 .dynamic-form {
     height: 100%;
     flex: 2;
-    min-width: 0; 
+    min-width: 300px; 
     overflow-y: auto;
     padding-right: 0.5rem;
 }

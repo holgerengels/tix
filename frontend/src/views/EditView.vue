@@ -245,7 +245,7 @@ onMounted(fetchData);
 .dynamic-form {
     height: 100%;
     flex: 2;
-    min-width: 0; 
+    min-width: 300px; 
     overflow-y: auto;
     padding-right: 0.5rem;
 }

@@ -198,6 +198,8 @@ body {
     padding: 1rem;
     background-color: var(--wa-color-neutral-50);
     overflow: hidden; /* Ensure content doesn't spill over when sidebar is toggled */
+    container-type: inline-size;
+    container-name: main;
 }
 
 /* Sidebar Collapsed State */
