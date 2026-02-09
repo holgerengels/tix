@@ -26,9 +26,8 @@
             {{ ticket.id }} {{ ticket.title }}
         </h3>
         
-        <div slot="header" class="ticket-meta">
-            <span>Erstellt von <strong>{{ ticket.creator }}</strong> am {{ formatDate(ticket.created) }}</span>
-            <span v-if="ticket.assignee"> | Zugewiesen an <strong>{{ ticket.assignee }}</strong></span>
+        <div slot="header">
+            <strong>{{ ticket.creator }}</strong> {{ formatDate(ticket.created) }}
         </div>
         
 
@@ -38,6 +37,9 @@
                :fields="currentFormDef.fields" 
                v-model="actionFormData" 
             />
+            <div v-else-if="autoExecuting" class="loading">
+                <wa-spinner></wa-spinner> Führe Aktion aus...
+            </div>
             <div v-else class="message">
                 Sicher, dass die Aktion <strong>{{ actionDef.name }}</strong> ausgeführt werden soll?
             </div>
@@ -84,6 +86,7 @@ const actionDef = ref(null);
 const currentFormDef = ref(null);
 const loading = ref(true);
 const executing = ref(false);
+const autoExecuting = ref(false);
 const error = ref(null);
 const isDirty = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -187,6 +190,11 @@ const prepareAction = () => {
             fields: fields,
             actions: specificFormDef ? specificFormDef.actions : []
         };
+    } else {
+        // No Form -> Auto Execute
+        autoExecuting.value = true;
+        execute(null);
+        return;
     }
 
      // Watch for changes after initial load

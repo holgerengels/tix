@@ -32,9 +32,8 @@
             {{ ticket.id }} {{ ticket.title }}
         </h3>
         
-        <div slot="header" class="ticket-meta">
-            <span>Erstellt von <strong>{{ ticket.creator }}</strong> am {{ formatDate(ticket.created) }}</span>
-            <span v-if="ticket.assignee"> | Zugewiesen an <strong>{{ ticket.assignee }}</strong></span>
+        <div slot="header">
+            <strong>{{ ticket.creator }}</strong> {{ formatDate(ticket.created) }}
         </div>
 
         <div class="ticket-content">

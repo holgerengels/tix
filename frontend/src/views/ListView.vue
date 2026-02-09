@@ -129,6 +129,7 @@
                         :key="action.name"
                         size="small"
                         appearance="plain"
+                        :loading="executingActionId === (ticket._id + '-' + action.name)"
                         @click="handleAction(ticket, action)"
                     >
                         {{ action.name }}
@@ -165,6 +166,8 @@ const filterDateTo = ref('');
 const filterBadges = ref([]);
 
 const savedFilters = ref([]);
+const executingActionId = ref(null);
+
 
 const loadSavedFilters = () => {
     const key = `vin_saved_filters_${currentFilter.value}`;
@@ -468,13 +471,44 @@ const getActions = (ticket) => {
     return authorizedActions;
 };
 
-const handleAction = (ticket, action) => {
+const handleAction = async (ticket, action) => {
     if (action.form === 'read') {
         router.push(`/tickets/${ticket.id}/view`);
     } else if (action.form === 'edit') {
         router.push(`/tickets/${ticket.id}/edit`);
-    } else {
+    } else if (action.form) {
         router.push(`/tickets/${ticket.id}/action/${action.name}`);
+    } else {
+        // Direct execution
+        if (executingActionId.value) return; 
+        
+        const actionId = ticket._id + '-' + action.name;
+        executingActionId.value = actionId;
+        
+        try {
+            const { _id, __v, type, state, creator, created, updated, log, ...rest } = ticket;
+            const payload = {
+                actionName: action.name,
+                formData: { 
+                    title: ticket.title,
+                    description: ticket.description,
+                    assignee: ticket.assignee,
+                    ...rest 
+                }
+            };
+
+            await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
+                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            // Refresh list
+            fetchTickets();
+        } catch (err) {
+            console.error(err);
+            alert('Fehler: ' + (err.response?.data?.message || err.message));
+        } finally {
+            executingActionId.value = null;
+        }
     }
 };
 
