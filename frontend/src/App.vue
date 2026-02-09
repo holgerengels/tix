@@ -6,7 +6,7 @@
     <div v-if="isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
 
     <aside v-if="auth.isAuthenticated.value" class="sidebar">
-        <div class="logo">TIX</div>
+        <div class="logo"><img src="/vu.svg" alt="TIX" height="44"/>&nbsp;TIX</div>
         
         <nav>
             <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
@@ -166,15 +166,14 @@ body {
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 32px;
+    line-height: 34px;
     font-weight: 800;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
     color: var(--wa-color-primary-700);
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--wa-color-primary-600), var(--wa-color-primary-800));
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-item {

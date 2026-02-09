@@ -63,21 +63,16 @@
       />
 
       <!-- User Select -->
-      <wa-select
-        v-else-if="field.type === 'User'"
-        hoist
-        :label="field.label"
-        :required="field.required === true"
-        :disabled="field.readonly === true"
-        :value="modelValue[field.name] || ''"
-        @change.stop="updateField(field.name, $event.target.value)"
-        @input.stop
-        @after-hide.stop="isOpen = false"
-      >
-        <wa-option v-for="user in getDisplayUsers(field)" :key="user.username" :value="user.username">
-            {{ user.username }}
-        </wa-option>
-      </wa-select>
+      <div v-else-if="field.type === 'User'">
+        <WAAutocomplete
+            :label="field.label"
+            :required="field.required === true"
+            :disabled="field.readonly === true"
+            :modelValue="modelValue[field.name] || ''"
+            :options="getDisplayUsers(field).map(u => u.username)"
+            @update:modelValue="updateField(field.name, $event)"
+        />
+      </div>
 
       <!-- Badges -->
       <BadgeEditor
