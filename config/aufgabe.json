@@ -52,7 +52,7 @@
                         "Netzwerkteam",
                         "Hausmeister"
                     ],
-                    "script": "ticket.state = 'geschlossen.abgelehnt'"
+                    "script": "ticket.state = 'offen.abgelehnt'"
                 }
             ]
         },
@@ -143,6 +143,10 @@
                 }
             ],
             "actions": [
+                {
+                    "name": "abgelehnt",
+                    "script": "ticket.state = 'offen.abgelehnt'"
+                },
                 {
                     "name": "erledigt",
                     "script": "ticket.state = 'offen.erledigt'"
