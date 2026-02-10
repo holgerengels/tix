@@ -163,7 +163,10 @@ router.get('/tickets', verifyToken, async (req, res) => {
     // If baseQuery has $or, we must use $and to combine with other filters
     const sensitiveFilters = [];
 
-    if (type) sensitiveFilters.push({ type: type });
+    if (type) {
+        const types = Array.isArray(type) ? type : [type];
+        sensitiveFilters.push({ type: { $in: types } });
+    }
     if (status) {
         if (status.endsWith('.*')) {
             const prefix = status.replace('.*', '');

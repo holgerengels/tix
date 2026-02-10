@@ -13,10 +13,11 @@
             <div class="filters">
                 <div class="filter-group">
                     <label>Typ:</label>
-                    <select v-model="filterType" @change="handleTypeChange">
-                        <option value="">Alle</option>
-                        <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
-                    </select>
+                    <div style="min-width: 200px;">
+                        <wa-select multiple clearable v-model="filterType" @change="handleTypeChange">
+                            <wa-option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</wa-option>
+                        </wa-select>
+                    </div>
                 </div>
                 <div class="filter-group">
                     <label>Status:</label>
@@ -157,7 +158,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 const tickets = ref([]);
 const loading = ref(false);
 
-const filterType = ref('');
+const filterType = ref([]);
 const filterStatus = ref('');
 const filterCreator = ref('');
 const filterDateRange = ref('');
@@ -205,14 +206,15 @@ const saveCurrentFilter = () => {
 };
 
 const deleteSavedFilter = (index) => {
-    // Stop propagation is handled by the component event usually, but let's be safe if UI needs it
-    savedFilters.value.splice(index, 1);
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    localStorage.setItem(key, JSON.stringify(savedFilters.value));
+    if (confirm('Soll der Filter wirklich gelöscht werden?')) {
+        savedFilters.value.splice(index, 1);
+        const key = `vin_saved_filters_${currentFilter.value}`;
+        localStorage.setItem(key, JSON.stringify(savedFilters.value));
+    }
 };
 
 const applySavedFilter = (filter) => {
-    filterType.value = filter.type || '';
+    filterType.value = filter.type || [];
     filterStatus.value = filter.status || '';
     filterCreator.value = filter.creator || '';
     filterDateRange.value = filter.dateRange || '';
@@ -241,14 +243,21 @@ const availableTypes = computed(() => {
 });
 
 const availableStatuses = computed(() => {
-    if (!filterType.value) {
+    if (!filterType.value || filterType.value.length === 0) {
         return ['offen.*', 'geschlossen.*'];
     }
     
-    if (config.value && config.value[filterType.value] && config.value[filterType.value].states) {
-        return config.value[filterType.value].states.map(s => s.name);
-    }
-    return [];
+    const types = Array.isArray(filterType.value) ? filterType.value : [filterType.value];
+    const states = new Set();
+    
+    types.forEach(t => {
+        if (config.value && config.value[t] && config.value[t].states) {
+            config.value[t].states.forEach(s => states.add(s.name));
+        }
+    });
+    
+    if (states.size === 0) return ['offen.*', 'geschlossen.*'];
+    return Array.from(states);
 });
 
 const availableBadges = [
@@ -335,7 +344,7 @@ const handleTypeChange = () => {
 };
 
 const resetFilters = () => {
-    filterType.value = '';
+    filterType.value = [];
     filterStatus.value = '';
     filterCreator.value = '';
     filterDateRange.value = '';
