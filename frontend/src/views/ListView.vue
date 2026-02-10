@@ -95,13 +95,13 @@
             </thead>
             <tbody>
                 <tr v-for="ticket in tickets" :key="ticket._id">
-                <td>
+                <td data-label="ID">
                     <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
                         <span class="id-tag">{{ ticket.id }}</span>
                     </router-link>
                 </td>
-                <td>{{ ticket.type }}</td>
-                <td><strong>{{ ticket.title }}</strong>
+                <td data-label="Typ">{{ ticket.type }}</td>
+                <td data-label="Titel" class="title-cell"><strong>{{ ticket.title }}</strong>
                         <span 
                             v-for="badge in ticket.badges" 
                             :key="badge" 
@@ -111,10 +111,10 @@
                             {{ badge }}
                         </span>
                 </td>
-                <td><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
-                <td>{{ ticket.creator }}</td>
-                <td>{{ formatDate(ticket.created) }}</td>
-                <td>
+                <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
+                <td data-label="Ersteller">{{ ticket.creator }}</td>
+                <td data-label="Erstellt">{{ formatDate(ticket.created) }}</td>
+                <td data-label="Daten">
                     <div class="dynamic-data">
                         <div v-if="hasTemplate(ticket)" class="template-data">
                             {{ getFormattedData(ticket) }}
@@ -795,5 +795,86 @@ onMounted(async () => {
 .saved-filter-tag:hover {
     transform: translateY(-1px);
     box-shadow: var(--wa-shadow-small);
+}
+
+@media (max-width: 768px) {
+    .ticket-table {
+        display: block;
+        background: transparent;
+        box-shadow: none;
+        border: none;
+    }
+    
+    .ticket-table thead {
+        display: none;
+    }
+    
+    .ticket-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .ticket-table tr {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border: 1px solid var(--wa-color-neutral-200);
+        border-radius: var(--wa-border-radius-large);
+        box-shadow: var(--wa-shadow-small);
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+    
+    .ticket-table td {
+        display: flex;
+        padding: 0.25rem 0;
+        border: none;
+        text-align: left;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    .ticket-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--wa-color-neutral-600);
+        margin-right: 1rem;
+        flex-shrink: 0;
+        font-size: 0.85rem;
+        margin-top: 0.1rem;
+    }
+    
+    /* Special handling for Title to make it look like a card header */
+    .ticket-table td.title-cell {
+        display: block;
+        border-bottom: 1px solid var(--wa-color-neutral-100);
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .ticket-table td.title-cell::before {
+        display: none;
+    }
+    
+    .ticket-table td.title-cell strong {
+        display: block;
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .ticket-table td.actions-cell {
+        margin-top: 0.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--wa-color-neutral-100);
+        justify-content: flex-end;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    /* Actions content wrapper to align buttons */
+    .actions-cell wa-button {
+        margin: 0;
+    }
 }
 </style>
