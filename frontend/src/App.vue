@@ -263,12 +263,6 @@ body {
         position: relative;
     }
 
-    .app-container.with-sidebar {
-         display: block; /* Ensure it's not flex row anymore so sidebar doesn't take space? 
-                            Actually if it's flex row, and sidebar is absolute, it shouldn't take space. 
-                            But let's make sure main-content takes full width. */
-    }
-
     .sidebar {
         position: absolute;
         top: 0;
@@ -294,6 +288,14 @@ body {
     .main-content {
         width: 100%;
         height: 100%;
+    }
+}
+@media (max-width: 768px) {
+    .main-content {
+        padding: 1rem 0;
+    }
+    wa-card {
+        border-radius: 0;
     }
 }
 </style>

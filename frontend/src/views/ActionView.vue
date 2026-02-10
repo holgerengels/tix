@@ -369,7 +369,7 @@ onMounted(fetchData);
     color: var(--wa-color-danger-700);
 }
 
-@container main (max-width: 800px) {
+@container main (max-width: 768px) {
     .ticket-content {
         flex-direction: column;
         display: flex;

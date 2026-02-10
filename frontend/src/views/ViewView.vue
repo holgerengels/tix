@@ -50,7 +50,19 @@
                 <TicketComments v-if="canComment" :ticket="ticket" />
             </aside>
         </div>
-            <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
+            <div slot="footer-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                <wa-button @click="goBack" appearance="plain">Abbrechen</wa-button>
+                <wa-button 
+                    v-for="action in getActions(ticket)" 
+                    :key="action.name"
+                    size="small"
+                    appearance="filled"
+                    :loading="executingActionId === (ticket._id + '-' + action.name)"
+                    @click="handleAction(ticket, action)"
+                >
+                    {{ action.name }}
+                </wa-button>
+            </div>
     </wa-card>
   </div>
 </template>
@@ -72,6 +84,7 @@ const loading = ref(true);
 const error = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const undoAction = ref(null);
+const executingActionId = ref(null);
 
 const ticketData = ref({});
 const formFields = ref([]);
@@ -228,6 +241,78 @@ const getStatusLabel = (ticket) => {
     return stateDef ? stateDef.label : ticket.state;
 };
 
+const getActions = (ticket) => {
+    if (!config.value || !config.value[ticket.type]) return [];
+    
+    const workflow = config.value[ticket.type].workflow;
+    const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
+    
+    if (matchingBlocks.length === 0) return [];
+    
+    const allActions = matchingBlocks.flatMap(block => block.actions);
+
+    const authorizedActions = allActions.filter(action => {
+        const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
+        const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
+        const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
+        return allowedByCreator || allowedByAssignee || allowedByGroup;
+    });
+
+    const wf = config.value[ticket.type];
+    const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
+    if (editAccess && editAccess.groups.some(g => (user.groups || []).includes(g))) {
+        authorizedActions.push({
+            name: 'editieren',
+            form: 'edit',
+            groups: editAccess.groups 
+        });
+    }
+
+    return authorizedActions;
+};
+
+const handleAction = async (ticket, action) => {
+    if (action.form === 'read') {
+        // We are already reading, maybe just refresh?
+        fetchData();
+    } else if (action.form === 'edit') {
+        router.push(`/tickets/${ticket.id}/edit`);
+    } else if (action.form) {
+        router.push(`/tickets/${ticket.id}/action/${action.name}`);
+    } else {
+        // Direct execution
+        if (executingActionId.value) return; 
+        
+        const actionId = ticket._id + '-' + action.name;
+        executingActionId.value = actionId;
+        
+        try {
+             const { _id, __v, type, state, creator, created, updated, log, ...rest } = ticket;
+            const payload = {
+                actionName: action.name,
+                formData: { 
+                    title: ticket.title,
+                    description: ticket.description,
+                    assignee: ticket.assignee,
+                    ...rest 
+                }
+            };
+
+            await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
+                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            
+            // Refresh data
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            alert('Fehler: ' + (err.response?.data?.message || err.message));
+        } finally {
+            executingActionId.value = null;
+        }
+    }
+};
+
 onMounted(fetchData);
 </script>
 
@@ -306,7 +391,7 @@ onMounted(fetchData);
     color: var(--wa-color-danger-700);
 }
 
-@container main (max-width: 800px) {
+@container main (max-width: 768px) {
     .ticket-content {
         flex-direction: column;
         display: flex;
