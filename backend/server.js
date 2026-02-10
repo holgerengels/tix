@@ -33,4 +33,7 @@ app.listen(PORT, () => {
     // Start Background Jobs
     const { startPublisher } = require('./publisher');
     startPublisher();
+
+    const { startBots } = require('./bots');
+    startBots();
 });

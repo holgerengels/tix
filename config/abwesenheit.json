@@ -141,6 +141,17 @@
             ]
         }
     ],
+    "bots": [
+        {
+            "name": "dringend",
+            "states": [
+                "offen.neu",
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "function": "dringend"
+        }
+    ],
     "forms": [
         {
             "name": "abwesenheit.bearbeiten",

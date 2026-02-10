@@ -11,7 +11,8 @@ const ticketSchema = new mongoose.Schema({
     creator: { type: String, required: true },
     created: { type: Date, required: true, default: Date.now },
     assignee: { type: String },
-    assigned: { type: Date }
+    assigned: { type: Date },
+    badges: { type: [String], default: [] }
 }, {
     strict: false,
     timestamps: { createdAt: 'created', updatedAt: 'updated' }
