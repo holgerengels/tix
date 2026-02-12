@@ -12,7 +12,7 @@
     </div>
 
     <wa-card v-else class="ticket-card" with-footer>
-        <div slot="header" class="card-header">Ticket Typ<wa-select :value="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen">
+        <div slot="header" class="card-header">Typ<wa-select :value="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen" style="width: 100%;">
            <wa-option v-for="type in availableTypes" :key="type" :value="type">
               {{ type }}
            </wa-option>

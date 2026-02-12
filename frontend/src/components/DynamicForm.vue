@@ -82,6 +82,15 @@
         @update:modelValue="updateField(field.name, $event)"
       />
 
+      <!-- Boolean -->
+      <wa-checkbox
+        v-else-if="field.type === 'Boolean'"
+        :checked="modelValue[field.name] === true"
+        :disabled="field.readonly === true"
+        :required="field.required === true"
+        @change="updateField(field.name, $event.target.checked)"
+      >{{ field.label }}</wa-checkbox>
+
       <!-- Standard Text -->
       <wa-input 
         v-else
@@ -145,6 +154,11 @@ const fetchUsers = async () => {
 const getDisplayUsers = (field) => {
     // 1. Start with all fetched users
     let displayUsers = [...users.value];
+
+    // Filter by field groups if defined
+    if (field.groups && field.groups.length > 0) {
+        displayUsers = displayUsers.filter(u => u.groups && u.groups.some(g => field.groups.includes(g)));
+    }
 
     // 2. Check if current value exists
     const currentValue = props.modelValue[field.name];

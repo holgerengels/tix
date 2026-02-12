@@ -1,0 +1,253 @@
+{
+    "type": "Außerunterrichtliche Veranstaltung",
+    "abbreviation": "AUß",
+    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} ({{reason}})",
+    "fields": [
+        {
+            "name": "dateFrom",
+            "label": "Datum von",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "timeFrom",
+            "label": "Zeit von",
+            "type": "Time",
+            "required": true
+        },
+        {
+            "name": "dateUntil",
+            "label": "Datum bis",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "timeUntil",
+            "label": "Zeit bis",
+            "type": "Time",
+            "required": true
+        },
+        {
+            "name": "location",
+            "label": "Ort / Betrieb",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "companion1",
+            "label": "Begleitperson 1",
+            "type": "User",
+            "groups": [
+                "Lehrkräfte"
+            ],
+            "required": false
+        },
+        {
+            "name": "companion2",
+            "label": "Begleitperson 2",
+            "type": "User",
+            "groups": [
+                "Lehrkräfte"
+            ],
+            "required": false
+        },
+        {
+            "name": "companion3",
+            "label": "Begleitperson 3",
+            "type": "User",
+            "groups": [
+                "Lehrkräfte"
+            ],
+            "required": false
+        },
+        {
+            "name": "assignee",
+            "label": "Antrag an Abteilungsleitung",
+            "type": "User",
+            "groups": [
+                "Abteilungsleitung"
+            ],
+            "required": true,
+            "visible": true
+        }
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu"
+            ],
+            "actions": [
+                {
+                    "name": "genehmigen",
+                    "groups": [
+                        "Abteilungsleitung"
+                    ],
+                    "script": "ticket.state = 'offen.genehmigt'"
+                },
+                {
+                    "name": "ablehnen",
+                    "groups": [
+                        "Schulleitung"
+                    ],
+                    "script": "ticket.state = 'offen.abgelehnt'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "Stundenplanung"
+                    ],
+                    "form": "abwesenheit.bearbeiten"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.neu",
+                "offen.genehmigt"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'geschlossen.storniert'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.erledigt",
+                "offen.abgelehnt"
+            ],
+            "actions": [
+                {
+                    "name": "ok",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "script": "ticket.state = 'geschlossen.ok'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "Schulleitung",
+                "Abteilungsleitung",
+                "Stundenplanung"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "Schulleitung",
+                "Abteilungsleitung",
+                "Stundenplanung"
+            ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "dringend",
+            "states": [
+                "offen.neu",
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "function": "dringend"
+        }
+    ],
+    "forms": [
+        {
+            "name": "abwesenheit.bearbeiten",
+            "title": "Abwesenheit bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'offen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.genehmigt",
+            "label": "genehmigt",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "offen.abgelehnt",
+            "label": "abgelehnt",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "geschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "geschlossen",
+            "color": "green"
+        }
+    ]
+}

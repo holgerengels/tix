@@ -20,6 +20,7 @@ const MOCK_USERS = [
     { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },
+    { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'] },
     { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'] },
     { username: 'hausmeister', password: 'password', groups: ['Hausmeister'] },
     { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'] },

@@ -1,0 +1,178 @@
+{
+    "type": "Krankmeldung",
+    "abbreviation": "KRM",
+    "template": "{{dateFrom}} - {{dateUntil}}",
+    "fields": [
+        {
+            "name": "dateFrom",
+            "label": "Datum von",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "dateUntil",
+            "label": "Datum bis",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "who",
+            "label": "Wer ist krank?",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "Ich selbst",
+                "Mein Kind"
+            ]
+        },
+        {
+            "name": "exam",
+            "label": "Ich habe eine Prüfungsaufsicht",
+            "type": "Boolean"
+        },
+        {
+            "name": "workAssignment",
+            "label": "Folgende Unterrichte sind mit Arbeitsaufträge versorgt",
+            "help": "Arbeitsaufträge bitte selbst kommunizieren",
+            "type": "RichText",
+            "required": false
+        }
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "Stundenplanung"
+                    ],
+                    "form": "krankmeldung.bearbeiten"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.neu"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'geschlossen.storniert'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.erledigt"
+            ],
+            "actions": [
+                {
+                    "name": "ok",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "script": "ticket.state = 'geschlossen.ok'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "Schulleitung",
+                "Stundenplanung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "Stundenplanung"
+            ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "dringend",
+            "states": [
+                "offen.neu",
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "function": "dringend"
+        }
+    ],
+    "forms": [
+        {
+            "name": "krankmeldung.bearbeiten",
+            "title": "Krankmeldung bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'offen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "geschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "geschlossen",
+            "color": "green"
+        }
+    ]
+}
