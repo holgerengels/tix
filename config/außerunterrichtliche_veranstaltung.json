@@ -62,7 +62,7 @@
         },
         {
             "name": "assignee",
-            "label": "Antrag an Abteilungsleitung",
+            "label": "Zuständige Abteilungsleitung",
             "type": "User",
             "groups": [
                 "Abteilungsleitung"

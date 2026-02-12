@@ -27,13 +27,13 @@
         },
         {
             "name": "exam",
-            "label": "Ich habe eine Prüfungsaufsicht",
+            "label": "Eine Prüfungsaufsicht ist betroffen",
             "type": "Boolean"
         },
         {
             "name": "workAssignment",
-            "label": "Folgende Unterrichte sind mit Arbeitsaufträge versorgt",
-            "help": "Arbeitsaufträge bitte selbst kommunizieren",
+            "label": "Folgende Unterrichte sind mit Arbeitsaufträgen versorgt",
+            "hint": "Arbeitsaufträge bitte selbst kommunizieren",
             "type": "RichText",
             "required": false
         }

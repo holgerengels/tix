@@ -9,6 +9,7 @@
         :required="field.required === true"
         :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
+        :hint="field.hint"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>
 
@@ -20,6 +21,7 @@
         :required="field.required === true"
         :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
+        :hint="field.hint"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>
 
@@ -31,6 +33,7 @@
         :required="field.required === true"
         :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
+        :hint="field.hint"
         @change.stop="updateField(field.name, $event.target.value)"
         @input.stop
         @after-hide.stop="isOpen = false"
@@ -47,6 +50,7 @@
             :required="field.required === true"
             :disabled="field.readonly === true"
             :modelValue="modelValue[field.name] || ''"
+            :hint="field.hint"
             :options="field.options"
             @update:modelValue="updateField(field.name, $event)"
         />
@@ -59,6 +63,7 @@
         :disabled="field.readonly === true"
         :required="field.required === true"
         :modelValue="modelValue[field.name] || ''"
+        :hint="field.hint"
         @update:modelValue="updateField(field.name, $event)"
       />
 
@@ -69,6 +74,7 @@
             :required="field.required === true"
             :disabled="field.readonly === true"
             :modelValue="modelValue[field.name] || ''"
+            :hint="field.hint"
             :options="getDisplayUsers(field).map(u => u.username)"
             @update:modelValue="updateField(field.name, $event)"
         />
@@ -98,6 +104,7 @@
         :required="field.required === true"
         :disabled="field.readonly === true"
         :value="modelValue[field.name] || ''"
+        :hint="field.hint"
         @input="updateField(field.name, $event.target.value)"
       ></wa-input>
     </div>
@@ -182,5 +189,11 @@ watch(() => props.fields, () => {
 <style scoped>
 .form-field {
     margin-bottom: 1rem;
+}
+.field-hint {
+    font-size: var(--wa-font-size-small);
+    color: var(--wa-color-neutral-600);
+    margin-top: 0.25rem;
+    margin-left: 2rem; /* Align with checkbox textual content roughly */
 }
 </style>

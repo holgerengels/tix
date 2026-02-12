@@ -13,6 +13,7 @@
         toolbar="essential"
       />
     </div>
+    <div v-if="hint" class="editor-hint">{{ hint }}</div>
   </div>
 </template>
 
@@ -25,7 +26,8 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   label: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
-  required: { type: Boolean, default: false }
+  required: { type: Boolean, default: false },
+  hint: { type: String, default: '' }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -68,6 +70,11 @@ const emit = defineEmits(['update:modelValue']);
     background-color: var(--wa-color-neutral-50);
     border-bottom-left-radius: var(--wa-border-radius-medium);
     border-bottom-right-radius: var(--wa-border-radius-medium);
+    border-bottom-right-radius: var(--wa-border-radius-medium);
+    color: var(--wa-color-neutral-600);
+}
+.editor-hint {
+    font-size: var(--wa-font-size-small);
     color: var(--wa-color-neutral-600);
 }
 </style>

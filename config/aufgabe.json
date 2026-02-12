@@ -17,16 +17,6 @@
             "type": "Autocomplete",
             "required": true,
             "options": [
-                "Ebene 100",
-                "Ebene 200",
-                "Ebene 300",
-                "Ebene 400",
-                "Ebene 500",
-                "Gebäude A",
-                "Gebäude B",
-                "Gebäude C",
-                "Gebäude D",
-                "Gebäude E (Sporthalle)",
                 "Raum 100 (Textilarbeit / Werken)",
                 "Raum 101 (Textilarbeit / Werken)",
                 "Raum 102 (Textilarbeit / Werken)",
@@ -134,7 +124,17 @@
                 "Sonstige Aula",
                 "Sonstige Landtechnik",
                 "Sonstige Mensa",
-                "Sonstige Turnhalle"
+                "Sonstige Turnhalle",
+                "Ebene 100",
+                "Ebene 200",
+                "Ebene 300",
+                "Ebene 400",
+                "Ebene 500",
+                "Gebäude A",
+                "Gebäude B",
+                "Gebäude C",
+                "Gebäude D",
+                "Gebäude E (Sporthalle)"
             ]
         }
     ],

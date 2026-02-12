@@ -12,6 +12,7 @@
       @keydown.down.prevent="focusMenu"
       @keydown.space.stop
       autocomplete="off"
+      :hint="hint"
     >
         <wa-icon slot="suffix" name="chevron-down"></wa-icon>
     </wa-input>
@@ -33,7 +34,8 @@ const props = defineProps({
   label: { type: String, default: '' },
   required: { type: Boolean, default: false },
   options: { type: Array, default: () => [] },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  hint: { type: String, default: '' }
 });
 
 const emit = defineEmits(['update:modelValue']);
