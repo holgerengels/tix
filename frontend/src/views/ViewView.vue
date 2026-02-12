@@ -73,13 +73,14 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ui } from '../state/ui';
+import { workflow } from '../state/workflow';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 
 const route = useRoute();
 const router = useRouter();
 const ticket = ref(null);
-const config = ref({});
+const config = workflow.config;
 const loading = ref(true);
 const error = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -105,10 +106,7 @@ const fetchData = async () => {
     error.value = null;
     try {
         // Fetch Config first
-        const configRes = await axios.get('/api/config', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        config.value = configRes.data;
+        await workflow.fetchConfig();
 
         // Fetch Ticket
         const ticketRes = await axios.get('/api/tickets', {

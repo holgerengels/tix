@@ -61,7 +61,7 @@ axios.interceptors.request.use(config => {
 axios.interceptors.response.use(
     response => response,
     error => {
-        if (error.response && error.response.status === 401) {
+        if (error.response && error.response.status === 401 && !error.config.url.endsWith('/login')) {
             // Trigger Login Overlay
             auth.triggerLogin();
 
