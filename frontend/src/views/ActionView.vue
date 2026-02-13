@@ -1,5 +1,5 @@
 <template>
-  <div class="action-view">
+  <div class="action-view" :class="{ 'is-mobile': ui.state.isMobile, 'is-narrow': ui.state.isNarrow }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -371,27 +371,39 @@ onMounted(fetchData);
     color: var(--wa-color-danger-700);
 }
 
-@container main (max-width: 768px) {
-    .ticket-content {
-        flex-direction: column;
-        display: flex;
-        overflow-y: auto !important;
-    }
+/* Narrow/Mobile state */
+.is-narrow .ticket-content, .is-mobile .ticket-content {
+    flex-direction: column;
+    display: flex;
+    overflow-y: visible; 
+}
 
-    .dynamic-form {
-        flex: none;
-        height: auto;
-        overflow-y: visible;
-        padding-right: 0;
-    }
+.is-narrow .dynamic-form, .is-mobile .dynamic-form {
+    flex: none;
+    height: auto;
+    overflow-y: visible;
+    padding-right: 0;
+}
 
-    .comments-sidebar {
-        flex: none;
-        height: auto;
-        overflow: visible;
-        border-left: none;
-        border-top: 1px solid var(--wa-color-neutral-200);
-        padding-left: 0;
-    }
+.is-narrow .comments-sidebar, .is-mobile .comments-sidebar {
+    flex: none;
+    height: auto;
+    overflow: visible;
+    border-left: none;
+    border-top: 1px solid var(--wa-color-neutral-200);
+    padding-left: 0;
+    margin-top: 2rem;
+}
+
+/* Specific mobile overrides */
+.is-mobile {
+    height: auto;
+    overflow: visible;
+}
+.is-mobile .ticket-card {
+    height: auto;
+}
+.is-mobile .ticket-card::part(body) {
+    overflow: visible;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="new-ticket-view">
+  <div class="new-ticket-view" :class="{ 'is-mobile': ui.state.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -221,5 +221,20 @@ onMounted(fetchConfig);
 }
 .error-item:last-child {
     margin-bottom: 0;
+}
+
+.is-mobile {
+    height: auto;
+    overflow: visible;
+}
+.is-mobile .ticket-card {
+    height: auto;
+}
+.is-mobile .ticket-card::part(body) {
+    overflow: visible;
+}
+.is-mobile .dynamic-form {
+    overflow-y: visible;
+    height: auto;
 }
 </style>

@@ -309,6 +309,7 @@ body {
     .main-content {
         width: 100%;
         height: 100%;
+        overflow-y: auto; /* Allow main content to scroll on mobile */
     }
 }
 @media (max-width: 768px) {
