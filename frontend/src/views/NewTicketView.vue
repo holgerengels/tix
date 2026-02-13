@@ -167,13 +167,14 @@ onMounted(fetchConfig);
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
-    margin-bottom: 1rem;
+    margin: 1rem;
 }
 .header h2 {
     margin: 0;
 }
 .ticket-card {
     height: calc(100% - 70px);
+    margin: 0 1rem 1rem 1rem;
 }
 .card-header {
     display: flex;
@@ -229,6 +230,7 @@ onMounted(fetchConfig);
 }
 .is-mobile .ticket-card {
     height: auto;
+    margin: 0;
 }
 .is-mobile .ticket-card::part(body) {
     overflow: visible;

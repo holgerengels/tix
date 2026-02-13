@@ -251,12 +251,13 @@ body {
 /* Main Content */
 .main-content {
     flex: 1;
-    padding: 1rem;
+    padding: 0;
     background-color: var(--wa-color-neutral-50);
     overflow: hidden; /* Ensure content doesn't spill over when sidebar is toggled */
     container-type: inline-size;
     container-name: main;
 }
+
 
 /* Sidebar Collapsed State */
 .app-container.sidebar-collapsed .sidebar {
@@ -310,14 +311,6 @@ body {
         width: 100%;
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
-    }
-}
-@media (max-width: 768px) {
-    .main-content {
-        padding: 1rem 0;
-    }
-    wa-card {
-        border-radius: 0;
     }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="log-view">
+  <div class="log-view" :class="{ 'is-mobile': ui.state.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -59,17 +59,17 @@
                 </thead>
                 <tbody>
                     <tr v-for="log in logs" :key="log._id">
-                    <td>{{ formatDate(log.timestamp) }}</td>
-                    <td>
+                    <td data-label="Zeitpkt">{{ formatDate(log.timestamp) }}</td>
+                    <td data-label="ID">
                         <router-link v-if="log.ticket" :to="'/tickets/' + log.ticket.id + '/view'" @click.stop>
                             <span class="ticket-link">{{ log.ticket.id }}</span>
                         </router-link>
                         <span v-else class="text-muted">-</span>
                     </td>
-                    <td>{{ log.ticket ? log.ticket.type : '-' }}</td>
-                    <td>{{ log.ticket ? log.ticket.title : 'Gelöschtes Ticket' }}</td>
-                    <td>{{ log.editor }}</td>
-                    <td>{{ log.action }}</td>
+                    <td data-label="Typ">{{ log.ticket ? log.ticket.type : '-' }}</td>
+                    <td data-label="Titel">{{ log.ticket ? log.ticket.title : 'Gelöschtes Ticket' }}</td>
+                    <td data-label="User">{{ log.editor }}</td>
+                    <td data-label="Aktion">{{ log.action }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -186,17 +186,18 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin: 1rem;
     flex-shrink: 0;
 }
 .header h2 {
     margin: 0;
 }
 .content-container {
-    height: calc(100% - 60px); 
+    height: calc(100% - 70px); 
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin: 0 1rem 1rem 1rem;
 }
 .table-container {
     flex-grow: 1;
@@ -327,3 +328,63 @@ onMounted(async () => {
     font-style: italic;
 }
 </style>
+
+<style scoped>
+/* Mobile Styles using .is-mobile class */
+.is-mobile .header {
+    margin: 1rem;
+}
+
+.is-mobile .log-table {
+    display: block;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+}
+
+.is-mobile .log-table thead {
+    display: none;
+}
+
+.is-mobile .log-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.is-mobile .log-table tr {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid var(--wa-color-neutral-200);
+    border-radius: var(--wa-border-radius-large);
+    box-shadow: var(--wa-shadow-small);
+    padding: 1rem;
+    gap: 0.5rem;
+}
+
+.is-mobile .log-table td {
+    display: flex;
+    padding: 0.25rem 0;
+    border: none;
+    text-align: left;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.is-mobile .log-table td::before {
+    content: attr(data-label); /* Needs data-label added to HTML */
+    font-weight: 600;
+    color: var(--wa-color-neutral-600);
+    margin-right: 1rem;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    margin-top: 0.1rem;
+}
+
+/* Adjust row hover for mobile cards */
+.is-mobile .log-table tr:hover {
+    background-color: white; /* Or keep hover effect if desired */
+}
+</style>
+

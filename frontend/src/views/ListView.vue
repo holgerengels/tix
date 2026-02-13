@@ -1,5 +1,5 @@
 <template>
-  <div class="list-view">
+  <div class="list-view" :class="{ 'is-mobile': ui.state.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -537,7 +537,7 @@ onMounted(async () => {
     align-items: center;
     gap: 1rem;
     flex-shrink: 0;
-    margin-bottom: 1rem;
+    margin: 1rem;
 }
 .header h2 {
     margin: 0;
@@ -546,7 +546,8 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    height: calc(100% - 70px);
+    height: calc(100% - 70px); /* Adjust calculation if needed? Header is ~50px + 2rem margin = ~82px */
+    margin: 0 1rem 1rem 1rem;
 }
 
 .table-container {
@@ -789,84 +790,88 @@ onMounted(async () => {
     box-shadow: var(--wa-shadow-small);
 }
 
-@media (max-width: 768px) {
-    .ticket-table {
-        display: block;
-        background: transparent;
-        box-shadow: none;
-        border: none;
-    }
-    
-    .ticket-table thead {
-        display: none;
-    }
-    
-    .ticket-table tbody {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .ticket-table tr {
-        display: flex;
-        flex-direction: column;
-        background: white;
-        border: 1px solid var(--wa-color-neutral-200);
-        border-radius: var(--wa-border-radius-large);
-        box-shadow: var(--wa-shadow-small);
-        padding: 1rem;
-        gap: 0.5rem;
-    }
-    
-    .ticket-table td {
-        display: flex;
-        padding: 0.25rem 0;
-        border: none;
-        text-align: left;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-    
-    .ticket-table td::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--wa-color-neutral-600);
-        margin-right: 1rem;
-        flex-shrink: 0;
-        font-size: 0.85rem;
-        margin-top: 0.1rem;
-    }
-    
-    /* Special handling for Title to make it look like a card header */
-    .ticket-table td.title-cell {
-        display: block;
-        border-bottom: 1px solid var(--wa-color-neutral-100);
-        padding-bottom: 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .ticket-table td.title-cell::before {
-        display: none;
-    }
-    
-    .ticket-table td.title-cell strong {
-        display: block;
-        font-size: 1.1rem;
-        margin-bottom: 0.25rem;
-    }
-    
-    .ticket-table td.actions-cell {
-        margin-top: 0.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--wa-color-neutral-100);
-        justify-content: flex-end;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    
-    /* Actions content wrapper to align buttons */
-    .actions-cell wa-button {
-        margin: 0;
-    }
+/* Mobile Styles using .is-mobile class */
+.is-mobile .header {
+    margin: 1rem;
 }
+
+.is-mobile .ticket-table {
+    display: block;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+}
+
+.is-mobile .ticket-table thead {
+    display: none;
+}
+
+.is-mobile .ticket-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.is-mobile .ticket-table tr {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid var(--wa-color-neutral-200);
+    border-radius: var(--wa-border-radius-large);
+    box-shadow: var(--wa-shadow-small);
+    padding: 1rem;
+    gap: 0.5rem;
+}
+
+.is-mobile .ticket-table td {
+    display: flex;
+    padding: 0.25rem 0;
+    border: none;
+    text-align: left;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.is-mobile .ticket-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--wa-color-neutral-600);
+    margin-right: 1rem;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    margin-top: 0.1rem;
+}
+
+/* Special handling for Title to make it look like a card header */
+.is-mobile .ticket-table td.title-cell {
+    display: block;
+    border-bottom: 1px solid var(--wa-color-neutral-100);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.is-mobile .ticket-table td.title-cell::before {
+    display: none;
+}
+
+.is-mobile .ticket-table td.title-cell strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.is-mobile .ticket-table td.actions-cell {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--wa-color-neutral-100);
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Actions content wrapper to align buttons */
+.is-mobile .actions-cell wa-button {
+    margin: 0;
+}
+
 </style>

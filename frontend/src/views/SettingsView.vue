@@ -1,5 +1,5 @@
 <template>
-  <div class="settings-view">
+  <div class="settings-view" :class="{ 'is-mobile': ui.state.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -88,11 +88,15 @@ const cancel = () => {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin: 1rem;
     flex-shrink: 0;
 }
+.header h2 {
+    margin: 0;
+}
 .settings-card {
-    width: 100%;
+    width: auto;
+    margin: 0 1rem 1rem 1rem;
 }
 
 .form-group {
@@ -105,8 +109,11 @@ const cancel = () => {
     gap: 0.5rem;
 }
 
-
-.header h2 {
+/* Mobile Styles */
+.is-mobile .settings-card {
     margin: 0;
+}
+.is-mobile .header {
+    margin: 1rem;
 }
 </style>
