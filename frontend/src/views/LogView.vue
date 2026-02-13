@@ -41,12 +41,10 @@
             </div>
         </details>
 
-        <div class="table-container">
-            <wa-spinner v-if="loading"></wa-spinner>
-            <div v-else-if="error" class="error">{{ error }}</div>
-            <div v-else-if="logs.length === 0" class="empty-state">Keine Protokolleinträge gefunden.</div>
-            
-            <table v-else class="log-table">
+        <wa-spinner v-if="loading"></wa-spinner>
+
+        <div v-else class="table-container">
+            <table class="log-table">
                 <thead>
                     <tr>
                     <th>Zeitpunkt</th>
@@ -193,20 +191,65 @@ onMounted(async () => {
     margin: 0;
 }
 .content-container {
-    height: calc(100% - 70px); 
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    height: calc(100% - 82px);
     margin: 0 1rem 1rem 1rem;
 }
 .table-container {
-    flex-grow: 1;
+    width: 100%;
+    height: 100%;
     overflow: auto;
+}
+.log-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
     background: white;
-    border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
+    border-radius: var(--wa-border-radius-large);
     border: 1px solid var(--wa-color-neutral-200);
 }
+.log-table th, .log-table td {
+    padding: 0.5rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--wa-color-neutral-100);
+    vertical-align: middle;
+}
+.log-table th {
+    background-color: var(--wa-color-neutral-50);
+    font-weight: 600;
+    color: var(--wa-color-neutral-600);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.log-table tr {
+    transition: background-color 0.2s;
+}
+.log-table tr:hover {
+    background-color: var(--wa-color-primary-50);
+}
+.log-table tr:last-child td {
+    border-bottom: none;
+}
+.ticket-link {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--wa-color-primary-600);
+    cursor: pointer;
+}
+.ticket-link:hover {
+    text-decoration: underline;
+}
+.text-muted {
+    color: var(--wa-color-neutral-500);
+    font-style: italic;
+}
+
 .filter-details {
     background: white;
     border-radius: var(--wa-border-radius-large);
@@ -288,48 +331,6 @@ onMounted(async () => {
     box-shadow: 0 0 0 2px var(--wa-color-primary-100);
     background-color: white;
 }
-.log-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-.log-table th, .log-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
-    vertical-align: middle;
-}
-.log-table th {
-    background-color: var(--wa-color-neutral-50);
-    font-weight: 600;
-    color: var(--wa-color-neutral-600);
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-.log-table tr:hover {
-    background-color: var(--wa-color-primary-50);
-}
-.log-table tr:last-child td {
-    border-bottom: none;
-}
-.ticket-link {
-    font-weight: 600;
-    color: var(--wa-color-primary-600);
-    cursor: pointer;
-}
-.ticket-link:hover {
-    text-decoration: underline;
-}
-.text-muted {
-    color: var(--wa-color-neutral-500);
-    font-style: italic;
-}
-</style>
-
-<style scoped>
 /* Mobile Styles using .is-mobile class */
 .is-mobile .header {
     margin: 1rem;
@@ -364,16 +365,17 @@ onMounted(async () => {
 }
 
 .is-mobile .log-table td {
-    display: flex;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: flex-start;
+    justify-items: start;
     padding: 0.25rem 0;
     border: none;
     text-align: left;
-    justify-content: space-between;
-    align-items: flex-start;
 }
 
 .is-mobile .log-table td::before {
-    content: attr(data-label); /* Needs data-label added to HTML */
+    content: attr(data-label); 
     font-weight: 600;
     color: var(--wa-color-neutral-600);
     margin-right: 1rem;
@@ -382,9 +384,7 @@ onMounted(async () => {
     margin-top: 0.1rem;
 }
 
-/* Adjust row hover for mobile cards */
 .is-mobile .log-table tr:hover {
-    background-color: white; /* Or keep hover effect if desired */
+    background-color: white;
 }
 </style>
-

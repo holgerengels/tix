@@ -101,7 +101,7 @@
                     </router-link>
                 </td>
                 <td data-label="Typ">{{ ticket.type }}</td>
-                <td data-label="Titel" class="title-cell"><strong>{{ ticket.title }}</strong>
+                <td data-label="Titel" class="title-cell"><span><strong>{{ ticket.title }}</strong>
                         <span 
                             v-for="badge in ticket.badges" 
                             :key="badge" 
@@ -110,7 +110,7 @@
                         >
                             {{ badge }}
                         </span>
-                </td>
+                </span></td>
                 <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
                 <td data-label="Ersteller">{{ ticket.creator }}</td>
                 <td data-label="Erstellt">{{ formatDate(ticket.created) }}</td>
@@ -536,8 +536,8 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 1rem;
-    flex-shrink: 0;
     margin: 1rem;
+    flex-shrink: 0;
 }
 .header h2 {
     margin: 0;
@@ -546,7 +546,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    height: calc(100% - 70px); /* Adjust calculation if needed? Header is ~50px + 2rem margin = ~82px */
+    height: calc(100% - 82px);
     margin: 0 1rem 1rem 1rem;
 }
 
@@ -567,7 +567,7 @@ onMounted(async () => {
 }
 
 .ticket-table th, .ticket-table td {
-    padding: 0.3rem 1rem;
+    padding: 0.5rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--wa-color-neutral-100);
     vertical-align: middle;
@@ -579,7 +579,6 @@ onMounted(async () => {
     color: var(--wa-color-neutral-600);
     text-transform: uppercase;
     font-size: 0.75rem;
-    letter-spacing: 0.05em;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -824,12 +823,13 @@ onMounted(async () => {
 }
 
 .is-mobile .ticket-table td {
-    display: flex;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: flex-start;
+    justify-items: start;
     padding: 0.25rem 0;
     border: none;
     text-align: left;
-    justify-content: space-between;
-    align-items: flex-start;
 }
 
 .is-mobile .ticket-table td::before {
@@ -842,29 +842,11 @@ onMounted(async () => {
     margin-top: 0.1rem;
 }
 
-/* Special handling for Title to make it look like a card header */
-.is-mobile .ticket-table td.title-cell {
-    display: block;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.5rem;
-}
-
-.is-mobile .ticket-table td.title-cell::before {
-    display: none;
-}
-
-.is-mobile .ticket-table td.title-cell strong {
-    display: block;
-    font-size: 1.1rem;
-    margin-bottom: 0.25rem;
-}
-
 .is-mobile .ticket-table td.actions-cell {
     margin-top: 0.5rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--wa-color-neutral-100);
-    justify-content: flex-end;
+    justify-items: end;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
