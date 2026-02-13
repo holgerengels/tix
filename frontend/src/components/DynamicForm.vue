@@ -88,16 +88,69 @@
         @update:modelValue="updateField(field.name, $event)"
       />
 
+      <!-- Lessons (Slider) -->
+      <wa-slider v-else-if="field.type === 'Lessons'"
+          :label="field.label"
+          :min="1"
+          :max="10"
+          :min-value="modelValue[field.name]?.min || 1"
+          :max-value="modelValue[field.name]?.max || 6"
+          :disabled="field.readonly === true"
+          range
+          with-markers
+          with-tooltip
+          :hint="field.hint"
+          @input="updateField(field.name, { min: $event.target.minValue, max: $event.target.maxValue })"
+        >
+            <span slot="reference">1</span>
+            <span slot="reference">2</span>
+            <span slot="reference">3</span>
+            <span slot="reference">4</span>
+            <span slot="reference">5</span>
+            <span slot="reference">6</span>
+            <span slot="reference">7</span>
+            <span slot="reference">8</span>
+            <span slot="reference">9</span>
+            <span slot="reference">10</span>
+        </wa-slider>
+
       <!-- Boolean -->
       <wa-checkbox
         v-else-if="field.type === 'Boolean'"
         :checked="modelValue[field.name] === true"
         :disabled="field.readonly === true"
         :required="field.required === true"
+        :hint="field.hint"
         @change="updateField(field.name, $event.target.checked)"
       >{{ field.label }}</wa-checkbox>
 
-      <!-- Standard Text -->
+      <!-- Integer -->
+      <wa-input 
+        v-else-if="field.type === 'Integer'"
+        type="number"
+        step="1"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue[field.name] || ''"
+        :hint="field.hint"
+        @input="updateField(field.name, $event.target.value)"
+      ></wa-input>
+
+      <!-- Decimal -->
+      <wa-input 
+        v-else-if="field.type === 'Decimal'"
+        type="number"
+        step="any"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue[field.name] || ''"
+        :hint="field.hint"
+        @input="updateField(field.name, $event.target.value)"
+      ></wa-input>
+
+       <!-- Standard Text -->
       <wa-input 
         v-else
         :label="field.label"
@@ -189,11 +242,5 @@ watch(() => props.fields, () => {
 <style scoped>
 .form-field {
     margin-bottom: 1rem;
-}
-.field-hint {
-    font-size: var(--wa-font-size-small);
-    color: var(--wa-color-neutral-600);
-    margin-top: 0.25rem;
-    margin-left: 2rem; /* Align with checkbox textual content roughly */
 }
 </style>
