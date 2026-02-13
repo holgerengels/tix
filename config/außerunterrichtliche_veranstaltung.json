@@ -69,7 +69,20 @@
             ],
             "required": true,
             "visible": true
+        },
+        {
+            "name": "description",
+            "label": "Bemerkung"
         }
+    ],
+    "grid": [
+        "title title title title",
+        "dateFrom dateFrom timeFrom timeFrom",
+        "dateUntil dateUntil timeUntil timeUntil",
+        "location location location location",
+        "companion1 companion2 companion3 .",
+        "assignee assignee assignee assignee",
+        "description description description description"
     ],
     "workflow": [
         {

@@ -32,11 +32,22 @@
         },
         {
             "name": "workAssignment",
-            "label": "Folgende Unterrichte sind mit Arbeitsaufträgen versorgt",
+            "label": "Folgende Unterrichte sind mit Arbeitsaufträgen versorgt:",
             "hint": "Arbeitsaufträge bitte selbst kommunizieren",
             "type": "RichText",
             "required": false
+        },
+        {
+            "name": "description",
+            "label": "Bemerkung"
         }
+    ],
+    "grid": [
+        "title title title title",
+        "dateFrom dateFrom dateUntil dateUntil",
+        "who who exam exam",
+        "workAssignment workAssignment workAssignment workAssignment",
+        "description description description description"
     ],
     "workflow": [
         {

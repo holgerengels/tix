@@ -22,6 +22,7 @@
             <DynamicForm
                 v-if="newTicketType && config[newTicketType]" 
                 :fields="config[newTicketType].fields" 
+                :grid="config[newTicketType].grid"
                 v-model="newTicketData" 
             />
             <div v-else-if="newTicketType" class="error">

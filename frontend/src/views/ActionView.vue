@@ -35,6 +35,7 @@
             <DynamicForm 
                v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
                :fields="currentFormDef.fields" 
+               :grid="currentFormDef.grid"
                v-model="actionFormData" 
             />
             <div v-else-if="autoExecuting" class="loading">
@@ -188,6 +189,7 @@ const prepareAction = () => {
         currentFormDef.value = {
             ...specificFormDef,
             fields: fields,
+            grid: (specificFormDef && specificFormDef.grid) ? specificFormDef.grid : wf.grid,
             actions: specificFormDef ? specificFormDef.actions : []
         };
     } else {

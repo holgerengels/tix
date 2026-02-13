@@ -40,6 +40,7 @@
             <DynamicForm 
                 v-if="formFields.length > 0"
                 :fields="formFields" 
+                :grid="formGrid"
                 v-model="ticketData"
             />
             <div v-else class="message">
@@ -89,6 +90,7 @@ const executingActionId = ref(null);
 
 const ticketData = ref({});
 const formFields = ref([]);
+const formGrid = ref([]);
 
 const goBack = () => {
     // Check if we have a robust "previous" state from Vue Router
@@ -178,6 +180,7 @@ const prepareForm = () => {
     fields.forEach(f => f.readonly = true);
     
     formFields.value = fields;
+    formGrid.value = wf.grid || [];
     
     // Prepare data
     // Mix standard fields that might be in the form definition with dynamic fields

@@ -36,7 +36,18 @@
                 "Dienstgeschäft",
                 "Fortbildung"
             ]
+        },
+        {
+            "name": "description",
+            "label": "Bemerkung"
         }
+    ],
+    "grid": [
+        "title title title title",
+        "dateFrom dateFrom timeFrom timeFrom",
+        "dateUntil dateUntil timeUntil timeUntil",
+        "reason reason reason reason",
+        "description description description description"
     ],
     "workflow": [
         {

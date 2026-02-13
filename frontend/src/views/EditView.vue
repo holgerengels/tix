@@ -34,6 +34,7 @@
             <DynamicForm 
                 v-if="formFields.length > 0"
                 :fields="formFields" 
+                :grid="formGrid"
                 v-model="ticketData"
             />
         </div>
@@ -63,6 +64,7 @@ const isDirty = ref(false);
 
 const ticketData = ref({});
 const formFields = ref([]);
+const formGrid = ref([]);
 
 const goBack = () => {
     router.back();
@@ -109,6 +111,7 @@ const prepareForm = () => {
     }
     
     formFields.value = fields;
+    formGrid.value = wf.grid || [];
     
     ticketData.value = {
         title: ticket.value.title,
