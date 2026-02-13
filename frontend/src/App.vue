@@ -3,7 +3,7 @@
     
     <LoginOverlay v-if="auth.state.showLogin" />
     
-    <div v-if="isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
+    <div v-if="ui.state.isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
 
     <aside v-if="auth.isAuthenticated.value" class="sidebar">
         <div class="logo"><img src="/vu.svg" alt="TIX" height="44"/>&nbsp;TIX</div>
@@ -43,7 +43,7 @@
         </div>
     </aside>
 
-    <main class="main-content">
+    <main class="main-content" ref="mainContent">
       <router-view />
     </main>
   </div>
@@ -79,36 +79,57 @@ watch(auth.isAuthenticated, (newVal) => {
     if (newVal) checkDevMode();
 });
 
-const isMobile = ref(false);
-
 const handleResize = (e) => {
-    isMobile.value = e.matches;
-    if (isMobile.value) {
+    const mobile = e.matches;
+    ui.setIsMobile(mobile);
+    if (mobile) {
         ui.setSidebar(false);
     } else {
         ui.setSidebar(true);
     }
 };
 
+const mainContent = ref(null);
+let resizeObserver = null;
+
 onMounted(() => {
     const mediaQuery = window.matchMedia('(max-width: 1000px)');
-    isMobile.value = mediaQuery.matches;
+    // Initial check
+    const mobile = mediaQuery.matches;
+    ui.setIsMobile(mobile);
     
     // Initial state check - if mobile, ensure closed. If desktop, ensure open (or whatever was last state? Maybe user wants persistent state)
     // Requirement says: "standardmäßig zugeklappt" (default collapsed) < 1000px.
-    if (isMobile.value) {
+    if (mobile) {
          ui.setSidebar(false);
     }
 
     mediaQuery.addEventListener('change', handleResize);
     
+    // Setup ResizeObserver for main content width
+    resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+            if (entry.contentRect) {
+                const width = entry.contentRect.width;
+                ui.setIsNarrow(width < 720);
+            }
+        }
+    });
+    
+    if (mainContent.value) {
+        resizeObserver.observe(mainContent.value);
+    }
+    
     onUnmounted(() => {
         mediaQuery.removeEventListener('change', handleResize);
+        if (resizeObserver) {
+            resizeObserver.disconnect();
+        }
     });
 });
 
 watch(route, () => {
-    if (isMobile.value && ui.state.sidebarOpen) {
+    if (ui.state.isMobile && ui.state.sidebarOpen) {
         ui.setSidebar(false);
     }
 });

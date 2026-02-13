@@ -233,16 +233,16 @@ const getDisplayUsers = (field) => {
     return displayUsers;
 };
 
-import { watch } from 'vue';
+import { watch, computed } from 'vue';
 
 watch(() => props.fields, () => {
     fetchUsers();
 }, { immediate: true });
 
-import { computed } from 'vue';
+import { ui } from '../state/ui';
 
 const gridStyle = computed(() => {
-    if (props.grid && props.grid.length > 0) {
+    if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
         let areas = [...props.grid];
         
         // Find fields not present in the grid
@@ -266,7 +266,7 @@ const gridStyle = computed(() => {
 });
 
 const getFieldStyle = (field) => {
-    if (props.grid && props.grid.length > 0) {
+    if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
         return {
             gridArea: field.name
         };

@@ -1,7 +1,9 @@
 import { reactive, computed } from 'vue';
 
 const state = reactive({
-    sidebarOpen: JSON.parse(localStorage.getItem('sidebarOpen') !== null ? localStorage.getItem('sidebarOpen') : 'true')
+    sidebarOpen: JSON.parse(localStorage.getItem('sidebarOpen') !== null ? localStorage.getItem('sidebarOpen') : 'true'),
+    isMobile: false,
+    isNarrow: false
 });
 
 const toggleSidebar = () => {
@@ -14,9 +16,19 @@ const setSidebar = (isOpen) => {
     localStorage.setItem('sidebarOpen', isOpen);
 };
 
+const setIsMobile = (isMobile) => {
+    state.isMobile = isMobile;
+};
+
+const setIsNarrow = (isNarrow) => {
+    state.isNarrow = isNarrow;
+};
+
 export const ui = {
     state,
     toggleSidebar,
     setSidebar,
+    setIsMobile,
+    setIsNarrow,
     isSidebarOpen: computed(() => state.sidebarOpen)
 };

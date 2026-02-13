@@ -95,14 +95,6 @@ const fetchConfig = async () => {
 const resetForm = () => {
     newTicketData.value = {};
     errors.value = [];
-    // Reset dirty flag next tick to avoid triggering watch immediately if strictly needed, 
-    // but usually setting value triggers watch. 
-    // Actually, setting newTicketData triggers watch. 
-    // We want to reset state.
-    // Let's set it to false AFTER the change, or use nextTick logic? 
-    // Simpler: just set it false. The watch might trigger if newTicketData changes, 
-    // but if we set isDirty = false immediately after, it might be racey.
-    // Better: setTimeout or nextTick.
     setTimeout(() => { isDirty.value = false; }, 0);
 };
 
@@ -122,23 +114,6 @@ const validateForm = () => {
 };
 
 const createTicket = async () => {
-    // Basic validation
-    if (!newTicketData.value.title) {
-        // title is usually part of dynamic fields now, but kept as fallback if hardcoded
-        // actually for 'Aufgabe' title is not in fields in JSON, so it might be hardcoded in backend?
-        // Wait, looking at routes.js: title: req.body.titel || req.body.title
-        // And aufgabe.json DOES NOT have a title field in "fields". 
-        // Logic check: Is title required for all tickets?
-        // In routes.js: ticketData uses req.body.title. 
-        // If title is missing, likely acceptable or handled elsewhere?
-        // Let's rely on validateForm mostly. If title isn't in fields, we assume it's not strictly required by dynamic config, 
-        // OR it should be added to fields. 
-        // However, checking previous code:
-        // if (!newTicketData.value.title) { alert("Bitte einen Titel eingeben."); ... }
-        // If 'title' is NOT in dynamic fields, user can't enter it. 
-        // Let's assume for now we only validate what is in 'fields'.
-    }
-    
     // Validate dynamic fields
     if (!validateForm()) {
         return;
