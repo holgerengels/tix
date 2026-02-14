@@ -44,6 +44,7 @@
     ],
     "grid": [
         "title title title title",
+        "badges badges badges badges",
         "dateFrom dateFrom timeFrom timeFrom",
         "dateUntil dateUntil timeUntil timeUntil",
         "reason reason reason reason",

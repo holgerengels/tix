@@ -44,6 +44,7 @@
     ],
     "grid": [
         "title title title title",
+        "badges badges badges badges",
         "dateFrom dateFrom dateUntil dateUntil",
         "who who exam exam",
         "workAssignment workAssignment workAssignment workAssignment",
