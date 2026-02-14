@@ -1,71 +1,79 @@
 {
-    "type": "Abwesenheitsantrag",
-    "abbreviation": "ABW",
-    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} ({{reason}})",
+    "type": "Stundenplan-Ticket",
+    "abbreviation": "STU",
+    "template": "{{category}}",
     "fields": [
         {
-            "name": "dateFrom",
-            "label": "Datum von",
-            "type": "Date",
-            "required": true
-        },
-        {
-            "name": "timeFrom",
-            "label": "Zeit von",
-            "type": "Time",
-            "required": true
-        },
-        {
-            "name": "dateUntil",
-            "label": "Datum bis",
-            "type": "Date",
-            "required": true
-        },
-        {
-            "name": "timeUntil",
-            "label": "Zeit bis",
-            "type": "Time",
-            "required": true
-        },
-        {
-            "name": "reason",
-            "label": "Grund",
-            "type": "Select",
-            "required": true,
-            "options": [
-                "Dienstgeschäft",
-                "Fortbildung"
-            ]
+            "name": "assignee",
+            "visible": true
         },
         {
             "name": "description",
-            "label": "Bemerkung"
+            "required": true
+        },
+        {
+            "name": "category",
+            "label": "Kategorie",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "Stundenplan",
+                "Vertretungsplan"
+            ]
+        },
+        {
+            "name": "date",
+            "label": "Datum",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "lessons",
+            "label": "Stunden",
+            "type": "Lessons",
+            "required": true
+        },
+        {
+            "name": "agreement",
+            "label": "Betroffene Kolleg*innen sind einverstanden",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "Ja",
+                "Nein",
+                "Niemand betroffen"
+            ]
         }
     ],
     "grid": [
         "title title title title",
-        "dateFrom dateFrom timeFrom timeFrom",
-        "dateUntil dateUntil timeUntil timeUntil",
-        "reason reason reason reason",
-        "description description description description"
+        "description description description description",
+        "category category agreement agreement",
+        "assignee assignee assignee assignee",
+        "date date lessons lessons"
     ],
     "workflow": [
         {
             "states": [
-                "offen.neu"
+                "offen.neu",
+                "offen.inArbeit"
             ],
             "actions": [
                 {
-                    "name": "genehmigen",
+                    "name": "bearbeiten",
                     "groups": [
-                        "Schulleitung"
+                        "@assignee",
+                        "Schulleitung",
+                        "Stundenplanung"
                     ],
-                    "script": "ticket.state = 'offen.genehmigt'"
+                    "script": "ticket.state = 'offen.inArbeit'",
+                    "form": "aufgabe.bearbeiten"
                 },
                 {
                     "name": "ablehnen",
                     "groups": [
-                        "Schulleitung"
+                        "Schulleitung",
+                        "Stundenplanung"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }
@@ -73,23 +81,8 @@
         },
         {
             "states": [
-                "offen.genehmigt",
-                "offen.inArbeit"
-            ],
-            "actions": [
-                {
-                    "name": "bearbeiten",
-                    "groups": [
-                        "Stundenplanung"
-                    ],
-                    "form": "abwesenheit.bearbeiten"
-                }
-            ]
-        },
-        {
-            "states": [
                 "offen.neu",
-                "offen.genehmigt"
+                "offen.inArbeit"
             ],
             "actions": [
                 {
@@ -128,11 +121,17 @@
         {
             "name": "edit",
             "groups": [
-                "Schulleitung"
+                "Stundenplanung"
             ]
         },
         {
             "name": "read",
+            "groups": [
+                "@creator"
+            ]
+        },
+        {
+            "name": "undo",
             "groups": [
                 "Schulleitung",
                 "Stundenplanung"
@@ -141,32 +140,22 @@
         {
             "name": "delete",
             "groups": [
-                "Schulleitung"
+                "Schulleitung",
+                "Stundenplanung"
             ]
         },
         {
             "name": "comment",
             "groups": [
-                "Schulleitung",
+                "@creator",
                 "Stundenplanung"
             ]
         }
     ],
-    "bots": [
-        {
-            "name": "dringend",
-            "states": [
-                "offen.neu",
-                "offen.genehmigt",
-                "offen.inArbeit"
-            ],
-            "function": "dringend"
-        }
-    ],
     "forms": [
         {
-            "name": "abwesenheit.bearbeiten",
-            "title": "Abwesenheit bearbeiten",
+            "name": "aufgabe.bearbeiten",
+            "title": "Aufgabe bearbeiten",
             "fields": [
                 {
                     "name": "badges",
@@ -174,6 +163,10 @@
                 }
             ],
             "actions": [
+                {
+                    "name": "abgelehnt",
+                    "script": "ticket.state = 'offen.abgelehnt'"
+                },
                 {
                     "name": "erledigt",
                     "script": "ticket.state = 'offen.erledigt'"
@@ -195,11 +188,6 @@
             "name": "offen.neu",
             "label": "neu",
             "color": "blue"
-        },
-        {
-            "name": "offen.genehmigt",
-            "label": "genehmigt",
-            "color": "yellow"
         },
         {
             "name": "offen.inArbeit",
@@ -225,6 +213,11 @@
             "name": "geschlossen.ok",
             "label": "geschlossen",
             "color": "green"
+        },
+        {
+            "name": "geschlossen.abgelehnt",
+            "label": "abgelehnt",
+            "color": "red"
         },
         {
             "name": "geschlossen",

@@ -92,7 +92,7 @@
       <wa-slider v-else-if="field.type === 'Lessons'"
           :label="field.label"
           :min="1"
-          :max="10"
+          :max="11"
           :min-value="modelValue[field.name]?.min || 1"
           :max-value="modelValue[field.name]?.max || 6"
           :disabled="field.readonly === true"
@@ -112,6 +112,7 @@
             <span slot="reference">8</span>
             <span slot="reference">9</span>
             <span slot="reference">10</span>
+            <span slot="reference">11</span>
         </wa-slider>
 
       <!-- Boolean -->

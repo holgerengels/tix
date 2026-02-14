@@ -1,15 +1,31 @@
 {
-    "type": "Aufgabe",
-    "abbreviation": "AUF",
-    "template": "{{location}}",
+    "type": "IT-Ticket",
+    "abbreviation": "ITT",
+    "template": "{{location}} {{category}}",
     "fields": [
         {
             "name": "assignee",
+            "groups": [
+                "Netzwerkteam"
+            ],
             "visible": true
         },
         {
             "name": "description",
             "required": true
+        },
+        {
+            "name": "category",
+            "label": "Kategorie",
+            "type": "Select",
+            "required": false,
+            "options": [
+                "Medien",
+                "Netzwerk",
+                "Software",
+                "Hardware",
+                "Sonstiges"
+            ]
         },
         {
             "name": "location",
@@ -138,6 +154,12 @@
             ]
         }
     ],
+    "grid": [
+        "title title title title",
+        "description description description description",
+        "location location category category",
+        "assignee assignee assignee assignee"
+    ],
     "workflow": [
         {
             "states": [
@@ -150,8 +172,7 @@
                     "groups": [
                         "@assignee",
                         "Schulleitung",
-                        "Netzwerkteam",
-                        "Hausmeister"
+                        "Netzwerkteam"
                     ],
                     "script": "ticket.state = 'offen.inArbeit'",
                     "form": "aufgabe.bearbeiten"
@@ -160,8 +181,7 @@
                     "name": "ablehnen",
                     "groups": [
                         "Schulleitung",
-                        "Netzwerkteam",
-                        "Hausmeister"
+                        "Netzwerkteam"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }
@@ -203,8 +223,7 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte",
-                "Hausmeister"
+                "Lehrkräfte"
             ]
         },
         {
@@ -216,8 +235,7 @@
         {
             "name": "read",
             "groups": [
-                "Lehrkräfte",
-                "Hausmeister"
+                "Lehrkräfte"
             ]
         },
         {
@@ -238,8 +256,7 @@
             "name": "comment",
             "groups": [
                 "Schulleitung",
-                "Netzwerkteam",
-                "Hausmeister"
+                "Netzwerkteam"
             ]
         }
     ],

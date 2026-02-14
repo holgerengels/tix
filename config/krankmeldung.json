@@ -27,7 +27,7 @@
         },
         {
             "name": "exam",
-            "label": "Eine Prüfungsaufsicht ist betroffen",
+            "label": "Prüfungsaufsichten betroffen",
             "type": "Boolean"
         },
         {
