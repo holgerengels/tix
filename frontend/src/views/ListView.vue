@@ -517,15 +517,6 @@ const getActions = (ticket) => {
     const wf = config.value[ticket.type];
     const actions = [...authorizedActions];
     
-    const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
-    if (editAccess && editAccess.groups.some(g => (user.groups || []).includes(g))) {
-        actions.push({
-            name: 'editieren',
-            form: 'edit',
-            groups: editAccess.groups 
-        });
-    }
-
     return actions.map(processAction);
 };
 

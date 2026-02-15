@@ -11,6 +11,9 @@
         <wa-button v-if="undoAction" variant="warning" size="small" appearance="filled" @click="executeUndo">
              <wa-icon slot="start" name="arrow-counterclockwise"></wa-icon> Undo: {{ undoAction.action }}
         </wa-button>
+        <wa-button v-if="canEdit" variant="neutral" size="small" appearance="filled" @click="editTicket">
+             <wa-icon slot="start" name="pencil"></wa-icon> Bearbeiten
+        </wa-button>
         <wa-button v-if="canDelete" variant="danger" size="small" appearance="filled" @click="deleteTicket">
              <wa-icon slot="start" name="trash"></wa-icon> Löschen
         </wa-button>
@@ -157,6 +160,10 @@ const executeUndo = async () => {
     }
 };
 
+const editTicket = () => {
+    router.push(`/tickets/${ticket.value.id}/edit`);
+};
+
 const deleteTicket = async () => {
     if (!confirm('Sind Sie sicher, dass Sie dieses Ticket löschen möchten?')) return;
     
@@ -206,6 +213,18 @@ const canComment = computed(() => {
     const rule = access.find(r => r.name === 'comment');
     if (!rule) return false;
     
+    return rule.groups.some(g => (user.groups || []).includes(g));
+});
+
+const canEdit = computed(() => {
+    if (!ticket.value || !config.value[ticket.value.type]) return false;
+    
+    const access = config.value[ticket.value.type].access;
+    if (!access) return false;
+
+    const rule = access.find(r => r.name === 'edit');
+    if (!rule) return false;
+
     return rule.groups.some(g => (user.groups || []).includes(g));
 });
 
