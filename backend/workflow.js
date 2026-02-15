@@ -85,6 +85,7 @@ const canComment = (type, userGroups) => {
 };
 
 const canEdit = (type, userGroups) => {
+    if (userGroups.includes('Administration')) return true;
     const wf = workflows[type];
     if (!wf) return false;
     const rule = wf.access.find(z => z.name === 'edit');

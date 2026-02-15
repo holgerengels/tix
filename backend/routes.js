@@ -306,7 +306,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         if (currentStates.length === 0) {
             console.log(`Debug: Invalid ticket state. Ticket: ${ticket.state}, Workflow States: ${wf.workflow.map(s => s.states.join(','))}`);
-            return res.status(400).json({ message: `Invalid ticket state: ${ticket.state}` });
+            // return res.status(400).json({ message: `Invalid ticket state: ${ticket.state}` });
         }
 
         // Search for the action in ALL matching state blocks
