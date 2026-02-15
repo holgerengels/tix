@@ -44,7 +44,8 @@ const router = createRouter({
         { path: '/tickets/:id/edit', component: () => import('./views/EditView.vue'), meta: { requiresAuth: true } },
         { path: '/tickets/:id/action/:action', component: () => import('./views/ActionView.vue'), meta: { requiresAuth: true } },
         { path: '/logs', component: () => import('./views/LogView.vue'), meta: { requiresAuth: true } },
-        { path: '/settings', component: () => import('./views/SettingsView.vue'), meta: { requiresAuth: true } }
+        { path: '/settings', component: () => import('./views/SettingsView.vue'), meta: { requiresAuth: true } },
+        { path: '/admin', component: () => import('./views/AdminView.vue'), meta: { requiresAuth: true } }
     ]
 })
 

@@ -4,7 +4,12 @@
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
         </wa-button>
-        <h2>{{ pageTitle }}</h2>
+        <h2>Administration</h2>
+        <div style="margin-left: auto;" v-if="selectedTickets.length > 0">
+            <wa-button variant="danger" size="small" appearance="filled" @click="deleteSelected">
+                <wa-icon slot="start" name="trash"></wa-icon> {{ selectedTickets.length }} Löschen
+            </wa-button>
+        </div>
     </div>
 
     <div class="ticket-list-container">
@@ -55,24 +60,12 @@
                 </div>
                 <div class="filter-group">
                     <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
-                    <wa-button appearance="plain" @click="saveCurrentFilter">Speichern</wa-button>
+                </div>
+                <div class="filter-group" v-if="selectedTickets.length > 0">
+                    <span style="font-weight: 500; color: var(--wa-color-primary-700);">{{ selectedTickets.length }} ausgewählt</span>
                 </div>
             </div>
             
-            <div class="saved-filters" v-if="savedFilters.length > 0">
-                <span class="saved-filters-label">Gespeicherte Filter:</span>
-                <wa-tag 
-                    v-for="(filter, index) in savedFilters" 
-                    :key="index" 
-                    with-remove 
-                    @wa-remove="deleteSavedFilter(index)"
-                    @click="applySavedFilter(filter)"
-                    class="saved-filter-tag"
-                    variant="brand"
-                >
-                    {{ filter.name }}
-                </wa-tag>
-            </div>
         </details>
 
         <wa-spinner v-if="loading"></wa-spinner>
@@ -83,6 +76,9 @@
             <table class="ticket-table">
             <thead>
                 <tr>
+                <th style="width: 40px;">
+                    <wa-checkbox :checked="allSelected" @change="toggleSelectAll"></wa-checkbox>
+                </th>
                 <th>ID</th>
                 <th>Typ</th>
                 <th>Titel</th>
@@ -90,11 +86,13 @@
                 <th>Ersteller</th>
                 <th>Erstellt</th>
                 <th>Daten</th>
-                <th>Aktionen</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="ticket in tickets" :key="ticket._id">
+                <tr v-for="ticket in tickets" :key="ticket._id" :class="{ 'selected': selectedTickets.includes(ticket._id) }" @click="toggleSelection(ticket._id)">
+                <td @click.stop>
+                    <wa-checkbox :checked="selectedTickets.includes(ticket._id)" @change="toggleSelection(ticket._id)"></wa-checkbox>
+                </td>
                 <td data-label="ID">
                     <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
                         <span class="id-tag">{{ ticket.id }}</span>
@@ -123,61 +121,6 @@
                             <strong>{{ key }}:</strong> {{ val }}
                         </span>
                     </div>
-                </td>
-                <td class="actions-cell">
-                    <template v-for="action in getActions(ticket)" :key="action.name">
-                        <template v-if="action['inline-comment']">
-                            <wa-button 
-                                :id="'trigger-' + ticket._id + '-' + action.name"
-                                size="small" 
-                                appearance="plain"
-                            >
-                                {{ action.name }}
-                            </wa-button>
-                            
-                            <wa-popover 
-                                :for="'trigger-' + ticket._id + '-' + action.name"
-                                :open="!!popoverStates[ticket._id + '-' + action.name]"
-                                placement="left" 
-                                distance="5" 
-                                skidding="0"
-                                @wa-show="popoverStates[ticket._id + '-' + action.name] = true"
-                                @wa-hide="popoverStates[ticket._id + '-' + action.name] = false"
-                            >
-                                <div class="popover-content">
-                                    <wa-textarea 
-                                        :value="popoverComments[ticket._id + '-' + action.name] || ''"
-                                        @input="e => popoverComments[ticket._id + '-' + action.name] = e.target.value"
-                                        placeholder="Kommentar..."
-                                        resize="auto"
-                                        rows="2"
-                                        autofocus
-                                    ></wa-textarea>
-                                    <div class="popover-actions">
-                                        <wa-button appearance="plain" size="small" @click="popoverStates[ticket._id + '-' + action.name] = false">Abbrechen</wa-button>
-                                        <wa-button 
-                                            size="small" 
-                                            variant="primary" 
-                                            :loading="executingActionId === (ticket._id + '-' + action.name)"
-                                            @click="confirmActionComment(ticket, action, popoverComments[ticket._id + '-' + action.name])"
-                                        >
-                                            {{ action.name }}
-                                        </wa-button>
-                                    </div>
-                                </div>
-                            </wa-popover>
-                        </template>
-
-                        <wa-button 
-                            v-else
-                            size="small"
-                            appearance="plain"
-                            :loading="executingActionId === (ticket._id + '-' + action.name)"
-                            @click="handleAction(ticket, action)"
-                        >
-                            {{ action.name }}
-                        </wa-button>
-                    </template>
                 </td>
                 </tr>
             </tbody>
@@ -210,83 +153,10 @@ const filterDateFrom = ref('');
 const filterDateTo = ref('');
 const filterBadges = ref([]);
 
-const savedFilters = ref([]);
-const executingActionId = ref(null);
-
-const popoverComments = ref({});
-const popoverStates = ref({});
-const executingActionComment = ref(false);
-
-
-
-
-const loadSavedFilters = () => {
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    try {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-            savedFilters.value = JSON.parse(saved);
-        } else {
-            savedFilters.value = [];
-        }
-    } catch (e) {
-        console.error('Error loading saved filters:', e);
-        savedFilters.value = [];
-    }
-};
-
-const saveCurrentFilter = () => {
-    const name = prompt('Bitte geben Sie einen Namen für diesen Filter ein:');
-    if (!name) return;
-
-    const newFilter = {
-        name,
-        type: filterType.value,
-        status: filterStatus.value,
-        creator: filterCreator.value,
-        dateRange: filterDateRange.value,
-        dateFrom: filterDateFrom.value,
-        dateTo: filterDateTo.value,
-        badges: [...filterBadges.value]
-    };
-
-    savedFilters.value.push(newFilter);
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    localStorage.setItem(key, JSON.stringify(savedFilters.value));
-};
-
-const deleteSavedFilter = (index) => {
-    if (confirm('Soll der Filter wirklich gelöscht werden?')) {
-        savedFilters.value.splice(index, 1);
-        const key = `vin_saved_filters_${currentFilter.value}`;
-        localStorage.setItem(key, JSON.stringify(savedFilters.value));
-    }
-};
-
-const applySavedFilter = (filter) => {
-    filterType.value = filter.type || [];
-    filterStatus.value = filter.status || '';
-    filterCreator.value = filter.creator || '';
-    filterDateRange.value = filter.dateRange || '';
-    filterDateFrom.value = filter.dateFrom || '';
-    filterDateTo.value = filter.dateTo || '';
-    filterBadges.value = filter.badges || [];
-    applyFilters();
-};
+const selectedTickets = ref([]);
 
 let lastRequestId = 0;
 let debounceTimer = null;
-
-const currentFilter = computed(() => route.query.filter || 'my');
-
-const pageTitle = computed(() => {
-    switch(currentFilter.value) {
-        case 'my': return 'Meine Tickets';
-        case 'assigned': return 'Mir zugewiesen';
-        case 'all': return 'Alle Tickets';
-        default: return 'Tickets';
-    }
-});
 
 const availableTypes = computed(() => {
     return config.value ? Object.keys(config.value) : [];
@@ -316,8 +186,6 @@ const availableBadges = [
   'obsolet', 'wartet'
 ];
 
-
-
 const fetchTickets = async () => {
     if (debounceTimer) {
         clearTimeout(debounceTimer);
@@ -329,7 +197,7 @@ const fetchTickets = async () => {
         
         try {
             const params = {
-                filter: currentFilter.value,
+                filter: 'all', // Admin view always shows all tickets subject to filters
                 type: filterType.value,
                 status: filterStatus.value,
                 creator: filterCreator.value,
@@ -346,6 +214,9 @@ const fetchTickets = async () => {
             if (requestId === lastRequestId) {
                 tickets.value = res.data;
                 loading.value = false;
+                // Clear selection on reload/filter change? Maybe better UX to keep if possible, but IDs might disappear.
+                // For now, let's keep IDs in selection even if not visible, or filter them out.
+                // Let's keep it simple: keep selection.
             }
         } catch (err) {
             console.error(err);
@@ -394,6 +265,66 @@ const resetFilters = () => {
     filterBadges.value = [];
     applyFilters();
 };
+
+// Selection Logic
+const toggleSelection = (id) => {
+    const index = selectedTickets.value.indexOf(id);
+    if (index === -1) {
+        selectedTickets.value.push(id);
+    } else {
+        selectedTickets.value.splice(index, 1);
+    }
+};
+
+const allSelected = computed(() => {
+    return tickets.value.length > 0 && tickets.value.every(t => selectedTickets.value.includes(t._id));
+});
+
+const toggleSelectAll = (e) => {
+    // Check if the event provides the new checked state
+    // wa-change event detail might contain the new state or we check the element
+    // But since we bind :checked, we might need to rely on the current state invert
+    
+    // Better approach: If allSelected is true, we deselect. If false, we select all.
+    // The event listener is triggered by user interaction.
+    
+    if (allSelected.value) {
+        selectedTickets.value = [];
+    } else {
+        selectedTickets.value = tickets.value.map(t => t._id);
+    }
+};
+
+const deleteSelected = async () => {
+    if (!confirm(`Sollen die ${selectedTickets.value.length} ausgewählten Tickets wirklich unwiderruflich gelöscht werden?`)) {
+        return;
+    }
+
+    loading.value = true;
+    try {
+        // Execute deletions in parallel
+        const promises = selectedTickets.value.map(id => 
+            axios.delete(`/api/tickets/${id}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            })
+        );
+
+        await Promise.all(promises);
+
+        // Success
+        selectedTickets.value = [];
+        fetchTickets();
+        
+    } catch (err) {
+        console.error('Error deleting tickets:', err);
+        alert('Fehler beim Löschen einiger Tickets: ' + err.message);
+        // Refresh anyway to show what's left
+        fetchTickets();
+    } finally {
+        loading.value = false;
+    }
+};
+
 
 const getBadgeColorClass = (badge) => {
     switch (badge) {
@@ -485,139 +416,15 @@ const getFormattedData = (ticket) => {
     return template;
 };
 
-const getActions = (ticket) => {
-    if (!config.value || !config.value[ticket.type]) return [];
-    
-    const workflow = config.value[ticket.type].workflow;
-    const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
-    
-    if (matchingBlocks.length === 0) return [];
-    
-    const allActions = matchingBlocks.flatMap(block => block.actions);
-
-    const authorizedActions = allActions.filter(action => {
-        const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
-        const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
-        const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
-        return allowedByCreator || allowedByAssignee || allowedByGroup;
-    });
-
-    if (currentFilter.value === 'assigned') {
-        const actions = authorizedActions.filter(a => !a.optional);
-        return actions.map(processAction);
-    } else if (currentFilter.value === 'my') {
-        const actions = authorizedActions.filter(a => a.optional === true);
-        return actions.map(processAction);
-    }
-    
-    const wf = config.value[ticket.type];
-    const actions = [...authorizedActions];
-    
-    return actions.map(processAction);
-};
-
-const processAction = (action) => {
-    // Add unique ID for popover checking
-    return { ...action, _id: action.name };
-};
-
-const executeAction = async (ticket, action) => {
-    // ... existing logic ...
-    const actionId = ticket._id + '-' + action.name;
-    
-    // Allow re-entry if we are already "executing" this specific action (e.g. from confirmActionComment)
-    if (executingActionId.value && executingActionId.value !== actionId) return; 
-    
-    executingActionId.value = actionId;
-    
-    try {
-        const { _id, __v, type, state, creator, created, updated, log, badges, ...rest } = ticket;
-        const payload = {
-            actionName: action.name,
-            formData: { 
-                title: ticket.title,
-                description: ticket.description,
-                assignee: ticket.assignee,
-                ...rest 
-            }
-        };
-
-        await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        
-        // Refresh list
-        fetchTickets();
-    } catch (err) {
-        console.error(err);
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
-    } finally {
-        executingActionId.value = null;
-    }
-};
-
-const handleAction = async (ticket, action) => {
-    if (action.form === 'read') {
-        router.push(`/tickets/${ticket.id}/view`);
-    } else if (action.form === 'edit') {
-        router.push(`/tickets/${ticket.id}/edit`);
-    } else if (action.form) {
-        router.push(`/tickets/${ticket.id}/action/${action.name}`);
-    } else {
-        // Direct execution
-        executeAction(ticket, action);
-    }
-};
-
-
-const confirmActionComment = async (ticket, action, comment) => {
-    const actionId = ticket._id + '-' + action.name;
-    
-    // Set loading state on the button via executingActionId
-    executingActionId.value = actionId;
-    
-    try {
-        if (comment && comment.trim()) {
-            await axios.post(`/api/tickets/${ticket._id}/comments`, {
-                text: comment, 
-                silent: true
-            }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        }
-        
-        await executeAction(ticket, action);
-        
-        // Close popover
-        if (popoverStates.value[actionId]) {
-            popoverStates.value[actionId] = false;
-        }
-
-        // Clear comment
-        if (popoverComments.value[actionId]) {
-            delete popoverComments.value[actionId];
-        }
-
-    } catch (err) {
-        console.error(err);
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
-        executingActionId.value = null; // Reset loading if error
-    } 
-    // If success, fetchTickets in executeAction will refresh list, 
-    // and ideally the popover is gone because the ticket row is re-rendered? 
-    // Or we need to manually close it? 
-    // Re-rendering list should reset popover state if it's not persistent.
-};
-
-watch(currentFilter, () => {
-    loading.value = true; // Show loading immediately
-    loadSavedFilters();
-    fetchTickets();
-});
-
 onMounted(async () => {
+    // Basic Access Control
+    if (!(user.groups || []).includes('Administration')) {
+        alert('Kein Zugriff.');
+        router.push('/');
+        return;
+    }
+
     await workflow.fetchConfig();
-    loadSavedFilters();
     fetchTickets();
 });
 </script>
@@ -682,10 +489,15 @@ onMounted(async () => {
 
 .ticket-table tr {
     transition: background-color 0.2s;
+    cursor: pointer;
 }
 
 .ticket-table tr:hover {
     background-color: var(--wa-color-primary-50);
+}
+
+.ticket-table tr.selected {
+    background-color: var(--wa-color-primary-100);
 }
 
 .ticket-table tr:last-child td {
@@ -705,10 +517,7 @@ onMounted(async () => {
     line-height: 1;
     color: var(--wa-color-neutral-600);
 }
-.actions-cell wa-button {
-    margin-right: 0;
-    margin-left: -1rem;
-}
+
 .filter-details {
     background: white;
     border-radius: var(--wa-border-radius-large);
@@ -794,20 +603,7 @@ onMounted(async () => {
     font-size: 0.75rem;
     font-weight: 500;
     padding: 2px 6px;
-    border-radius: 9999px;
-    border: 1px solid var(--wa-color-neutral-300);
 }
-
-
-.empty-state {
-    padding: 3rem;
-    text-align: center;
-    color: var(--wa-color-neutral-500);
-    background: white;
-    border-radius: var(--wa-border-radius-large);
-    border: 1px dashed var(--wa-color-neutral-300);
-}
-
 .id-tag {
     white-space: nowrap;
     font-weight: 600;
@@ -859,111 +655,5 @@ onMounted(async () => {
     background-color: #f3f4f6;
     color: #374151;
     border-color: #e5e7eb;
-}
-
-.saved-filters {
-    padding: 0 1.5rem 1rem 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.saved-filters-label {
-    font-size: 0.85rem;
-    color: var(--wa-color-neutral-500);
-    margin-right: 0.5rem;
-}
-
-.saved-filter-tag {
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.saved-filter-tag:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--wa-shadow-small);
-}
-
-/* Mobile Styles using .is-mobile class */
-.is-mobile .header {
-    margin: 1rem;
-}
-
-.is-mobile .ticket-table {
-    display: block;
-    background: transparent;
-    box-shadow: none;
-    border: none;
-}
-
-.is-mobile .ticket-table thead {
-    display: none;
-}
-
-.is-mobile .ticket-table tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.is-mobile .ticket-table tr {
-    display: flex;
-    flex-direction: column;
-    background: white;
-    border: 1px solid var(--wa-color-neutral-200);
-    border-radius: var(--wa-border-radius-large);
-    box-shadow: var(--wa-shadow-small);
-    padding: 1rem;
-    gap: 0.5rem;
-}
-
-.is-mobile .ticket-table td {
-    display: grid;
-    grid-template-columns: 100px 1fr;
-    align-items: flex-start;
-    justify-items: start;
-    padding: 0.25rem 0;
-    border: none;
-    text-align: left;
-}
-
-.is-mobile .ticket-table td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--wa-color-neutral-600);
-    margin-right: 1rem;
-    flex-shrink: 0;
-    font-size: 0.85rem;
-    margin-top: 0.1rem;
-}
-
-.is-mobile .ticket-table td.actions-cell {
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--wa-color-neutral-100);
-    justify-items: end;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-/* Actions content wrapper to align buttons */
-.is-mobile .actions-cell wa-button {
-    margin: 0;
-}
-
-.popover-card {
-    --padding: 0;
-    min-width: 300px;
-}
-
-.popover-content {
-    padding: 0%
-}
-.popover-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
-    gap: 1.5rem;
 }
 </style>

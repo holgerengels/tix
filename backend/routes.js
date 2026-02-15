@@ -124,36 +124,35 @@ router.get('/tickets', verifyToken, async (req, res) => {
         else baseQuery = { _id: null }; // No access
 
     } else if (filter === 'all' || !filter) {
-        const conditions = [];
-        const allWorkflows = workflowEngine.getWorkflows();
-        Object.values(allWorkflows).forEach(wf => {
-            const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-            const groups = [];
-            if (readAccess) groups.push(...readAccess.groups);
-
-            // Implicit: Creator usually can read their own tickets? 
-            // If explicit read access rules exist, we follow them.
-            // If generic read access allows this user's group:
-            if (groups.some(g => user.groups.includes(g))) {
-                conditions.push({ type: wf.type });
-            }
-        });
-
-        // Also always include tickets where user is creator or assignee?
-        // Usually 'all' means all visible in system.
-        // Let's stick to explicit read permissions + own tickets
-
-        const accessOr = [];
-        if (conditions.length > 0) accessOr.push(...conditions);
-        accessOr.push({ creator: user.username });
-        accessOr.push({ assignee: user.username });
-
-        if (baseQuery.$or) {
-            // If baseQuery already had $or (unlikely here as it is 'all'), we'd merge.
-            // But here we build it.
-            baseQuery.$or = accessOr;
+        // Global Check for Administration Group
+        if (user.groups && user.groups.includes('Administration')) {
+            // Admins see everything
+            // baseQuery remains empty (or rather, no constraints added yet)
+            // But we must initialize $or to empty or null?
+            // Actually, if we add nothing to baseQuery here, it means "match all".
+            // So we just Don't add restrictions.
         } else {
-            baseQuery.$or = accessOr;
+            const conditions = [];
+            const allWorkflows = workflowEngine.getWorkflows();
+            Object.values(allWorkflows).forEach(wf => {
+                const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
+                const groups = [];
+                if (readAccess) groups.push(...readAccess.groups);
+                if (groups.some(g => user.groups.includes(g))) {
+                    conditions.push({ type: wf.type });
+                }
+            });
+
+            const accessOr = [];
+            if (conditions.length > 0) accessOr.push(...conditions);
+            accessOr.push({ creator: user.username });
+            accessOr.push({ assignee: user.username });
+
+            if (baseQuery.$or) {
+                baseQuery.$or = accessOr;
+            } else {
+                baseQuery.$or = accessOr;
+            }
         }
     }
 

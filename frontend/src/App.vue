@@ -24,6 +24,10 @@
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
                 <wa-icon name="journal-text"></wa-icon> <span class="nav-text">Protokoll</span>
             </router-link>
+            <router-link v-if="auth.state.user && auth.state.user.groups && auth.state.user.groups.includes('Administration')" to="/admin" class="nav-item" :class="{ active: $route.path === '/admin' }">
+                <wa-icon name="shield-lock"></wa-icon> <span class="nav-text">Administration</span>
+            </router-link>
+
         </nav>
 
         <div class="footer">
