@@ -425,7 +425,8 @@ router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
 
 router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
     try {
-        const { text } = req.body;
+        const { text, silent } = req.body;
+
         if (!text) return res.status(400).json({ message: 'Text required' });
 
         const ticket = await Ticket.findById(req.params.id);
@@ -451,14 +452,16 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
         });
         await comment.save();
 
-        // Create Log
-        await new Log({
-            ticket: ticket._id,
-            editor: req.user.username,
-            action: 'Kommentar hinzugefügt',
-            timestamp: new Date(),
-            dataAfter: ticket.toObject() // Snapshot (unchanged, but current state)
-        }).save();
+        // Create Log (if not silent)
+        if (!silent) {
+            await new Log({
+                ticket: ticket._id,
+                editor: req.user.username,
+                action: 'Kommentar hinzugefügt',
+                timestamp: new Date(),
+                dataAfter: ticket.toObject() // Snapshot (unchanged, but current state)
+            }).save();
+        }
 
         res.status(201).json(comment);
 
@@ -638,7 +641,7 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
 
         // Checks
         if (!latestLog) return res.status(400).json({ message: 'No actions to undo' });
-        if (latestLog.published) return res.status(400).json({ message: 'Action already published, cannot undo' });
+        if (latestLog.published) return res.status(400).json({ message: 'Kann nicht mehr rückgängig gemacht werden' });
 
         // Ensure no new actions appeared (trivial since we fetched latestLog just now, 
         // effectively checking if "latestLog" IS the one user wants to undo? 

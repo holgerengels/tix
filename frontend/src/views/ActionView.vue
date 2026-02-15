@@ -230,7 +230,7 @@ const execute = async (btnName = null) => {
     executing.value = true;
     try {
         if (commentsRef.value && commentsRef.value.hasPendingComment()) {
-            await commentsRef.value.sendComment();
+            await commentsRef.value.sendComment(true);
         }
 
         const payload = {

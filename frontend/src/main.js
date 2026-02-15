@@ -23,6 +23,8 @@ import '@awesome.me/webawesome/dist/components/spinner/spinner.js';
 import '@awesome.me/webawesome/dist/components/tag/tag.js';
 import '@awesome.me/webawesome/dist/components/badge/badge.js';
 import '@awesome.me/webawesome/dist/components/dialog/dialog.js';
+import '@awesome.me/webawesome/dist/components/popover/popover.js';
+import '@awesome.me/webawesome/dist/components/popup/popup.js';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
 
 registerIconLibrary('default', {

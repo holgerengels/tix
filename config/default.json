@@ -11,7 +11,7 @@
             "type": "Badges",
             "label": "Labels",
             "required": false,
-            "visible": true
+            "visible": false
         },
         {
             "name": "description",

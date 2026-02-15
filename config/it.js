@@ -1,5 +1,5 @@
 function dringend(ticket) {
-  if (ticket.category === 'Medien') {
+  if (ticket.state === 'offen.neu' && ticket.category === 'Medien') {
     // Ensure badges array exists
     if (!ticket.badges) ticket.badges = [];
     // Add 'dringend' if not present

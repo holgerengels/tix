@@ -125,22 +125,69 @@
                     </div>
                 </td>
                 <td class="actions-cell">
-                    <wa-button 
-                        v-for="action in getActions(ticket)" 
-                        :key="action.name"
-                        size="small"
-                        appearance="plain"
-                        :loading="executingActionId === (ticket._id + '-' + action.name)"
-                        @click="handleAction(ticket, action)"
-                    >
-                        {{ action.name }}
-                    </wa-button>
+                    <template v-for="action in getActions(ticket)" :key="action.name">
+                        <template v-if="action['inline-comment']">
+                            <wa-button 
+                                :id="'trigger-' + ticket._id + '-' + action.name"
+                                size="small" 
+                                appearance="plain"
+                            >
+                                {{ action.name }}
+                            </wa-button>
+                            
+                            <wa-popover 
+                                :for="'trigger-' + ticket._id + '-' + action.name"
+                                :open="!!popoverStates[ticket._id + '-' + action.name]"
+                                placement="left" 
+                                distance="5" 
+                                skidding="0"
+                                @wa-show="popoverStates[ticket._id + '-' + action.name] = true"
+                                @wa-hide="popoverStates[ticket._id + '-' + action.name] = false"
+                            >
+                                <div class="popover-content">
+                                    <wa-textarea 
+                                        :value="popoverComments[ticket._id + '-' + action.name] || ''"
+                                        @input="e => popoverComments[ticket._id + '-' + action.name] = e.target.value"
+                                        placeholder="Kommentar..."
+                                        resize="auto"
+                                        rows="2"
+                                        autofocus
+                                    ></wa-textarea>
+                                    <div class="popover-actions">
+                                        <wa-button appearance="plain" size="small" @click="popoverStates[ticket._id + '-' + action.name] = false">Abbrechen</wa-button>
+                                        <wa-button 
+                                            size="small" 
+                                            variant="primary" 
+                                            :loading="executingActionId === (ticket._id + '-' + action.name)"
+                                            @click="confirmActionComment(ticket, action, popoverComments[ticket._id + '-' + action.name])"
+                                        >
+                                            {{ action.name }}
+                                        </wa-button>
+                                    </div>
+                                </div>
+                            </wa-popover>
+                        </template>
+
+                        <wa-button 
+                            v-else
+                            size="small"
+                            appearance="plain"
+                            :loading="executingActionId === (ticket._id + '-' + action.name)"
+                            @click="handleAction(ticket, action)"
+                        >
+                            {{ action.name }}
+                        </wa-button>
+                    </template>
                 </td>
                 </tr>
             </tbody>
             </table>
         </div>
-    </div>
+        </div>
+
+
+
+
   </div>
 </template>
 
@@ -169,6 +216,12 @@ const filterBadges = ref([]);
 
 const savedFilters = ref([]);
 const executingActionId = ref(null);
+
+const popoverComments = ref({});
+const popoverStates = ref({});
+const executingActionComment = ref(false);
+
+
 
 
 const loadSavedFilters = () => {
@@ -454,22 +507,66 @@ const getActions = (ticket) => {
     });
 
     if (currentFilter.value === 'assigned') {
-        return authorizedActions.filter(a => !a.optional);
+        const actions = authorizedActions.filter(a => !a.optional);
+        return actions.map(processAction);
     } else if (currentFilter.value === 'my') {
-        return authorizedActions.filter(a => a.optional === true);
+        const actions = authorizedActions.filter(a => a.optional === true);
+        return actions.map(processAction);
     }
     
     const wf = config.value[ticket.type];
+    const actions = [...authorizedActions];
+    
     const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
     if (editAccess && editAccess.groups.some(g => (user.groups || []).includes(g))) {
-        authorizedActions.push({
+        actions.push({
             name: 'editieren',
             form: 'edit',
             groups: editAccess.groups 
         });
     }
 
-    return authorizedActions;
+    return actions.map(processAction);
+};
+
+const processAction = (action) => {
+    // Add unique ID for popover checking
+    return { ...action, _id: action.name };
+};
+
+const executeAction = async (ticket, action) => {
+    // ... existing logic ...
+    const actionId = ticket._id + '-' + action.name;
+    
+    // Allow re-entry if we are already "executing" this specific action (e.g. from confirmActionComment)
+    if (executingActionId.value && executingActionId.value !== actionId) return; 
+    
+    executingActionId.value = actionId;
+    
+    try {
+        const { _id, __v, type, state, creator, created, updated, log, badges, ...rest } = ticket;
+        const payload = {
+            actionName: action.name,
+            formData: { 
+                title: ticket.title,
+                description: ticket.description,
+                assignee: ticket.assignee,
+                ...rest 
+            }
+        };
+
+        await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        // Refresh list
+        fetchTickets();
+    } catch (err) {
+        console.error(err);
+        alert('Fehler: ' + (err.response?.data?.message || err.message));
+    } finally {
+        executingActionId.value = null;
+    }
 };
 
 const handleAction = async (ticket, action) => {
@@ -481,36 +578,48 @@ const handleAction = async (ticket, action) => {
         router.push(`/tickets/${ticket.id}/action/${action.name}`);
     } else {
         // Direct execution
-        if (executingActionId.value) return; 
-        
-        const actionId = ticket._id + '-' + action.name;
-        executingActionId.value = actionId;
-        
-        try {
-            const { _id, __v, type, state, creator, created, updated, log, ...rest } = ticket;
-            const payload = {
-                actionName: action.name,
-                formData: { 
-                    title: ticket.title,
-                    description: ticket.description,
-                    assignee: ticket.assignee,
-                    ...rest 
-                }
-            };
-
-            await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
-                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            
-            // Refresh list
-            fetchTickets();
-        } catch (err) {
-            console.error(err);
-            alert('Fehler: ' + (err.response?.data?.message || err.message));
-        } finally {
-            executingActionId.value = null;
-        }
+        executeAction(ticket, action);
     }
+};
+
+
+const confirmActionComment = async (ticket, action, comment) => {
+    const actionId = ticket._id + '-' + action.name;
+    
+    // Set loading state on the button via executingActionId
+    executingActionId.value = actionId;
+    
+    try {
+        if (comment && comment.trim()) {
+            await axios.post(`/api/tickets/${ticket._id}/comments`, {
+                text: comment, 
+                silent: true
+            }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        }
+        
+        await executeAction(ticket, action);
+        
+        // Close popover
+        if (popoverStates.value[actionId]) {
+            popoverStates.value[actionId] = false;
+        }
+
+        // Clear comment
+        if (popoverComments.value[actionId]) {
+            delete popoverComments.value[actionId];
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert('Fehler: ' + (err.response?.data?.message || err.message));
+        executingActionId.value = null; // Reset loading if error
+    } 
+    // If success, fetchTickets in executeAction will refresh list, 
+    // and ideally the popover is gone because the ticket row is re-rendered? 
+    // Or we need to manually close it? 
+    // Re-rendering list should reset popover state if it's not persistent.
 };
 
 watch(currentFilter, () => {
@@ -856,4 +965,18 @@ onMounted(async () => {
     margin: 0;
 }
 
+.popover-card {
+    --padding: 0;
+    min-width: 300px;
+}
+
+.popover-content {
+    padding: 0%
+}
+.popover-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    gap: 1.5rem;
+}
 </style>

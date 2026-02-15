@@ -178,6 +178,7 @@ const prepareForm = () => {
     
     // Mark all as readonly
     fields.forEach(f => f.readonly = true);
+    fields.forEach(f => { if (f.name === 'badges') f.visible = true; });
     
     formFields.value = fields;
     formGrid.value = wf.grid || [];
@@ -186,6 +187,7 @@ const prepareForm = () => {
     // Mix standard fields that might be in the form definition with dynamic fields
     ticketData.value = {
         title: ticket.value.title,
+        badges: ticket.value.badges,
         description: ticket.value.description,
         assignee: ticket.value.assignee,
         ...ticket.value // includes dynamic fields
@@ -208,6 +210,8 @@ const canComment = computed(() => {
 });
 
 const canDelete = computed(() => {
+    if ((user.groups || []).includes('Administration')) return true;
+    
     if (!ticket.value || !config.value[ticket.value.type]) return false;
     
     const access = config.value[ticket.value.type].access;

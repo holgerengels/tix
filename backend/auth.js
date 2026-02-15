@@ -16,7 +16,7 @@ try {
 console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 
 const MOCK_USERS = [
-    { username: 'admin', password: 'password', groups: ['Admin', 'Schulleitung', 'Stundenplanung'] },
+    { username: 'admin', password: 'password', groups: ['Administration', 'Schulleitung', 'Stundenplanung'] },
     { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte'] },
     { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },

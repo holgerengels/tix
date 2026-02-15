@@ -69,13 +69,13 @@ const fetchComments = async () => {
     }
 };
 
-const sendComment = async () => {
+const sendComment = async (silent = false) => {
     if (!newComment.value.trim()) return;
     
     sending.value = true;
     try {
         const res = await axios.post(`/api/tickets/${props.ticket._id}/comments`, {
-            text: newComment.value
+            text: newComment.value, silent
         }, {
              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
