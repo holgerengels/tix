@@ -59,10 +59,9 @@
                     <tr v-for="log in logs" :key="log._id">
                     <td data-label="Zeitpkt">{{ formatDate(log.timestamp) }}</td>
                     <td data-label="ID">
-                        <router-link v-if="log.ticket" :to="'/tickets/' + log.ticket.id + '/view'" @click.stop>
-                            <span class="ticket-link">{{ log.ticket.id }}</span>
+                        <router-link :to="'/tickets/' + log.ticket.id + '/view'" @click.stop class="ticket-link">
+                            {{ log.ticket.id }}
                         </router-link>
-                        <span v-else class="text-muted">-</span>
                     </td>
                     <td data-label="Typ">{{ log.ticket ? log.ticket.type : '-' }}</td>
                     <td data-label="Titel">{{ log.ticket ? log.ticket.title : 'Gelöschtes Ticket' }}</td>
@@ -237,6 +236,7 @@ onMounted(async () => {
     border-bottom: none;
 }
 .ticket-link {
+    text-decoration: none;
     font-weight: 600;
     white-space: nowrap;
     color: var(--wa-color-primary-600);

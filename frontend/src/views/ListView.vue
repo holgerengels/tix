@@ -96,8 +96,8 @@
             <tbody>
                 <tr v-for="ticket in tickets" :key="ticket._id">
                 <td data-label="ID">
-                    <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
-                        <span class="id-tag">{{ ticket.id }}</span>
+                    <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
+                        {{ ticket.id }}
                     </router-link>
                 </td>
                 <td data-label="Typ">{{ ticket.type }}</td>
@@ -798,7 +798,6 @@ onMounted(async () => {
     border: 1px solid var(--wa-color-neutral-300);
 }
 
-
 .empty-state {
     padding: 3rem;
     text-align: center;
@@ -808,15 +807,19 @@ onMounted(async () => {
     border: 1px dashed var(--wa-color-neutral-300);
 }
 
-.id-tag {
+.ticket-link {
+    text-decoration: none;
     white-space: nowrap;
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s;
 }
-.id-tag:hover {
+.ticket-link:hover {
     opacity: 0.8;
     text-decoration: underline;
+}
+[data-label=Typ] {
+    white-space: nowrap;
 }
 
 .badges-container {
