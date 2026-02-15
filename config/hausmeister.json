@@ -1,89 +1,27 @@
 {
-    "type": "Außerunterrichtliche Veranstaltung",
-    "abbreviation": "AUß",
-    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} {{location}}",
+    "type": "Hausmeisterauftrag",
+    "abbreviation": "HMA",
+    "template": "{{category}}",
     "fields": [
         {
-            "name": "dateFrom",
-            "label": "Datum von",
-            "type": "Date",
-            "required": true
-        },
-        {
-            "name": "timeFrom",
-            "label": "Zeit von",
-            "type": "Time",
-            "required": true
-        },
-        {
-            "name": "dateUntil",
-            "label": "Datum bis",
-            "type": "Date",
-            "required": true
-        },
-        {
-            "name": "timeUntil",
-            "label": "Zeit bis",
-            "type": "Time",
-            "required": true
-        },
-        {
-            "name": "location",
-            "label": "Ort / Betrieb",
-            "type": "Text",
-            "required": true
-        },
-        {
-            "name": "companion1",
-            "label": "Begleitperson 1",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
-            "required": false
-        },
-        {
-            "name": "companion2",
-            "label": "Begleitperson 2",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
-            "required": false
-        },
-        {
-            "name": "companion3",
-            "label": "Begleitperson 3",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
-            "required": false
-        },
-        {
-            "name": "assignee",
-            "label": "Zuständige Abteilungsleitung",
-            "type": "User",
-            "groups": [
-                "Abteilungsleitung"
-            ],
+            "name": "category",
+            "label": "Kategorie",
+            "type": "Select",
             "required": true,
-            "visible": true
-        },
-        {
-            "name": "description",
-            "label": "Bemerkung"
+            "options": [
+                "Veranstaltung",
+                "Reparatur",
+                "Reinigung",
+                "Entsorgung",
+                "Sonstiges"
+            ]
         }
     ],
     "grid": [
         "title title title title",
         "badges badges badges badges",
-        "dateFrom dateFrom timeFrom timeFrom",
-        "dateUntil dateUntil timeUntil timeUntil",
-        "location location location location",
-        "companion1 companion2 companion3 .",
-        "assignee assignee assignee assignee",
-        "description description description description"
+        "description description description description",
+        "category category category category"
     ],
     "workflow": [
         {
@@ -94,7 +32,7 @@
                 {
                     "name": "genehmigen",
                     "groups": [
-                        "Abteilungsleitung"
+                        "Schulleitung"
                     ],
                     "script": "ticket.state = 'offen.genehmigt'"
                 },
@@ -103,6 +41,7 @@
                     "groups": [
                         "Schulleitung"
                     ],
+                    "inline-comment": true,
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }
             ]
@@ -116,9 +55,9 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Stundenplanung"
+                        "Hausmeister"
                     ],
-                    "form": "abwesenheit.bearbeiten"
+                    "form": "bearbeiten"
                 }
             ]
         },
@@ -162,11 +101,17 @@
             ]
         },
         {
+            "name": "edit",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
             "name": "read",
             "groups": [
                 "Schulleitung",
-                "Abteilungsleitung",
-                "Stundenplanung"
+                "Netzwerkteam",
+                "Hausmeister"
             ]
         },
         {
@@ -179,26 +124,15 @@
             "name": "comment",
             "groups": [
                 "Schulleitung",
-                "Abteilungsleitung",
-                "Stundenplanung"
+                "Netzwerkteam",
+                "Hausmeister"
             ]
-        }
-    ],
-    "bots": [
-        {
-            "name": "dringend",
-            "states": [
-                "offen.neu",
-                "offen.genehmigt",
-                "offen.inArbeit"
-            ],
-            "function": "dringend"
         }
     ],
     "forms": [
         {
-            "name": "abwesenheit.bearbeiten",
-            "title": "Abwesenheit bearbeiten",
+            "name": "bearbeiten",
+            "title": "bearbeiten",
             "fields": [
                 {
                     "name": "badges",

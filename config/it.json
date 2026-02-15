@@ -18,7 +18,7 @@
             "name": "category",
             "label": "Kategorie",
             "type": "Select",
-            "required": false,
+            "required": true,
             "options": [
                 "Medien",
                 "Netzwerk",
@@ -219,6 +219,15 @@
                     "script": "ticket.state = 'geschlossen.ok'"
                 }
             ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "dringend",
+            "states": [
+                "offen.neu"
+            ],
+            "function": "dringend"
         }
     ],
     "access": [
