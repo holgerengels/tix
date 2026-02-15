@@ -217,6 +217,8 @@ const canComment = computed(() => {
 });
 
 const canEdit = computed(() => {
+    if ((user.groups || []).includes('Administration')) return true;
+
     if (!ticket.value || !config.value[ticket.value.type]) return false;
     
     const access = config.value[ticket.value.type].access;
