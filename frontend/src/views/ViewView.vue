@@ -12,7 +12,7 @@
              <wa-icon slot="start" name="arrow-counterclockwise"></wa-icon> Undo: {{ undoAction.action }}
         </wa-button>
         <wa-button v-if="canEdit" variant="neutral" size="small" appearance="filled" @click="editTicket">
-             <wa-icon slot="start" name="pencil"></wa-icon> Bearbeiten
+             <wa-icon slot="start" name="pencil"></wa-icon> Editieren
         </wa-button>
         <wa-button v-if="canDelete" variant="danger" size="small" appearance="filled" @click="deleteTicket">
              <wa-icon slot="start" name="trash"></wa-icon> Löschen
@@ -275,22 +275,14 @@ const getActions = (ticket) => {
     
     const allActions = matchingBlocks.flatMap(block => block.actions);
 
+    // The filter that previously hid 'bearbeiten' actions has been removed.
+    // All actions are now considered for authorization based on groups.
     const authorizedActions = allActions.filter(action => {
         const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
         const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
         const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
         return allowedByCreator || allowedByAssignee || allowedByGroup;
     });
-
-    const wf = config.value[ticket.type];
-    const editAccess = wf.access ? wf.access.find(a => a.name === 'edit') : null;
-    if (editAccess && editAccess.groups.some(g => (user.groups || []).includes(g))) {
-        authorizedActions.push({
-            name: 'editieren',
-            form: 'edit',
-            groups: editAccess.groups 
-        });
-    }
 
     return authorizedActions;
 };
