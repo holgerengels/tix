@@ -141,6 +141,13 @@
             ]
         },
         {
+            "name": "undo",
+            "groups": [
+                "Schulleitung",
+                "Stundenplanung"
+            ]
+        },
+        {
             "name": "delete",
             "groups": [
                 "Schulleitung"

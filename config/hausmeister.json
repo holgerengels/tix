@@ -115,6 +115,13 @@
             ]
         },
         {
+            "name": "undo",
+            "groups": [
+                "Schulleitung",
+                "Netzwerkteam"
+            ]
+        },
+        {
             "name": "delete",
             "groups": [
                 "Schulleitung"

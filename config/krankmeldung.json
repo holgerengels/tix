@@ -111,6 +111,12 @@
             ]
         },
         {
+            "name": "undo",
+            "groups": [
+                "Stundenplanung"
+            ]
+        },
+        {
             "name": "comment",
             "groups": [
                 "Stundenplanung"
