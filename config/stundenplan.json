@@ -5,6 +5,9 @@
     "fields": [
         {
             "name": "assignee",
+            "groups": [
+                "Stundenplanung"
+            ],
             "visible": true
         },
         {

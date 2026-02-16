@@ -93,8 +93,8 @@
           :label="field.label"
           :min="1"
           :max="11"
-          :min-value="modelValue[field.name]?.min || 1"
-          :max-value="modelValue[field.name]?.max || 6"
+          :min-value="modelValue[field.name]?.min"
+          :max-value="modelValue[field.name]?.max"
           :disabled="field.readonly === true"
           range
           with-markers
@@ -102,17 +102,17 @@
           :hint="field.hint"
           @input="updateField(field.name, { min: $event.target.minValue, max: $event.target.maxValue })"
         >
-            <span slot="reference">1</span>
-            <span slot="reference">2</span>
-            <span slot="reference">3</span>
-            <span slot="reference">4</span>
-            <span slot="reference">5</span>
-            <span slot="reference">6</span>
-            <span slot="reference">7</span>
-            <span slot="reference">8</span>
-            <span slot="reference">9</span>
-            <span slot="reference">10</span>
-            <span slot="reference">11</span>
+            <span slot="reference" class="tick">1</span>
+            <span slot="reference" class="tick">2</span>
+            <span slot="reference" class="tick">3</span>
+            <span slot="reference" class="tick">4</span>
+            <span slot="reference" class="tick">5</span>
+            <span slot="reference" class="tick">6</span>
+            <span slot="reference" class="tick">7</span>
+            <span slot="reference" class="tick">8</span>
+            <span slot="reference" class="tick">9</span>
+            <span slot="reference" class="tick">10</span>
+            <span slot="reference" class="tick">11</span>
         </wa-slider>
 
       <!-- Boolean -->
@@ -280,5 +280,9 @@ const getFieldStyle = (field) => {
 .form-field {
     margin-bottom: 1rem;
     min-width: 0;
+}
+.tick {
+  width: 2ch;
+  text-align: center;
 }
 </style>
