@@ -556,6 +556,7 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
         // Checks
         if (!latestLog) return res.json(null); // No actions yet
         if (latestLog.published) return res.json(null); // Already published
+        if (latestLog.action.trim().startsWith('Ticket erstellt')) return res.json(null);
 
         // 3. User undo permission
         const wf = wfConfig[ticket.type];
@@ -584,6 +585,8 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
                     // However, log.action might contain suffixes like " (ButtonName)".
                     // We need to parse or match it loosely, or ideally store actionName separately.
                     // Current Log format: "actionName" or "actionName (ButtonName)" or "Ticket erstellt" or "Kommentar hinzugefügt"
+
+
 
                     // If it was "Ticket erstellt" (creation), can we undo it? 
                     // Usually undo is for transitions. "Ticket erstellt" implies deletion? 
