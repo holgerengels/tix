@@ -93,6 +93,15 @@
             ]
         }
     ],
+    "bots": [
+        {
+            "name": "automatisch_genehmigen",
+            "states": [
+                "offen.neu"
+            ],
+            "function": "automatisch_genehmigen"
+        }
+    ],
     "access": [
         {
             "name": "create",

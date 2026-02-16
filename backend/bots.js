@@ -97,10 +97,28 @@ async function runBots() {
     }
 }
 
+async function runBotsForTicket(ticket) {
+    const matchingBots = BOTS.filter(bot => bot.type === ticket.type && bot.states.includes(ticket.state));
+
+    for (const bot of matchingBots) {
+        try {
+            console.log(`Bot ${bot.name} processing ticket ${ticket.id}`);
+            await bot.run(ticket);
+
+            if (ticket.isModified()) {
+                await ticket.save();
+                console.log(`Ticket ${ticket.id} updated by bot ${bot.name}`);
+            }
+        } catch (err) {
+            console.error(`Error in bot ${bot.name} for ticket ${ticket.id}:`, err);
+        }
+    }
+}
+
 function startBots() {
     loadBots();
     runBots();
     setInterval(runBots, 60 * 1000);
 }
 
-module.exports = { startBots, runBots };
+module.exports = { startBots, runBots, runBotsForTicket };

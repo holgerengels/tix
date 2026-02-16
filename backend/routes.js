@@ -8,6 +8,7 @@ const Log = require('./models/log');
 const workflowEngine = require('./workflow');
 const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
+const { runBotsForTicket } = require('./bots');
 
 // Auth
 router.post('/login', async (req, res) => {
@@ -124,35 +125,26 @@ router.get('/tickets', verifyToken, async (req, res) => {
         else baseQuery = { _id: null }; // No access
 
     } else if (filter === 'all' || !filter) {
-        // Global Check for Administration Group
-        if (user.groups && user.groups.includes('Administration')) {
-            // Admins see everything
-            // baseQuery remains empty (or rather, no constraints added yet)
-            // But we must initialize $or to empty or null?
-            // Actually, if we add nothing to baseQuery here, it means "match all".
-            // So we just Don't add restrictions.
-        } else {
-            const conditions = [];
-            const allWorkflows = workflowEngine.getWorkflows();
-            Object.values(allWorkflows).forEach(wf => {
-                const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-                const groups = [];
-                if (readAccess) groups.push(...readAccess.groups);
-                if (groups.some(g => user.groups.includes(g))) {
-                    conditions.push({ type: wf.type });
-                }
-            });
-
-            const accessOr = [];
-            if (conditions.length > 0) accessOr.push(...conditions);
-            accessOr.push({ creator: user.username });
-            accessOr.push({ assignee: user.username });
-
-            if (baseQuery.$or) {
-                baseQuery.$or = accessOr;
-            } else {
-                baseQuery.$or = accessOr;
+        const conditions = [];
+        const allWorkflows = workflowEngine.getWorkflows();
+        Object.values(allWorkflows).forEach(wf => {
+            const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
+            const groups = [];
+            if (readAccess) groups.push(...readAccess.groups);
+            if (groups.some(g => user.groups.includes(g))) {
+                conditions.push({ type: wf.type });
             }
+        });
+
+        const accessOr = [];
+        if (conditions.length > 0) accessOr.push(...conditions);
+        accessOr.push({ creator: user.username });
+        accessOr.push({ assignee: user.username });
+
+        if (baseQuery.$or) {
+            baseQuery.$or = accessOr;
+        } else {
+            baseQuery.$or = accessOr;
         }
     }
 
@@ -274,18 +266,23 @@ router.post('/tickets', verifyToken, async (req, res) => {
             }
         }
 
-        const ticket = new Ticket(ticketData);
-        await ticket.save();
+        const newTicket = new Ticket(ticketData);
+        await newTicket.save();
 
-        // Create Log
-        await new Log({
-            ticket: ticket._id,
-            editor: req.user.username,
+        // Run bots immediately
+        await runBotsForTicket(newTicket);
+
+        // Log creation
+        const log = new Log({
+            ticket: newTicket._id,
             action: 'Ticket erstellt',
-            dataAfter: ticket.toObject()
-        }).save();
+            editor: req.user.username, // Changed from 'user' to 'editor' to match existing log structure
+            timestamp: new Date(),
+            dataAfter: newTicket.toObject() // Added dataAfter to match existing log structure
+        });
+        await log.save();
 
-        res.status(201).json(ticket);
+        res.status(201).json(newTicket);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -373,7 +370,12 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             });
         }
 
-        await ticket.save();
+        if (ticket.isModified()) {
+            await ticket.save();
+        }
+
+        // Run bots immediately
+        await runBotsForTicket(ticket);
 
         // Create Log
         await new Log({
