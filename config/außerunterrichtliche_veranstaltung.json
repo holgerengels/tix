@@ -34,30 +34,17 @@
             "required": true
         },
         {
-            "name": "companion1",
-            "label": "Begleitperson 1",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
-            "required": false
-        },
-        {
-            "name": "companion2",
-            "label": "Begleitperson 2",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
-            "required": false
-        },
-        {
-            "name": "companion3",
-            "label": "Begleitperson 3",
-            "type": "User",
-            "groups": [
-                "Lehrkräfte"
-            ],
+            "name": "companions",
+            "label": "Begleitpersonen",
+            "type": "Array",
+            "layout": "columns",
+            "minWidth": "220px",
+            "items": {
+                "type": "User",
+                "groups": [
+                    "Lehrkräfte"
+                ]
+            },
             "required": false
         },
         {
@@ -81,7 +68,7 @@
         "dateFrom dateFrom timeFrom timeFrom",
         "dateUntil dateUntil timeUntil timeUntil",
         "location location location location",
-        "companion1 companion2 companion3 .",
+        "companions companions companions companions",
         "assignee assignee assignee assignee",
         "description description description description"
     ],
@@ -100,8 +87,9 @@
                 },
                 {
                     "name": "ablehnen",
+                    "inlineComment": true,
                     "groups": [
-                        "Schulleitung"
+                        "Abteilungsleitung"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }

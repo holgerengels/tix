@@ -1,0 +1,250 @@
+<template>
+  <div class="form-field-content">
+      <!-- Date -->
+      <wa-input 
+        v-if="field.type === 'Date'"
+        type="date"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      ></wa-input>
+
+      <!-- Time -->
+      <wa-input 
+        v-else-if="field.type === 'Time'"
+        type="time"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      ></wa-input>
+
+      <!-- Select -->
+      <wa-select
+        v-else-if="field.type === 'Select'"
+        hoist
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @change.stop="updateValue($event.target.value)"
+        @input.stop
+      >
+        <wa-option v-for="opt in field.options" :key="opt" :value="opt">
+            {{ opt }}
+        </wa-option>
+      </wa-select>
+
+      <!-- Autocomplete -->
+      <div v-else-if="field.type === 'Autocomplete'">
+        <WAAutocomplete
+            :label="field.label"
+            :required="field.required === true"
+            :disabled="field.readonly === true"
+            :modelValue="modelValue || ''"
+            :hint="field.hint"
+            :options="field.options"
+            @update:modelValue="updateValue"
+        />
+      </div>
+
+      <!-- Rich Text -->
+      <RichTextEditor
+        v-else-if="field.type === 'RichText'"
+        :label="field.label"
+        :disabled="field.readonly === true"
+        :required="field.required === true"
+        :modelValue="modelValue || ''"
+        :hint="field.hint"
+        @update:modelValue="updateValue"
+      />
+
+      <!-- User Select -->
+      <div v-else-if="field.type === 'User'">
+        <WAAutocomplete class="user"
+            :label="field.label"
+            :required="field.required === true"
+            :disabled="field.readonly === true"
+            :modelValue="modelValue || ''"
+            :hint="field.hint"
+            :options="displayUsers.map(u => u.username)"
+            @update:modelValue="updateValue"
+        />
+      </div>
+
+      <!-- Badges -->
+      <BadgeEditor
+        v-else-if="field.type === 'Badges'"
+        :disabled="field.readonly === true"
+        :modelValue="modelValue || []"
+        @update:modelValue="updateValue"
+      />
+
+      <!-- Lessons (Slider) -->
+      <wa-slider v-else-if="field.type === 'Lessons'"
+          :label="field.label"
+          :min="1"
+          :max="11"
+          :min-value="modelValue?.min"
+          :max-value="modelValue?.max"
+          :disabled="field.readonly === true"
+          range
+          with-markers
+          with-tooltip
+          :hint="field.hint"
+          @input="updateValue({ min: $event.target.minValue, max: $event.target.maxValue })"
+        >
+            <span slot="reference" class="tick">1</span>
+            <span slot="reference" class="tick">2</span>
+            <span slot="reference" class="tick">3</span>
+            <span slot="reference" class="tick">4</span>
+            <span slot="reference" class="tick">5</span>
+            <span slot="reference" class="tick">6</span>
+            <span slot="reference" class="tick">7</span>
+            <span slot="reference" class="tick">8</span>
+            <span slot="reference" class="tick">9</span>
+            <span slot="reference" class="tick">10</span>
+            <span slot="reference" class="tick">11</span>
+        </wa-slider>
+
+      <!-- Boolean -->
+      <wa-checkbox
+        v-else-if="field.type === 'Boolean'"
+        :checked="modelValue === true"
+        :disabled="field.readonly === true"
+        :required="field.required === true"
+        :hint="field.hint"
+        @change="updateValue($event.target.checked)"
+      >{{ field.label }}</wa-checkbox>
+
+      <!-- Integer -->
+      <wa-input 
+        v-else-if="field.type === 'Integer'"
+        type="number"
+        step="1"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      ></wa-input>
+
+      <!-- Decimal -->
+      <wa-input 
+        v-else-if="field.type === 'Decimal'"
+        type="number"
+        step="any"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      ></wa-input>
+
+      <!-- Array -->
+      <ArrayFieldEditor
+        v-else-if="field.type === 'Array'"
+        :field="field"
+        :modelValue="modelValue || []"
+        @update:modelValue="updateValue"
+      />
+
+       <!-- Standard Text -->
+      <wa-input 
+        v-else
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value="modelValue || ''"
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      ></wa-input>
+  </div>
+</template>
+
+<script setup>
+import { defineProps, defineEmits, ref, watch, computed } from 'vue';
+import axios from 'axios';
+import RichTextEditor from './RichTextEditor.vue';
+import WAAutocomplete from './WAAutocomplete.vue';
+import BadgeEditor from './BadgeEditor.vue';
+import ArrayFieldEditor from './ArrayFieldEditor.vue';
+
+const props = defineProps({
+  field: { type: Object, required: true },
+  modelValue: { required: true } // Can be String, Number, Boolean, Object, Array
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+const updateValue = (val) => {
+    emit('update:modelValue', val);
+};
+
+// User Handling
+const users = ref([]);
+
+const fetchUsers = async () => {
+    if (props.field.type !== 'User') return;
+    
+    try {
+        const groups = props.field.groups || [];
+        const groupsParam = groups.join(',');
+
+        const res = await axios.get('/api/users', {
+            params: { groups: groupsParam },
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        users.value = res.data;
+    } catch (err) {
+        console.error("Failed to fetch users", err);
+    }
+};
+
+const displayUsers = computed(() => {
+    if (props.field.type !== 'User') return [];
+
+    // 1. Start with all fetched users
+    let displayUsers = [...users.value];
+
+    // Filter by field groups if defined (already done by backend mostly, but double check)
+    // Actually backend handles ?groups=... param so usually users is already filtered.
+    
+    // 2. Check if current value exists
+    const currentValue = props.modelValue;
+    if (currentValue) {
+        // 3. If current value is not in the list, add it partially
+        const exists = displayUsers.find(u => u.username === currentValue);
+        if (!exists) {
+            displayUsers.push({ username: currentValue });
+        }
+    }
+    return displayUsers;
+});
+
+// Fetch users if needed when field definition changes or mostly on mount
+watch(() => props.field, () => {
+    if (props.field.type === 'User') {
+        fetchUsers();
+    }
+}, { immediate: true });
+
+</script>
+
+<style scoped>
+.tick {
+  width: 2ch;
+  text-align: center;
+}
+wa-slider {
+    margin: 0 1rem;
+}
+</style>

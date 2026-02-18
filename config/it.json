@@ -184,7 +184,7 @@
                         "Schulleitung",
                         "Netzwerkteam"
                     ],
-                    "inline-comment": true,
+                    "inlineComment": true,
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }
             ]

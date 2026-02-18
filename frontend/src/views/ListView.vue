@@ -126,7 +126,7 @@
                 </td>
                 <td class="actions-cell">
                     <template v-for="action in getActions(ticket)" :key="action.name">
-                        <template v-if="action['inline-comment']">
+                        <template v-if="action['inlineComment']">
                             <wa-button 
                                 :id="'trigger-' + ticket._id + '-' + action.name"
                                 size="small" 
