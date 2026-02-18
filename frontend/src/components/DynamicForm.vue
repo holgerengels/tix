@@ -1,6 +1,6 @@
 <template>
   <div class="dynamic-form" :style="gridStyle">
-    <div v-for="field in visibleFields(fields)" :key="field.name" class="form-field" :style="getFieldStyle(field)">
+    <div v-for="field in orderedFields" :key="field.name" class="form-field" :style="getFieldStyle(field)">
         <FormField 
             :field="field"
             :modelValue="modelValue[field.name]"
@@ -31,8 +31,53 @@ const updateField = (name, value) => {
     emit('update:modelValue', { ...props.modelValue, [name]: value });
 };
 
+
 // Start Grid Logic
 import { ui } from '../state/ui';
+
+const orderedFields = computed(() => {
+    const visible = visibleFields(props.fields);
+    
+    // Only reorder if grid layout is active (not narrow and grid exists)
+    if (ui.state.isNarrow || !props.grid || props.grid.length === 0) {
+        return visible;
+    }
+
+    // Extract field names from grid in visual order
+    const gridOrder = [];
+    const seen = new Set();
+    
+    props.grid.forEach(row => {
+        const tokens = row.split(/\s+/);
+        tokens.forEach(token => {
+            if (token !== '.' && !seen.has(token)) {
+                seen.add(token);
+                gridOrder.push(token);
+            }
+        });
+    });
+
+    // Sort visible fields
+    const fieldMap = new Map(visible.map(f => [f.name, f]));
+    const result = [];
+
+    // Add fields present in grid
+    gridOrder.forEach(name => {
+        if (fieldMap.has(name)) {
+            result.push(fieldMap.get(name));
+            fieldMap.delete(name);
+        }
+    });
+
+    // Add remaining fields (not in grid)
+    visible.forEach(f => {
+        if (fieldMap.has(f.name)) {
+            result.push(f);
+        }
+    });
+
+    return result;
+});
 
 const gridStyle = computed(() => {
     if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
