@@ -387,4 +387,7 @@ onMounted(async () => {
 .is-mobile .log-table tr:hover {
     background-color: white;
 }
+.is-mobile .header h2 {
+    font-size: 1.2rem;
+}
 </style>

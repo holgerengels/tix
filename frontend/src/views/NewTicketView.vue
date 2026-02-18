@@ -239,4 +239,7 @@ onMounted(fetchConfig);
     overflow-y: visible;
     height: auto;
 }
+.is-mobile .header h2 {
+    font-size: 1.2rem;
+}
 </style>

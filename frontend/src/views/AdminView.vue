@@ -656,4 +656,54 @@ onMounted(async () => {
     color: #374151;
     border-color: #e5e7eb;
 }
+.is-mobile .ticket-table {
+    display: block;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+}
+
+.is-mobile .ticket-table thead {
+    display: none;
+}
+
+.is-mobile .ticket-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.is-mobile .ticket-table tr {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid var(--wa-color-neutral-200);
+    border-radius: var(--wa-border-radius-large);
+    box-shadow: var(--wa-shadow-small);
+    padding: 1rem;
+    gap: 0.5rem;
+}
+
+.is-mobile .ticket-table td {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: flex-start;
+    justify-items: start;
+    padding: 0.25rem 0;
+    border: none;
+    text-align: left;
+}
+
+.is-mobile .ticket-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--wa-color-neutral-600);
+    margin-right: 1rem;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    margin-top: 0.1rem;
+}
+.is-mobile .header h2 {
+    font-size: 1.2rem;
+}
 </style>

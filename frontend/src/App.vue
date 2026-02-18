@@ -177,7 +177,7 @@ body {
 
 /* Sidebar Styles */
 .sidebar {
-    width: 210px;
+    width: 200px;
     background: linear-gradient(180deg, #ffffff 0%, var(--wa-color-neutral-50) 100%);
     border-right: 1px solid var(--wa-color-neutral-200);
     display: flex;
@@ -294,7 +294,7 @@ body {
         top: 0;
         left: 0;
         height: 100%;
-        width: 210px;
+        width: 200px;
         z-index: 1000;
         box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         transform: translateX(0);
@@ -303,7 +303,7 @@ body {
     
     .app-container.sidebar-collapsed .sidebar {
         transform: translateX(-100%);
-        width: 210px; 
+        width: 200px; 
         padding-left: 1.5rem; /* Restore padding because default collapsed removes it */
         padding-right: 1.5rem;
         border-right: 1px solid var(--wa-color-neutral-200); /* Restore border */

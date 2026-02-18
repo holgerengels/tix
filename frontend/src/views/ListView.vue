@@ -969,4 +969,7 @@ onMounted(async () => {
     margin-top: 1rem;
     gap: 1.5rem;
 }
+.is-mobile .header h2 {
+    font-size: 1.2rem;
+}
 </style>

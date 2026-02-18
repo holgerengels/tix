@@ -5,7 +5,7 @@
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
         </wa-button>
         <wa-button variant="neutral" appearance="outlined" size="small" @click="goBack">
-            <wa-icon slot="start" name="arrow-left"></wa-icon> zurück
+            <wa-icon name="arrow-left"></wa-icon>
         </wa-button>
         <h2>{{ actionTitle }}</h2>
     </div>
@@ -407,5 +407,11 @@ onMounted(fetchData);
 }
 .is-mobile .ticket-card::part(body) {
     overflow: visible;
+}
+.is-mobile .header h2 {
+    font-size: 1.2rem;
+}
+.is-narrow .ticket-card h3 {
+    font-size: 1rem !important;
 }
 </style>
