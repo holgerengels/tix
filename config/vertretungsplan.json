@@ -1,6 +1,6 @@
 {
-    "type": "Stundenplan-Ticket",
-    "abbreviation": "STU",
+    "type": "Vertretungsplan-Ticket",
+    "abbreviation": "VER",
     "template": "{{date}} {{lessons}}",
     "fields": [
         {
@@ -15,9 +15,9 @@
             "required": true
         },
         {
-            "name": "day",
-            "label": "Wochentag",
-            "type": "Weekday",
+            "name": "date",
+            "label": "Datum",
+            "type": "Date",
             "required": false
         },
         {
@@ -25,14 +25,26 @@
             "label": "Stunden",
             "type": "Lessons",
             "required": false
+        },
+        {
+            "name": "agreement",
+            "label": "Betroffene Kolleg*innen sind einverstanden",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "Ja",
+                "Nein",
+                "Niemand betroffen"
+            ]
         }
     ],
     "grid": [
         "title title title title",
         "badges badges badges badges",
         "description description description description",
+        "agreement agreement agreement agreement",
         "assignee assignee assignee assignee",
-        "day day lessons lessons"
+        "date date lessons lessons"
     ],
     "workflow": [
         {
@@ -45,7 +57,6 @@
                     "name": "bearbeiten",
                     "groups": [
                         "@assignee",
-                        "Schulleitung",
                         "Stundenplanung"
                     ],
                     "script": "ticket.state = 'offen.inArbeit'",
@@ -54,7 +65,6 @@
                 {
                     "name": "ablehnen",
                     "groups": [
-                        "Schulleitung",
                         "Stundenplanung"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
@@ -115,14 +125,12 @@
         {
             "name": "undo",
             "groups": [
-                "Schulleitung",
                 "Stundenplanung"
             ]
         },
         {
             "name": "delete",
             "groups": [
-                "Schulleitung",
                 "Stundenplanung"
             ]
         },
@@ -132,6 +140,16 @@
                 "@creator",
                 "Stundenplanung"
             ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "dringend",
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "function": "dringend"
         }
     ],
     "forms": [

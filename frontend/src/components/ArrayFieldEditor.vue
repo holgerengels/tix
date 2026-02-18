@@ -187,9 +187,9 @@ const onDrop = (event, index) => {
 .label {
     width: 100%; /* Label always full width */
     grid-column: 1 / -1; /* Make label span full width in grid */
-    font-size: 0.875rem;
-    font-weight: 500; /* Medium */
-    color: var(--wa-color-neutral-700); /* Neutral 700 */
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--wa-color-neutral-700);
     margin-bottom: 0.25rem;
 }
 

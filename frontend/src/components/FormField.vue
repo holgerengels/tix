@@ -149,6 +149,25 @@
         @input="updateValue($event.target.value)"
       ></wa-input>
 
+      <!-- Weekday -->
+      <div v-else-if="field.type === 'Weekday'" class="weekday-group">
+        <label v-if="field.label" class="weekday-label">{{ field.label }}</label>
+        <wa-button-group>
+            <wa-button 
+                v-for="day in ['Mo', 'Di', 'Mi', 'Do', 'Fr']" 
+                :key="day"
+                pill
+                size="small"
+                variant="brand"
+                :appearance="modelValue === day ? 'accent' : 'filled-outlined'"
+                :disabled="field.readonly === true"
+                @click="updateValue(day)"
+            >
+                {{ day }}
+            </wa-button>
+        </wa-button-group>
+      </div>
+
       <!-- Array -->
       <ArrayFieldEditor
         v-else-if="field.type === 'Array'"
@@ -247,4 +266,18 @@ watch(() => props.field, () => {
 wa-slider {
     margin: 0 1rem;
 }
+
+.weekday-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.weekday-label {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--wa-color-neutral-700);
+}
+
+
 </style>
