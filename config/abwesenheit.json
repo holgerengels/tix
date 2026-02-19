@@ -13,7 +13,6 @@
             "name": "lessonFrom",
             "label": "Stunde von",
             "type": "Lesson",
-            "indicator": "from",
             "required": true
         },
         {
@@ -26,7 +25,6 @@
             "name": "lessonUntil",
             "label": "Stunde bis",
             "type": "Lesson",
-            "indicator": "until",
             "required": true
         },
         {
