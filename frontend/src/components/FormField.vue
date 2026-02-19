@@ -86,6 +86,34 @@
         @update:modelValue="updateValue"
       />
 
+      <!-- Lesson (Slider) -->
+      <wa-slider v-else-if="field.type === 'Lesson'"
+        class="lesson"
+        :class="{'single': !field.indicator}"
+        :indicator-offset="field.indicator === 'until' ? '1' : (field.indicator === 'from' ? '11' : undefined)"
+        :label="field.label"
+        :min="1"
+        :max="11"
+        :value="modelValue"
+        :disabled="field.readonly === true"
+        with-markers
+        with-tooltip
+        :hint="field.hint"
+        @input="updateValue($event.target.value)"
+      >
+            <span slot="reference" class="tick">1</span>
+            <span slot="reference" class="tick">2</span>
+            <span slot="reference" class="tick">3</span>
+            <span slot="reference" class="tick">4</span>
+            <span slot="reference" class="tick">5</span>
+            <span slot="reference" class="tick">6</span>
+            <span slot="reference" class="tick">7</span>
+            <span slot="reference" class="tick">8</span>
+            <span slot="reference" class="tick">9</span>
+            <span slot="reference" class="tick">10</span>
+            <span slot="reference" class="tick">11</span>
+        </wa-slider>
+
       <!-- Lessons (Slider) -->
       <wa-slider v-else-if="field.type === 'Lessons'"
           :label="field.label"
@@ -113,7 +141,7 @@
             <span slot="reference" class="tick">11</span>
         </wa-slider>
 
-      <!-- Boolean -->
+        <!-- Boolean -->
       <wa-checkbox
         v-else-if="field.type === 'Boolean'"
         :checked="modelValue === true"
@@ -266,18 +294,17 @@ watch(() => props.field, () => {
 wa-slider {
     margin: 0 1rem;
 }
-
+.single::part(indicator) {
+    background-color: unset;
+}
 .weekday-group {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
-
 .weekday-label {
     font-size: 1rem;
     font-weight: 500;
     color: var(--wa-color-neutral-700);
 }
-
-
 </style>

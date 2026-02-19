@@ -114,11 +114,4 @@ const getFieldStyle = (field) => {
 </script>
 
 <style scoped>
-.dynamic-form {
-    /* Default stacked */
-}
-.form-field {
-    margin-bottom: 1rem;
-    min-width: 0;
-}
 </style>

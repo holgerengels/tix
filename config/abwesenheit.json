@@ -10,9 +10,10 @@
             "required": true
         },
         {
-            "name": "timeFrom",
-            "label": "Zeit von",
-            "type": "Time",
+            "name": "lessonFrom",
+            "label": "Stunde von",
+            "type": "Lesson",
+            "indicator": "from",
             "required": true
         },
         {
@@ -22,9 +23,10 @@
             "required": true
         },
         {
-            "name": "timeUntil",
-            "label": "Zeit bis",
-            "type": "Time",
+            "name": "lessonUntil",
+            "label": "Stunde bis",
+            "type": "Lesson",
+            "indicator": "until",
             "required": true
         },
         {
@@ -45,8 +47,8 @@
     "grid": [
         "title title title title",
         "badges badges badges badges",
-        "dateFrom dateFrom timeFrom timeFrom",
-        "dateUntil dateUntil timeUntil timeUntil",
+        "dateFrom dateFrom lessonFrom lessonFrom",
+        "dateUntil dateUntil lessonUntil lessonUntil",
         "reason reason reason reason",
         "description description description description"
     ],
