@@ -65,8 +65,8 @@
     "grid": [
         "title title title title",
         "badges badges badges badges",
-        "dateFrom dateFrom timeFrom timeFrom",
-        "dateUntil dateUntil timeUntil timeUntil",
+        "dateFrom dateFrom lessonFrom lessonFrom",
+        "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
         "companions companions companions companions",
         "assignee assignee assignee assignee",
