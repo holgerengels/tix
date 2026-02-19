@@ -1,7 +1,7 @@
 {
     "type": "Außerunterrichtliche Veranstaltung",
     "abbreviation": "AUß",
-    "template": "{{dateFrom}} Stunde {{lessonFrom}} - {{dateUntil}} Stunde {{lessonUntil}} {{location}}",
+    "template": "{{dateFrom}} S {{lessonFrom}} - {{dateUntil}} S {{lessonUntil}} {{location}}",
     "fields": [
         {
             "name": "dateFrom",
