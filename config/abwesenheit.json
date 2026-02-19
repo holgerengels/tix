@@ -1,7 +1,7 @@
 {
     "type": "Abwesenheitsantrag",
     "abbreviation": "ABW",
-    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} ({{reason}})",
+    "template": "{{dateFrom}} Stunde {{lessonFrom}} - {{dateUntil}} Stunde {{lessonUntil}} ({{reason}})",
     "fields": [
         {
             "name": "dateFrom",

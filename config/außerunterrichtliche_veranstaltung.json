@@ -1,7 +1,7 @@
 {
     "type": "Außerunterrichtliche Veranstaltung",
     "abbreviation": "AUß",
-    "template": "{{dateFrom}} {{timeFrom}} - {{dateUntil}} {{timeUntil}} {{location}}",
+    "template": "{{dateFrom}} Stunde {{lessonFrom}} - {{dateUntil}} Stunde {{lessonUntil}} {{location}}",
     "fields": [
         {
             "name": "dateFrom",
@@ -10,9 +10,9 @@
             "required": true
         },
         {
-            "name": "timeFrom",
-            "label": "Zeit von",
-            "type": "Time",
+            "name": "lessonFrom",
+            "label": "Stunde von",
+            "type": "Lesson",
             "required": true
         },
         {
@@ -22,9 +22,9 @@
             "required": true
         },
         {
-            "name": "timeUntil",
-            "label": "Zeit bis",
-            "type": "Time",
+            "name": "lessonUntil",
+            "label": "Stunde bis",
+            "type": "Lesson",
             "required": true
         },
         {
