@@ -29,6 +29,7 @@ const MOCK_USERS = [
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
 
 const login = async (username, password) => {
+    username = username.toLowerCase();
     console.log(`[Auth] Attempting login for user: ${username}`);
 
     // 1. DevMode / Mock Check
@@ -255,6 +256,7 @@ const getUsers = async (filterGroups = []) => {
                                 // Normalize username
                                 username = userAttributes.sAMAccountName || userAttributes.samaccountname;
                                 if (Array.isArray(username)) username = username[0];
+                                username = username.toLowerCase();
 
                                 // Normalize memberOf
                                 let rawGroups = userAttributes.memberOf || userAttributes.memberof;

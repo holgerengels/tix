@@ -396,23 +396,57 @@ const getFormattedData = (ticket) => {
     let template = config.value[ticket.type].template;
     const fields = getDynamicFields(ticket);
     const fieldDefs = config.value[ticket.type].fields || [];
-    
-    for (const [key, val] of Object.entries(fields)) {
-        let displayVal = val;
-        
-        const fieldDef = fieldDefs.find(f => f.name === key);
 
+    // Helper for safe evaluation
+    const evaluateExpression = (expr, context) => {
+        try {
+            const keys = Object.keys(context);
+            const values = Object.values(context);
+            // Add helper functions
+            keys.push('format');
+            values.push(format);
+            
+            // Check for valid identifiers in context keys to avoid syntax errors
+            const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
+            const validValues = validKeys.map(k => {
+                const idx = keys.indexOf(k);
+                return values[idx];
+            });
+
+            const func = new Function(...validKeys, `return ${expr}`);
+            return func(...validValues);
+        } catch (e) {
+            console.error(`Error evaluating expression "${expr}":`, e);
+            return `{${expr}}`; // Return original on error equivalent
+        }
+    };
+
+    // Replace {{ expression }}
+    template = template.replace(/\{\{(.*?)\}\}/g, (match, expr) => {
+        // First check if it's a simple key that needs Date formatting
+        const key = expr.trim();
+        const val = fields[key];
+        const fieldDef = fieldDefs.find(f => f.name === key);
+        
         if (fieldDef && fieldDef.type === 'Date' && val) {
-            try {
-                displayVal = format(new Date(val), 'dd.MM.yyyy');
+             try {
+                return format(new Date(val), 'dd.MM.yyyy');
             } catch (e) {
-                console.error(`[debug] Date format error for ${key}:`, e);
+                return val;
             }
         }
+        
+        // If not a simple date field, try evaluating as expression
+        const result = evaluateExpression(key, fields);
+        if (result === undefined || result === null) return '';
+        if (typeof result === 'object' && result.min !== undefined && result.max !== undefined) {
+             // Implicit formatting for range objects if user just uses {{lessons}}
+             if (result.min === result.max) return result.min;
+             return `${result.min}..${result.max}`;
+        }
+        return result;
+    });
 
-        template = template.replace(new RegExp(`{{${key}}}`, 'g'), displayVal);
-        template = template.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), displayVal);
-    }
     return template;
 };
 
