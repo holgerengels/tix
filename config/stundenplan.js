@@ -1,7 +1,7 @@
 const { startOfDay, isBefore, differenceInBusinessDays } = require('date-fns');
 
 function dringend(ticket) {
-  if (isUrgent(ticket.date)) {
+  if (isUrgent(ticket.dateFrom)) {
     // Ensure badges array exists
     if (!ticket.badges) ticket.badges = [];
     // Add 'dringend' if not present

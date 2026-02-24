@@ -189,7 +189,7 @@
                 variant="brand"
                 :appearance="modelValue === day ? 'accent' : 'filled-outlined'"
                 :disabled="field.readonly === true"
-                @click="updateValue(day)"
+                @click="updateValue(modelValue === day ? null : day)"
             >
                 {{ day }}
             </wa-button>
