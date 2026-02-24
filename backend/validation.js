@@ -57,6 +57,19 @@ function validateTicket(ticketData, workflow, formFields = null) {
                 errors.push(`Das Feld '${field.label || field.name}' ist ein Pflichtfeld.`);
             }
         }
+
+        if (field.validation && field.visible !== false) {
+            try {
+                const func = new Function('ticket', `return ${field.validation.expression}`);
+                const passed = func(ticketData || {});
+                if (!passed) {
+                    errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
+                }
+            } catch (e) {
+                console.error(`Error evaluating field validation for ${field.name}:`, e);
+                errors.push(`Interner Fehler bei Validierung von '${field.label || field.name}'`);
+            }
+        }
     });
 
     if (workflow.validations && Array.isArray(workflow.validations)) {

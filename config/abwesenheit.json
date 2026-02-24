@@ -7,7 +7,11 @@
             "name": "dateFrom",
             "label": "Datum von",
             "type": "Date",
-            "required": true
+            "required": true,
+            "validation": {
+                "expression": "!ticket.dateFrom || ticket.dateFrom > new Date().toLocaleDateString('en-CA')",
+                "message": "Datum von kann nicht in der Vergangenheit liegen"
+            }
         },
         {
             "name": "lessonFrom",
@@ -47,7 +51,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "expression": "ticket.dateFrom <= ticket.dateUntil",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],
