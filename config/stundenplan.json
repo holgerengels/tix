@@ -109,7 +109,9 @@
         {
             "name": "read",
             "groups": [
-                "@creator"
+                "@creator",
+                "Stundenplanung",
+                "Schulleitung"
             ]
         },
         {

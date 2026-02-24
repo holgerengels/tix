@@ -152,6 +152,7 @@
         {
             "name": "read",
             "groups": [
+                "@creator",
                 "Schulleitung",
                 "Abteilungsleitung",
                 "Stundenplanung"

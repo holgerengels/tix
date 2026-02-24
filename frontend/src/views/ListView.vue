@@ -88,7 +88,6 @@
                 <th>Titel</th>
                 <th>Status</th>
                 <th>Ersteller</th>
-                <th>Erstellt</th>
                 <th>Daten</th>
                 <th>Aktionen</th>
                 </tr>
@@ -113,7 +112,6 @@
                 </span></td>
                 <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
                 <td data-label="Ersteller">{{ ticket.creator }}</td>
-                <td data-label="Erstellt">{{ formatDate(ticket.created) }}</td>
                 <td data-label="Daten">
                     <div class="dynamic-data">
                         <div v-if="hasTemplate(ticket)" class="template-data">

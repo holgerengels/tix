@@ -136,6 +136,7 @@
         {
             "name": "read",
             "groups": [
+                "@creator",
                 "Schulleitung",
                 "Stundenplanung"
             ]

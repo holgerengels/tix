@@ -42,6 +42,13 @@
             "label": "Bemerkung"
         }
     ],
+    "validations": [
+        {
+            "name": "dateRange",
+            "script": "ticket.dateFrom <= ticket.dateUntil",
+            "message": "Datum von kann nicht nach Datum bis liegen"
+        }
+    ],
     "grid": [
         "title title title title",
         "badges badges badges badges",
@@ -106,6 +113,7 @@
         {
             "name": "read",
             "groups": [
+                "@creator",
                 "Schulleitung",
                 "Stundenplanung"
             ]
