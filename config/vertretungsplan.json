@@ -18,13 +18,13 @@
             "name": "date",
             "label": "Datum",
             "type": "Date",
-            "required": false
+            "required": true
         },
         {
             "name": "lessons",
             "label": "Stunden",
             "type": "Lessons",
-            "required": false
+            "required": true
         },
         {
             "name": "agreement",

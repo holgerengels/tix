@@ -18,13 +18,13 @@
             "name": "day",
             "label": "Wochentag",
             "type": "Weekday",
-            "required": false
+            "required": true
         },
         {
             "name": "lessons",
             "label": "Stunden",
             "type": "Lessons",
-            "required": false
+            "required": true
         }
     ],
     "grid": [
