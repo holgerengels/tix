@@ -225,16 +225,13 @@ router.post('/tickets', verifyToken, async (req, res) => {
 
         // Validation
         const wf = workflowEngine.getWorkflowForType(type);
-        if (wf && wf.fields) {
-            for (const field of wf.fields) {
-                if (field.required) {
-                    const val = req.body[field.name];
-                    if (val === undefined || val === null || val === '') {
-                        return res.status(400).json({
-                            message: `Missing required field: ${field.label || field.name}`
-                        });
-                    }
-                }
+        if (wf) {
+            const { validateTicket } = require('./validation');
+            const validationResult = validateTicket(req.body, wf);
+            if (!validationResult.isValid) {
+                return res.status(400).json({
+                    message: `Validation failed: ${validationResult.errors.join(', ')}`
+                });
             }
         }
 
@@ -367,6 +364,15 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         if (formData) {
             Object.keys(formData).forEach(key => {
                 ticket.set(key, formData[key]);
+            });
+        }
+
+        // Validate modified ticket
+        const { validateTicket } = require('./validation');
+        const validationResult = validateTicket(ticket.toObject(), wf);
+        if (!validationResult.isValid) {
+            return res.status(400).json({
+                message: `Validation failed: ${validationResult.errors.join(', ')}`
             });
         }
 

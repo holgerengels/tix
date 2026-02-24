@@ -11,8 +11,10 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue';
+import { defineProps, defineEmits, computed, watch } from 'vue';
 import FormField from './FormField.vue';
+import { evaluateFields } from '../utils/evaluation';
+import { ui } from '../state/ui';
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -20,23 +22,28 @@ const props = defineProps({
   grid: { type: Array, default: () => [] }
 });
 
-const visibleFields = (fields) => {
-    return fields.filter(f => f.visible !== false);
-};
-
 const emit = defineEmits(['update:modelValue']);
 
 const updateField = (name, value) => {
-    // Updates the model by emitting a new object
-    emit('update:modelValue', { ...props.modelValue, [name]: value });
+    // By mutating the proxy instead of extracting it, we avoid race conditions
+    // where asynchronous wa-change events use a stale modelValue clone.
+    props.modelValue[name] = value;
+    emit('update:modelValue', props.modelValue);
 };
 
-
 // Start Grid Logic
-import { ui } from '../state/ui';
+
+const evaluatedFields = computed(() => {
+    return evaluateFields(props.fields, props.modelValue);
+});
+
+const visibleFields = computed(() => {
+    // Rely on computed evaluated fields
+    return evaluatedFields.value.filter(f => f.visible !== false);
+});
 
 const orderedFields = computed(() => {
-    const visible = visibleFields(props.fields);
+    const visible = visibleFields.value;
     
     // Only reorder if grid layout is active (not narrow and grid exists)
     if (ui.state.isNarrow || !props.grid || props.grid.length === 0) {
@@ -85,7 +92,7 @@ const gridStyle = computed(() => {
         
         // Find fields not present in the grid
         const allGridTokens = new Set(props.grid.join(' ').split(/\s+/));
-        const missingFields = visibleFields(props.fields).filter(f => !allGridTokens.has(f.name));
+        const missingFields = visibleFields.value.filter(f => !allGridTokens.has(f.name));
         
         // Append a full-width row for each missing field
         missingFields.forEach(f => {

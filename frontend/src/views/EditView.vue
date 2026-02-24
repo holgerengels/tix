@@ -52,6 +52,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { ui } from '../state/ui';
 import DynamicForm from '../components/DynamicForm.vue';
+import { validateTicket } from '../utils/evaluation';
 
 const route = useRoute();
 const router = useRouter();
@@ -124,11 +125,34 @@ const prepareForm = () => {
     setTimeout(() => {
         watch(ticketData, () => {
             isDirty.value = true;
+            if (error.value && error.value.includes('Feld')) {
+                // If there's an active validation error, re-validate
+                if (formFields.value.length > 0) {
+                    const wf = config.value[ticket.value.type];
+                    const validation = validateTicket(ticketData.value, wf, formFields.value);
+                    if (validation.isValid) {
+                       error.value = null; // Clear if valid
+                    } else {
+                       error.value = validation.errors.join(', '); // Update error
+                    }
+                }
+            }
         }, { deep: true });
     }, 500);
 };
 
 const save = async () => {
+    if (formFields.value.length > 0) {
+        const wf = config.value[ticket.value.type];
+        const validation = validateTicket(ticketData.value, wf, formFields.value);
+        if (!validation.isValid) {
+            error.value = validation.errors.join(', ');
+            return;
+        } else {
+            error.value = null;
+        }
+    }
+
     saving.value = true;
     try {
         // Edit is an action named 'edit' usually, OR we can just update?

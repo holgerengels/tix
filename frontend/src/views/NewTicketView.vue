@@ -48,6 +48,7 @@ import axios from 'axios';
 import { ui } from '../state/ui';
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
+import { validateTicket } from '../utils/evaluation';
 const getFieldLabel = (name) => {
     // Fallback or simple implementation if needed, but DynamicForm handles labels now
     return name;
@@ -66,6 +67,10 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 watch(newTicketData, () => {
     if (Object.keys(newTicketData.value).length > 0) {
         isDirty.value = true;
+    }
+    // Re-validate dynamically if we already have errors showing to clear them immediately when fixed
+    if (errors.value.length > 0) {
+        validateForm();
     }
 }, { deep: true });
 
@@ -103,14 +108,11 @@ const validateForm = () => {
     const wf = config.value[newTicketType.value];
     if (!wf || !wf.fields) return true;
 
-    let isValid = true;
-    wf.fields.forEach(field => {
-        if (field.required && !newTicketData.value[field.name]) {
-            errors.value.push(`Das Feld '${field.label || field.name}' ist ein Pflichtfeld.`);
-            isValid = false;
-        }
-    });
-    return isValid;
+    const validation = validateTicket(newTicketData.value, wf);
+    if (!validation.isValid) {
+        errors.value = validation.errors;
+    }
+    return validation.isValid;
 };
 
 const createTicket = async () => {

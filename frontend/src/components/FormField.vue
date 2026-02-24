@@ -9,7 +9,7 @@
         :disabled="field.readonly === true"
         :value="modelValue || ''"
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       ></wa-input>
 
       <!-- Time -->
@@ -21,7 +21,7 @@
         :disabled="field.readonly === true"
         :value="modelValue || ''"
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       ></wa-input>
 
       <!-- Select -->
@@ -99,7 +99,7 @@
         with-markers
         with-tooltip
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       >
             <span slot="reference" class="tick">1</span>
             <span slot="reference" class="tick">2</span>
@@ -126,7 +126,7 @@
           with-markers
           with-tooltip
           :hint="field.hint"
-          @input="updateValue({ min: $event.target.minValue, max: $event.target.maxValue })"
+          @change="updateValue({ min: $event.target.minValue, max: $event.target.maxValue })"
         >
             <span slot="reference" class="tick">1</span>
             <span slot="reference" class="tick">2</span>
@@ -148,7 +148,7 @@
         :disabled="field.readonly === true"
         :required="field.required === true"
         :hint="field.hint"
-        @change="updateValue($event.target.checked)"
+        @wa-change="updateValue($event.target.checked)"
       >{{ field.label }}</wa-checkbox>
 
       <!-- Integer -->
@@ -161,7 +161,7 @@
         :disabled="field.readonly === true"
         :value="modelValue || ''"
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       ></wa-input>
 
       <!-- Decimal -->
@@ -174,7 +174,7 @@
         :disabled="field.readonly === true"
         :value="modelValue || ''"
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       ></wa-input>
 
       <!-- Weekday -->
@@ -212,7 +212,7 @@
         :disabled="field.readonly === true"
         :value="modelValue || ''"
         :hint="field.hint"
-        @input="updateValue($event.target.value)"
+        @change="updateValue($event.target.value)"
       ></wa-input>
   </div>
 </template>
