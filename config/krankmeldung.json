@@ -45,7 +45,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "script": "ticket.dateFrom <= ticket.dateUntil",
+            "expression": "ticket.dateFrom <= ticket.dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],

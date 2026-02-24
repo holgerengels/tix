@@ -42,6 +42,13 @@
             "label": "Bemerkung"
         }
     ],
+    "validations": [
+        {
+            "name": "dateRange",
+            "expression": "ticket.dateFrom <= ticket.dateUntil",
+            "message": "Datum von kann nicht nach Datum bis liegen"
+        }
+    ],
     "grid": [
         "title title title title",
         "badges badges badges badges",
