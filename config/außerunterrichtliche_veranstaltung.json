@@ -9,7 +9,7 @@
             "type": "Date",
             "required": true,
             "validation": {
-                "expression": "ticket.dateFrom > new Date().toLocaleDateString('en-CA')",
+                "expression": "dateFrom > new Date().toLocaleDateString('en-CA')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
             }
         },
@@ -69,7 +69,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
+            "expression": "!dateFrom || !dateUntil || dateFrom <= dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],
@@ -199,7 +199,7 @@
                 "offen.genehmigt",
                 "offen.inArbeit"
             ],
-            "function": "dringend"
+            "script": "dringend(ticket)"
         }
     ],
     "forms": [

@@ -40,20 +40,39 @@ function loadBots() {
                     try {
                         vm.createContext(sandbox);
                         vm.runInContext(scriptContent, sandbox);
-                        const script = sandbox.module.exports;
+                        const scriptExports = sandbox.module.exports;
 
                         config.bots.forEach(botConfig => {
-                            const functionName = botConfig.call || botConfig.function;
-                            if (script[functionName] && typeof script[functionName] === 'function') {
+                            if (botConfig.script) {
+                                // Compile the script into a function that takes 'ticket' as an argument
+                                // We combine the exports from the file with the script string
+                                const runFn = async (ticket) => {
+                                    // Make exported functions available in the execution scope
+                                    const scope = { ticket, ...scriptExports };
+                                    const keys = Object.keys(scope);
+                                    const values = Object.values(scope);
+
+                                    // If script is just calling a globally available function in the VM,
+                                    // we need to make sure those are accessible.
+                                    // Since script file already ran in `sandbox`, its declarations are in `sandbox`.
+                                    // Instead of a new Function, we can evaluate inside the VM with ticket.
+                                    sandbox.ticket = ticket;
+                                    try {
+                                        vm.runInContext(botConfig.script, sandbox);
+                                    } catch (e) {
+                                        console.error(`Error running bot script ${botConfig.name}:`, e);
+                                    }
+                                };
+
                                 BOTS.push({
                                     name: botConfig.name,
-                                    type: config.type, // e.g. "Abwesenheit"
-                                    states: botConfig.states,
-                                    run: script[functionName]
+                                    type: config.type,
+                                    states: botConfig.states || [],
+                                    run: runFn
                                 });
-                                console.log(`Loaded bot: ${botConfig.name} for type ${config.type}`);
+                                console.log(`Loaded bot: ${botConfig.name} for type ${config.type} with script: ${botConfig.script}`);
                             } else {
-                                console.warn(`Bot function ${functionName} not found in ${scriptPath}`);
+                                console.warn(`Bot config missing 'script' property in ${file}: ${botConfig.name}`);
                             }
                         });
                     } catch (scriptErr) {

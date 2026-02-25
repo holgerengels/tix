@@ -99,7 +99,7 @@
             "states": [
                 "offen.neu"
             ],
-            "function": "automatisch_genehmigen"
+            "script": "automatisch_genehmigen(ticket)"
         }
     ],
     "access": [

@@ -9,7 +9,7 @@
             "type": "Date",
             "required": true,
             "validation": {
-                "expression": "!ticket.dateFrom || ticket.dateFrom > new Date().toLocaleDateString('en-CA')",
+                "expression": "!dateFrom || dateFrom > new Date().toLocaleDateString('en-CA')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
             }
         },
@@ -18,7 +18,7 @@
             "label": "Stunde von",
             "type": "Lesson",
             "required": true,
-            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}"
+            "indicator": "{{dateUntil > dateFrom ? 'from' : ''}}"
         },
         {
             "name": "dateUntil",
@@ -31,7 +31,7 @@
             "label": "Stunde bis",
             "type": "Lesson",
             "required": true,
-            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}"
+            "indicator": "{{dateUntil > dateFrom ? 'until' : ''}}"
         },
         {
             "name": "reason",
@@ -51,7 +51,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
+            "expression": "!dateFrom || !dateUntil || dateFrom <= dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],
@@ -183,7 +183,7 @@
                 "offen.genehmigt",
                 "offen.inArbeit"
             ],
-            "function": "dringend"
+            "script": "dringend(ticket)"
         }
     ],
     "forms": [

@@ -1,3 +1,16 @@
+const createSafeEvaluator = (expr, ticketData) => {
+    const keys = Object.keys(ticketData || {});
+    const values = Object.values(ticketData || {});
+    const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
+    const validValues = validKeys.map(k => values[keys.indexOf(k)]);
+
+    validKeys.push('ticket');
+    validValues.push(ticketData || {});
+
+    const func = new Function(...validKeys, `return ${expr}`);
+    return () => func(...validValues);
+};
+
 function evaluateTemplate(templateStr, ticketData) {
     if (typeof templateStr !== 'string') return templateStr;
 
@@ -6,8 +19,8 @@ function evaluateTemplate(templateStr, ticketData) {
     if (boolMatch) {
         const expr = boolMatch[1];
         try {
-            const func = new Function('ticket', `return ${expr}`);
-            const result = func(ticketData || {});
+            const evaluate = createSafeEvaluator(expr, ticketData);
+            const result = evaluate();
             if (typeof result === 'boolean') {
                 return result;
             }
@@ -18,8 +31,8 @@ function evaluateTemplate(templateStr, ticketData) {
 
     return templateStr.replace(/\{\{(.+?)\}\}/g, (match, expr) => {
         try {
-            const func = new Function('ticket', `return ${expr}`);
-            const result = func(ticketData || {});
+            const evaluate = createSafeEvaluator(expr, ticketData);
+            const result = evaluate();
             return result === undefined || result === null ? '' : result;
         } catch (e) {
             console.warn(`Failed to evaluate expression: ${expr}`, e);
@@ -60,8 +73,8 @@ function validateTicket(ticketData, workflow, formFields = null) {
 
         if (field.validation && field.visible !== false) {
             try {
-                const func = new Function('ticket', `return ${field.validation.expression}`);
-                const passed = func(ticketData || {});
+                const evaluate = createSafeEvaluator(field.validation.expression, ticketData);
+                const passed = evaluate();
                 if (!passed) {
                     errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
                 }
@@ -75,8 +88,8 @@ function validateTicket(ticketData, workflow, formFields = null) {
     if (workflow.validations && Array.isArray(workflow.validations)) {
         workflow.validations.forEach(validation => {
             try {
-                const func = new Function('ticket', `return ${validation.expression}`);
-                const passed = func(ticketData || {});
+                const evaluate = createSafeEvaluator(validation.expression, ticketData);
+                const passed = evaluate();
                 if (!passed) {
                     errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
                 }

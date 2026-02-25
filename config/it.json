@@ -227,7 +227,7 @@
             "states": [
                 "offen.neu"
             ],
-            "function": "dringend"
+            "script": "dringend(ticket)"
         }
     ],
     "access": [

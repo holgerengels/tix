@@ -7,9 +7,8 @@ async function test() {
     await connectDB();
     console.log('DB Connected');
 
-    // Create a test ticket
     const ticket = new Ticket({
-        type: 'Abwesenheit',
+        type: 'Abwesenheitsantrag',
         state: 'offen.neu',
         title: 'Test Dringend VM',
         creator: 'automated_test',
