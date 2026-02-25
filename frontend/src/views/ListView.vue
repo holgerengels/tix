@@ -84,16 +84,16 @@
             <thead>
                 <tr>
                 <th>ID</th>
-                <th>Typ</th>
-                <th>Titel</th>
-                <th>Status</th>
-                <th>Ersteller</th>
-                <th>Daten</th>
+                <th class="sortable" @click="toggleSort('type')">Typ <span class="sort-icon">{{ getSortIcon('type') }}</span></th>
+                <th class="sortable" @click="toggleSort('title')">Titel <span class="sort-icon">{{ getSortIcon('title') }}</span></th>
+                <th class="sortable" @click="toggleSort('state')">Status <span class="sort-icon">{{ getSortIcon('state') }}</span></th>
+                <th class="sortable" @click="toggleSort('creator')">Ersteller <span class="sort-icon">{{ getSortIcon('creator') }}</span></th>
+                <th class="sortable" @click="toggleSort('data')">Daten <span class="sort-icon">{{ getSortIcon('data') }}</span></th>
                 <th>Aktionen</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="ticket in tickets" :key="ticket._id">
+                <tr v-for="ticket in sortedTickets" :key="ticket._id">
                 <td data-label="ID">
                     <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
                         {{ ticket.id }}
@@ -214,6 +214,64 @@ const executingActionId = ref(null);
 const popoverComments = ref({});
 const popoverStates = ref({});
 const executingActionComment = ref(false);
+
+const sortColumn = ref(null);
+const sortDirection = ref(1);
+
+const toggleSort = (col) => {
+    if (sortColumn.value === col) {
+        if (sortDirection.value === 1) {
+            sortDirection.value = -1; // 2nd click: desc
+        } else {
+            sortColumn.value = null; // 3rd click: no sort
+            sortDirection.value = 1;
+        }
+    } else {
+        sortColumn.value = col;
+        sortDirection.value = 1; // 1st click: asc
+    }
+};
+
+const getSortIcon = (col) => {
+    if (sortColumn.value !== col) return '↕';
+    return sortDirection.value === 1 ? '↑' : '↓';
+};
+
+const sortedTickets = computed(() => {
+    if (!sortColumn.value) return tickets.value;
+
+    return [...tickets.value].sort((a, b) => {
+        let valA = '';
+        let valB = '';
+
+        if (sortColumn.value === 'id') {
+            valA = a.id || 0;
+            valB = b.id || 0;
+            return (valA - valB) * sortDirection.value;
+        } else if (sortColumn.value === 'type') {
+            valA = a.type || '';
+            valB = b.type || '';
+        } else if (sortColumn.value === 'title') {
+            valA = a.title || '';
+            valB = b.title || '';
+        } else if (sortColumn.value === 'state') {
+            valA = getStatusLabel(a);
+            valB = getStatusLabel(b);
+        } else if (sortColumn.value === 'creator') {
+            valA = a.creator || '';
+            valB = b.creator || '';
+        } else if (sortColumn.value === 'data') {
+            // Sort by the rendered text representation
+            valA = hasTemplate(a) ? getFormattedData(a) : JSON.stringify(getDynamicFields(a));
+            valB = hasTemplate(b) ? getFormattedData(b) : JSON.stringify(getDynamicFields(b));
+        }
+        
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return valA.localeCompare(valB) * sortDirection.value;
+        }
+        return 0;
+    });
+});
 
 
 
@@ -706,10 +764,21 @@ onMounted(async () => {
     font-weight: 600;
     color: var(--wa-color-neutral-600);
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     position: sticky;
     top: 0;
     z-index: 10;
+    user-select: none;
+}
+.ticket-table th.sortable {
+    cursor: pointer;
+}
+.ticket-table th.sortable:hover {
+    background-color: var(--wa-color-neutral-100);
+}
+.sort-icon {
+    font-size: 1em;
+    margin-left: 0.2rem;
 }
 
 .ticket-table tr {
