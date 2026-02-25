@@ -1,7 +1,7 @@
 {
     "type": "Stundenplan-Ticket",
     "abbreviation": "STU",
-    "template": "{{day}} {{ lessons ? (lessons.min == lessons.max ? lessons.min : lessons.min + '..' + lessons.max) : (dateFrom + ' ' + lessonFrom + ' - ' + dateUntil + ' ' + lessonUntil) }}",
+    "template": "{{ticket.day}} {{ ticket.lessons ? (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) : (ticket.dateFrom + ' ' + lessonFrom + ' - ' + dateUntil + ' ' + lessonUntil) }}",
     "fields": [
         {
             "name": "assignee",
@@ -24,7 +24,7 @@
             "name": "lessons",
             "label": "Stunden",
             "type": "Lessons",
-            "required": "{{day ? true : false}}"
+            "required": "{{ticket.day ? true : false}}"
         },
         {
             "name": "dateFrom",
@@ -32,7 +32,7 @@
             "type": "Date",
             "required": false,
             "validation": {
-                "expression": "!dateFrom || dateFrom > new Date().toLocaleDateString('en-CA')",
+                "expression": "!ticket.dateFrom || ticket.dateFrom > new Date().toLocaleDateString('en-CA')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
             }
         },
@@ -40,8 +40,8 @@
             "name": "lessonFrom",
             "label": "Stunde von",
             "type": "Lesson",
-            "required": "{{dateFrom ? true : false}}",
-            "indicator": "{{dateUntil > dateFrom ? 'from' : ''}}"
+            "required": "{{ticket.dateFrom ? true : false}}",
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}"
         },
         {
             "name": "dateUntil",
@@ -53,14 +53,14 @@
             "name": "lessonUntil",
             "label": "Stunde bis",
             "type": "Lesson",
-            "required": "{{dateUntil ? true : false}}",
-            "indicator": "{{dateUntil > dateFrom ? 'until' : ''}}"
+            "required": "{{ticket.dateUntil ? true : false}}",
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}"
         }
     ],
     "validations": [
         {
             "name": "dateRange",
-            "expression": "!dateFrom || !dateUntil || dateFrom <= dateUntil",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],

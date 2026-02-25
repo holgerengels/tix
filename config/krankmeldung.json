@@ -1,7 +1,7 @@
 {
     "type": "Krankmeldung",
     "abbreviation": "KRM",
-    "template": "{{dateFrom}} - {{dateUntil}}",
+    "template": "{{ticket.dateFrom}} - {{ticket.dateUntil}}",
     "fields": [
         {
             "name": "dateFrom",
@@ -49,7 +49,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "expression": "!dateFrom || !dateUntil || dateFrom <= dateUntil",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],

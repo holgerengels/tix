@@ -284,6 +284,17 @@ watch(() => props.field, () => {
     }
 }, { immediate: true });
 
+// Initialize Default Values for Sliders if empty
+watch(() => props.field, (newField) => {
+    if (props.modelValue == null) {
+        if (newField.type === 'Lesson') {
+            updateValue(1);
+        } else if (newField.type === 'Lessons') {
+            updateValue({ min: 1, max: 11 });
+        }
+    }
+}, { immediate: true });
+
 </script>
 
 <style scoped>

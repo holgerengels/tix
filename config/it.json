@@ -1,7 +1,7 @@
 {
     "type": "IT-Ticket",
     "abbreviation": "ITT",
-    "template": "{{location}} {{category}}",
+    "template": "{{location}} {{ticket.category}}",
     "fields": [
         {
             "name": "assignee",

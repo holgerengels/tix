@@ -1,3 +1,6 @@
+import { format, formatDistance, addDays, subDays } from 'date-fns';
+import { de } from 'date-fns/locale';
+
 const createSafeEvaluator = (expr, ticketData) => {
     const keys = Object.keys(ticketData || {});
     const values = Object.values(ticketData || {});
@@ -7,6 +10,20 @@ const createSafeEvaluator = (expr, ticketData) => {
     // Always include 'ticket' for backward compatibility
     validKeys.push('ticket');
     validValues.push(ticketData || {});
+
+    // Inject helpers
+    const helpers = {
+        format: (date, fmt) => date ? format(new Date(date), fmt, { locale: de }) : '',
+        formatDistance: (d1, d2) => d1 && d2 ? formatDistance(new Date(d1), new Date(d2), { locale: de }) : '',
+        addDays: (date, amount) => date ? addDays(new Date(date), amount) : null,
+        subDays: (date, amount) => date ? subDays(new Date(date), amount) : null,
+        now: new Date()
+    };
+
+    for (const [key, val] of Object.entries(helpers)) {
+        validKeys.push(key);
+        validValues.push(val);
+    }
 
     const func = new Function(...validKeys, `return ${expr}`);
     return () => func(...validValues);

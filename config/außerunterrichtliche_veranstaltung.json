@@ -1,7 +1,7 @@
 {
     "type": "Außerunterrichtliche Veranstaltung",
     "abbreviation": "AUß",
-    "template": "{{dateFrom}} S {{lessonFrom}} - {{dateUntil}} S {{lessonUntil}} {{location}}",
+    "template": "{{ticket.dateFrom}} S {{ticket.lessonFrom}} - {{ticket.dateUntil}} S {{ticket.lessonUntil}} {{ticket.location}}",
     "fields": [
         {
             "name": "dateFrom",
@@ -69,7 +69,7 @@
     "validations": [
         {
             "name": "dateRange",
-            "expression": "!dateFrom || !dateUntil || dateFrom <= dateUntil",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
             "message": "Datum von kann nicht nach Datum bis liegen"
         }
     ],

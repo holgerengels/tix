@@ -523,13 +523,17 @@ const getFormattedData = (ticket) => {
     const fieldDefs = config.value[ticket.type].fields || [];
 
     // Helper for safe evaluation
-    const evaluateExpression = (expr, context) => {
+    const evaluateExpression = (expr, context, ticketData) => {
         try {
             const keys = Object.keys(context);
             const values = Object.values(context);
             // Add helper functions
             keys.push('format');
             values.push(format);
+            
+            // Add ticket object
+            keys.push('ticket');
+            values.push(ticketData);
             
             // Check for valid identifiers in context keys to avoid syntax errors
             const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
@@ -562,7 +566,7 @@ const getFormattedData = (ticket) => {
         }
         
         // If not a simple date field, try evaluating as expression
-        const result = evaluateExpression(key, fields);
+        const result = evaluateExpression(key, fields, ticket);
         if (result === undefined || result === null) return '';
         if (typeof result === 'object' && result.min !== undefined && result.max !== undefined) {
              // Implicit formatting for range objects if user just uses {{lessons}}
