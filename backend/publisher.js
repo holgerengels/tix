@@ -222,4 +222,4 @@ function startPublisher() {
     processLogs();
 }
 
-module.exports = { startPublisher };
+module.exports = { startPublisher, sendMail, nextcloud };

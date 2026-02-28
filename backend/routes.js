@@ -5,6 +5,7 @@ const Ticket = require('./models/ticket');
 const Counter = require('./models/counter');
 const Comment = require('./models/comment');
 const Log = require('./models/log');
+const Subscription = require('./models/subscription');
 const workflowEngine = require('./workflow');
 const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
@@ -167,7 +168,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
         }
     }
     if (creator) sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } }); // Fuzzy search
-    if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.g. ABW-1)
+    if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.e. ABW-1)
 
     if (dateFrom || dateTo) {
         let dateQuery = {};
@@ -734,6 +735,62 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Subscriptions API ---
+
+// Get all subscriptions for the current user
+router.get('/settings/subscriptions', verifyToken, async (req, res) => {
+    try {
+        const subscriptions = await Subscription.find({ userId: req.user.username });
+        res.json(subscriptions);
+    } catch (error) {
+        console.error('[API] Error fetching subscriptions:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// Create a new subscription
+router.post('/settings/subscriptions', verifyToken, async (req, res) => {
+    try {
+        const { name, filter } = req.body;
+        if (!name || !filter) {
+            return res.status(400).json({ message: 'Name and filter are required' });
+        }
+
+        const newSubscription = new Subscription({
+            userId: req.user.username,
+            name: name,
+            filter: filter,
+            lastMatchingTickets: [] // Initial empty state
+        });
+
+        const savedSubscription = await newSubscription.save();
+        res.status(201).json(savedSubscription);
+    } catch (error) {
+        console.error('[API] Error creating subscription:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+// Delete a subscription
+router.delete('/settings/subscriptions/:id', verifyToken, async (req, res) => {
+    try {
+        const subscription = await Subscription.findById(req.params.id);
+        if (!subscription) {
+            return res.status(404).json({ message: 'Subscription not found' });
+        }
+
+        if (subscription.userId !== req.user.username) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        await Subscription.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Subscription deleted' });
+    } catch (error) {
+        console.error('[API] Error deleting subscription:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 

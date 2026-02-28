@@ -36,4 +36,7 @@ app.listen(PORT, () => {
 
     const { startBots } = require('./bots');
     startBots();
+
+    const { startWorker: startSubscriptionWorker } = require('./subscriptionWorker');
+    startSubscriptionWorker();
 });

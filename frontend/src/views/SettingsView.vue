@@ -27,6 +27,11 @@
         <wa-button variant="primary" @click="save" :loading="loading">Speichern</wa-button>
       </div>
     </wa-card>
+
+    <wa-card class="settings-card" v-if="!loadingConfig">
+      <h2>Meine Abonnements</h2>
+      <SubscriptionManager />
+    </wa-card>
   </div>
 </template>
 
@@ -35,10 +40,12 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { ui } from '../state/ui';
+import SubscriptionManager from '../components/SubscriptionManager.vue';
 
 const router = useRouter();
 const notificationUri = ref('');
 const loading = ref(false);
+const loadingConfig = ref(false);
 
 onMounted(async () => {
     try {
@@ -83,6 +90,7 @@ const cancel = () => {
     height: 100%;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
 .header {
     display: flex;

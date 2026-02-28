@@ -133,9 +133,20 @@ const orderedFields = computed(() => {
 
 const gridStyle = computed(() => {
     if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
-        let areas = [...props.grid];
+        // Collect visible field names
+        const visibleNames = new Set(visibleFields.value.map(f => f.name));
         
-        // Find fields not present in the grid
+        // Filter rows: Keep row if it contains at least one visible field
+        // or if it contains tokens that are not valid field names (e.g. static areas/spacers like '.').
+        const allFieldNames = new Set(props.fields.map(f => f.name));
+        
+        let areas = props.grid.filter(rowStr => {
+            const tokens = rowStr.split(/\s+/);
+            // Check if any token is a visible field OR not a defined field
+            return tokens.some(token => visibleNames.has(token) || !allFieldNames.has(token));
+        });
+        
+        // Find fields not present in the original grid
         const allGridTokens = new Set(props.grid.join(' ').split(/\s+/));
         const missingFields = visibleFields.value.filter(f => !allGridTokens.has(f.name));
         
@@ -170,9 +181,6 @@ const getFieldStyle = (field) => {
     display: flex;
     flex-direction: column;
     height: 100%;
-}
-.dynamic-form-grid {
-    flex: 1;
 }
 .error-messages {
     background-color: #fee;
