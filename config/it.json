@@ -175,7 +175,6 @@
                         "Schulleitung",
                         "Netzwerkteam"
                     ],
-                    "script": "ticket.state = 'offen.inArbeit'",
                     "form": "aufgabe.bearbeiten"
                 },
                 {

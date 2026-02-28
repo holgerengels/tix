@@ -341,16 +341,22 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         if (!authorized) return res.status(403).json({ message: 'Not authorized' });
 
         // Determine Script to run
-        let scriptToRun = action.script;
+        let scriptToRun = null;
 
-        if (formButtonName && action.form) {
-            const formDef = wf.forms.find(f => f.name === action.form);
-            if (formDef) {
-                const btn = formDef.actions.find(b => b.name === formButtonName);
-                if (btn) {
-                    scriptToRun = btn.script;
+        if (action.form) {
+            // If action has a form, it MUST be triggered via a valid form button to run a script
+            if (formButtonName) {
+                const formDef = wf.forms.find(f => f.name === action.form);
+                if (formDef) {
+                    const btn = formDef.actions.find(b => b.name === formButtonName);
+                    if (btn) {
+                        scriptToRun = btn.script;
+                    }
                 }
             }
+        } else {
+            // Regular action without form
+            scriptToRun = action.script;
         }
 
         // Execute Script
