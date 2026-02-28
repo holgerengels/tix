@@ -33,8 +33,10 @@
         <div class="ticket-body">
             <DynamicForm 
                 v-if="formFields.length > 0"
+                ref="formRef"
                 :fields="formFields" 
                 :grid="formGrid"
+                :workflow="config[ticket.type]"
                 v-model="ticketData"
             />
         </div>
@@ -62,6 +64,7 @@ const loading = ref(true);
 const saving = ref(false);
 const error = ref(null);
 const isDirty = ref(false);
+const formRef = ref(null);
 
 const ticketData = ref({});
 const formFields = ref([]);
@@ -125,35 +128,17 @@ const prepareForm = () => {
     setTimeout(() => {
         watch(ticketData, () => {
             isDirty.value = true;
-            if (error.value && error.value.includes('Feld')) {
-                // If there's an active validation error, re-validate
-                if (formFields.value.length > 0) {
-                    const wf = config.value[ticket.value.type];
-                    const validation = validateTicket(ticketData.value, wf, formFields.value);
-                    if (validation.isValid) {
-                       error.value = null; // Clear if valid
-                    } else {
-                       error.value = validation.errors.join(', '); // Update error
-                    }
-                }
-            }
         }, { deep: true });
     }, 500);
 };
 
 const save = async () => {
-    if (formFields.value.length > 0) {
-        const wf = config.value[ticket.value.type];
-        const validation = validateTicket(ticketData.value, wf, formFields.value);
-        if (!validation.isValid) {
-            error.value = validation.errors.join(', ');
-            return;
-        } else {
-            error.value = null;
-        }
+    if (formRef.value && !formRef.value.validate()) {
+        return;
     }
 
     saving.value = true;
+    error.value = null;
     try {
         // Edit is an action named 'edit' usually, OR we can just update?
         // The previous implementation used executeActionApi with action name 'edit'.

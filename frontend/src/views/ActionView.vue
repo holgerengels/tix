@@ -34,8 +34,10 @@
         <div class="ticket-content">
             <DynamicForm 
                v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
+               ref="formRef"
                :fields="currentFormDef.fields" 
                :grid="currentFormDef.grid"
+               :workflow="config[ticket.type]"
                v-model="actionFormData" 
             />
             <div v-else-if="autoExecuting" class="loading">
@@ -93,6 +95,7 @@ const error = ref(null);
 const isDirty = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const commentsRef = ref(null);
+const formRef = ref(null);
 
 const actionFormData = ref({});
 
@@ -204,16 +207,6 @@ const prepareAction = () => {
     setTimeout(() => {
         watch(actionFormData, () => {
             isDirty.value = true;
-            if (error.value && currentFormDef.value && currentFormDef.value.fields) {
-                // If there's an active validation error, re-validate
-                const wf = config.value[ticket.value.type];
-                const validation = validateTicket(actionFormData.value, wf, currentFormDef.value.fields);
-                if (validation.isValid) {
-                    error.value = null; // Clear if valid
-                } else {
-                    error.value = validation.errors.join(', '); // Update error
-                }
-            }
         }, { deep: true });
     }, 500);
 };
@@ -238,16 +231,15 @@ const canComment = computed(() => {
 });
 
 const execute = async (btnName = null) => {
+    // Check form validation if action has fields
     if (currentFormDef.value && currentFormDef.value.fields && currentFormDef.value.fields.length > 0) {
-        const wf = config.value[ticket.value.type];
-        const validation = validateTicket(actionFormData.value, wf, currentFormDef.value.fields);
-        if (!validation.isValid) {
-            error.value = validation.errors.join(', ');
+        if (formRef.value && !formRef.value.validate()) {
             return;
         }
     }
-
+    
     executing.value = true;
+    error.value = null;
     try {
         if (commentsRef.value && commentsRef.value.hasPendingComment()) {
             await commentsRef.value.sendComment(true);

@@ -21,8 +21,10 @@
         <div class="ticket-content">
             <DynamicForm
                 v-if="newTicketType && config[newTicketType]" 
+                ref="formRef"
                 :fields="config[newTicketType].fields" 
                 :grid="config[newTicketType].grid"
+                :workflow="config[newTicketType]"
                 v-model="newTicketData" 
             />
             <div v-else-if="newTicketType" class="error">
@@ -30,11 +32,7 @@
             </div>
         </div>
 
-        <div v-if="errors.length > 0" class="error-messages">
-            <div v-for="(error, index) in errors" :key="index" class="error-item">
-                {{ error }}
-            </div>
-        </div>
+
         
         <wa-button slot="footer-actions" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
     </wa-card>
@@ -60,17 +58,13 @@ const newTicketType = ref('');
 const newTicketData = ref({});
 const creating = ref(false);
 const loadingConfig = ref(true);
-const errors = ref([]);
 const isDirty = ref(false);
+const formRef = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 
 watch(newTicketData, () => {
     if (Object.keys(newTicketData.value).length > 0) {
         isDirty.value = true;
-    }
-    // Re-validate dynamically if we already have errors showing to clear them immediately when fixed
-    if (errors.value.length > 0) {
-        validateForm();
     }
 }, { deep: true });
 
@@ -99,25 +93,12 @@ const fetchConfig = async () => {
 
 const resetForm = () => {
     newTicketData.value = {};
-    errors.value = [];
     setTimeout(() => { isDirty.value = false; }, 0);
-};
-
-const validateForm = () => {
-    errors.value = [];
-    const wf = config.value[newTicketType.value];
-    if (!wf || !wf.fields) return true;
-
-    const validation = validateTicket(newTicketData.value, wf);
-    if (!validation.isValid) {
-        errors.value = validation.errors;
-    }
-    return validation.isValid;
 };
 
 const createTicket = async () => {
     // Validate dynamic fields
-    if (!validateForm()) {
+    if (formRef.value && !formRef.value.validate()) {
         return;
     }
 
@@ -212,19 +193,7 @@ onMounted(fetchConfig);
 .loading, .error {
     text-align: center;
 }
-.error-messages {
-    background-color: #fee;
-    border: 1px solid #faa;
-    color: #c00;
-    padding: 1rem;
-    border-radius: 4px;
-}
-.error-item {
-    margin-bottom: 0.5rem;
-}
-.error-item:last-child {
-    margin-bottom: 0;
-}
+
 
 .is-mobile {
     height: auto;

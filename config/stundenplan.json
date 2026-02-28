@@ -1,7 +1,7 @@
 {
     "type": "Stundenplan-Ticket",
     "abbreviation": "STU",
-    "template": "{{ticket.day}} {{ ticket.lessons ? (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) : (ticket.dateFrom + ' ' + lessonFrom + ' - ' + dateUntil + ' ' + lessonUntil) }}",
+    "template": "{{ticket.day}} {{ ticket.lessons ? (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) : (ticket.dateFrom + ' ' + ticket.lessonFrom + ' - ' + ticket.dateUntil + ' ' + ticket.lessonUntil) }}",
     "fields": [
         {
             "name": "assignee",
@@ -32,7 +32,7 @@
             "type": "Date",
             "required": false,
             "validation": {
-                "expression": "!ticket.dateFrom || ticket.dateFrom > new Date().toLocaleDateString('en-CA')",
+                "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
             }
         },

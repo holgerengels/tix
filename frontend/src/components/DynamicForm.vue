@@ -1,28 +1,40 @@
 <template>
-  <div class="dynamic-form" :style="gridStyle">
-    <div v-for="field in orderedFields" :key="field.name" class="form-field" :style="getFieldStyle(field)">
-        <FormField 
-            :field="field"
-            :modelValue="modelValue[field.name]"
-            @update:modelValue="updateField(field.name, $event)"
-        />
+  <div class="dynamic-form">
+    <div class="dynamic-form-grid" :style="gridStyle">
+      <div v-for="field in orderedFields" :key="field.name" class="form-field" :style="getFieldStyle(field)">
+          <FormField 
+              :field="field"
+              :modelValue="modelValue[field.name]"
+              @update:modelValue="updateField(field.name, $event)"
+          />
+      </div>
+    </div>
+    
+    <div v-if="errors.length > 0" ref="errorBox" class="error-messages">
+        <div v-for="(error, index) in errors" :key="index" class="error-item">
+            {{ error }}
+        </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, watch } from 'vue';
+import { defineProps, defineEmits, defineExpose, computed, watch, ref, nextTick } from 'vue';
 import FormField from './FormField.vue';
-import { evaluateFields } from '../utils/evaluation';
+import { evaluateFields, validateTicket } from '../utils/evaluation';
 import { ui } from '../state/ui';
 
 const props = defineProps({
   fields: { type: Array, required: true },
   modelValue: { type: Object, required: true },
-  grid: { type: Array, default: () => [] }
+  grid: { type: Array, default: () => [] },
+  workflow: { type: Object, default: () => null }
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const errors = ref([]);
+const errorBox = ref(null);
 
 const updateField = (name, value) => {
     // By mutating the proxy instead of extracting it, we avoid race conditions
@@ -30,6 +42,39 @@ const updateField = (name, value) => {
     props.modelValue[name] = value;
     emit('update:modelValue', props.modelValue);
 };
+
+// Auto re-validate dynamically if we already have errors showing
+watch(props.modelValue, () => {
+    if (errors.value.length > 0) {
+        validate();
+    }
+}, { deep: true });
+
+const validate = () => {
+    errors.value = [];
+    if (!props.workflow && (!props.fields || props.fields.length === 0)) {
+        return true; // Nothing to validate against
+    }
+    
+    // Fallback if workflow is incomplete but we have fields
+    const wfToValidate = props.workflow || { fields: props.fields, validations: [] };
+    
+    const validation = validateTicket(props.modelValue, wfToValidate, props.fields);
+    if (!validation.isValid) {
+        errors.value = validation.errors;
+        nextTick(() => {
+            if (errorBox.value) {
+                // Scroll the error box into view with a little top margin
+                errorBox.value.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        });
+    }
+    return validation.isValid;
+};
+
+defineExpose({
+    validate
+});
 
 // Start Grid Logic
 
@@ -121,4 +166,26 @@ const getFieldStyle = (field) => {
 </script>
 
 <style scoped>
+.dynamic-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.dynamic-form-grid {
+    flex: 1;
+}
+.error-messages {
+    background-color: #fee;
+    border: 1px solid #faa;
+    color: #c00;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+.error-item {
+    margin-bottom: 0.5rem;
+}
+.error-item:last-child {
+    margin-bottom: 0;
+}
 </style>
