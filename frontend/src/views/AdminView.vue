@@ -574,6 +574,7 @@ onMounted(async () => {
     top: 0;
     z-index: 10;
     user-select: none;
+    white-space: nowrap;
 }
 .ticket-table th.sortable {
     cursor: pointer;
