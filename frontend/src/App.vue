@@ -27,15 +27,15 @@
             <router-link v-if="auth.state.user && auth.state.user.groups && auth.state.user.groups.includes('Administration')" to="/admin" class="nav-item" :class="{ active: $route.path === '/admin' }">
                 <wa-icon name="shield-lock"></wa-icon> <span class="nav-text">Administration</span>
             </router-link>
+            <router-link to="/settings" class="nav-item" :class="{ active: $route.path === '/settings' }">
+                <wa-icon name="gear"></wa-icon> <span class="nav-text">Einstellungen</span>
+            </router-link>
 
         </nav>
 
         <div class="footer">
              <div class="user-info" v-if="auth.state.user">
                 <small class="nav-text">{{ auth.state.user.username }}</small>
-                <wa-button variant="text" size="small" appearance="plain" @click="$router.push('/settings')" tooltip="Einstellungen">
-                    <wa-icon name="gear" style="font-size: 1rem;"></wa-icon>
-                </wa-button>
              </div>
              <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>

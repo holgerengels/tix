@@ -13,60 +13,22 @@
     </div>
 
     <div class="ticket-list-container">
-        <details class="filter-details">
-            <summary>Filter</summary>
-            <div class="filters">
-                <div class="filter-group">
-                    <label>Typ:</label>
-                    <div style="min-width: 200px;">
-                        <wa-select multiple clearable v-model="filterType" @change="handleTypeChange">
-                            <wa-option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</wa-option>
-                        </wa-select>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label>Status:</label>
-                    <select v-model="filterStatus" @change="applyFilters">
-                        <option value="">Alle</option>
-                        <option v-for="status in availableStatuses" :key="status" :value="status">{{ status }}</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Ersteller:</label>
-                    <input type="text" v-model="filterCreator" @input="applyFiltersDebounced" placeholder="Name..." />
-                </div>
-                <div class="filter-group">
-                    <select v-model="filterDateRange" @change="handleDateRangeChange">
-                        <option value="">Zeitraum wählen</option>
-                        <option value="week">Letzte Woche</option>
-                        <option value="month">Letzter Monat</option>
-                        <option value="custom">Benutzerdefiniert</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Label:</label>
-                    <div style="min-width: 200px;">
-                        <wa-select multiple clearable v-model="filterBadges" @change="applyFilters">
-                            <wa-option v-for="badge in availableBadges" :key="badge" :value="badge">
-                                <wa-badge :variant="getBadgeVariant(badge)" size="small" appearance="filled-outlined" pill>{{ badge }}</wa-badge>
-                            </wa-option>
-                        </wa-select>
-                    </div>
-                </div>
-                <div class="filter-group" v-if="filterDateRange === 'custom'">
-                    <input type="date" v-model="filterDateFrom" @change="applyFilters" />
-                    <span>-</span>
-                    <input type="date" v-model="filterDateTo" @change="applyFilters" />
-                </div>
-                <div class="filter-group">
-                    <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
-                </div>
-                <div class="filter-group" v-if="selectedTickets.length > 0">
-                    <span style="font-weight: 500; color: var(--wa-color-primary-700);">{{ selectedTickets.length }} ausgewählt</span>
-                </div>
-            </div>
-            
-        </details>
+        <TicketFilter 
+            v-model:type="filterType"
+            v-model:status="filterStatus"
+            v-model:creator="filterCreator"
+            v-model:dateRange="filterDateRange"
+            v-model:dateFrom="filterDateFrom"
+            v-model:dateTo="filterDateTo"
+            v-model:badges="filterBadges"
+            @apply="applyFilters"
+            @apply-debounced="applyFiltersDebounced"
+            @reset="resetFilters"
+        >
+            <template #actions v-if="selectedTickets.length > 0">
+                <span style="font-weight: 500; color: var(--wa-color-primary-700);">{{ selectedTickets.length }} ausgewählt</span>
+            </template>
+        </TicketFilter>
 
         <wa-spinner v-if="loading"></wa-spinner>
         
@@ -135,6 +97,7 @@ import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { ui } from '../state/ui';
 import { workflow } from '../state/workflow';
+import TicketFilter from '../components/TicketFilter.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -155,34 +118,6 @@ const selectedTickets = ref([]);
 
 let lastRequestId = 0;
 let debounceTimer = null;
-
-const availableTypes = computed(() => {
-    return config.value ? Object.keys(config.value) : [];
-});
-
-const availableStatuses = computed(() => {
-    if (!filterType.value || filterType.value.length === 0) {
-        return ['offen.*', 'geschlossen.*'];
-    }
-    
-    const types = Array.isArray(filterType.value) ? filterType.value : [filterType.value];
-    const states = new Set();
-    
-    types.forEach(t => {
-        if (config.value && config.value[t] && config.value[t].states) {
-            config.value[t].states.forEach(s => states.add(s.name));
-        }
-    });
-    
-    if (states.size === 0) return ['offen.*', 'geschlossen.*'];
-    return Array.from(states);
-});
-
-const availableBadges = [
-  'dringend', 'wichtig', 'eskaliert', 
-  'langfristig', 'unwichtig', 
-  'obsolet', 'wartet'
-];
 
 const fetchTickets = async () => {
     if (debounceTimer) {
@@ -231,26 +166,6 @@ const applyFilters = () => {
 
 const applyFiltersDebounced = () => {
     fetchTickets();
-};
-
-const handleDateRangeChange = () => {
-    const now = new Date();
-    if (filterDateRange.value === 'week') {
-        filterDateFrom.value = format(subDays(now, 7), 'yyyy-MM-dd');
-        filterDateTo.value = format(now, 'yyyy-MM-dd');
-    } else if (filterDateRange.value === 'month') {
-        filterDateFrom.value = format(subMonths(now, 1), 'yyyy-MM-dd');
-        filterDateTo.value = format(now, 'yyyy-MM-dd');
-    } else if (filterDateRange.value === '') {
-        filterDateFrom.value = '';
-        filterDateTo.value = '';
-    }
-    applyFilters();
-};
-
-const handleTypeChange = () => {
-    filterStatus.value = ''; 
-    applyFilters();
 };
 
 const resetFilters = () => {
@@ -618,92 +533,7 @@ onMounted(async () => {
     color: var(--wa-color-neutral-600);
 }
 
-.filter-details {
-    background: white;
-    border-radius: var(--wa-border-radius-large);
-    box-shadow: var(--wa-shadow-small);
-    border: 1px solid var(--wa-color-neutral-200);
-    flex-shrink: 0;
-}
 
-.filter-details summary {
-    padding: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    color: var(--wa-color-neutral-700);
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.filter-details summary::-webkit-details-marker {
-  display: none;
-}
-
-.filter-details summary::after {
-    content: '';
-    width: 0.5rem;
-    height: 0.5rem;
-    border-right: 2px solid var(--wa-color-neutral-500);
-    border-bottom: 2px solid var(--wa-color-neutral-500);
-    transform: rotate(45deg);
-    margin-left: auto;
-    transition: transform 0.2s;
-}
-
-.filter-details[open] summary::after {
-    transform: rotate(225deg);
-}
-
-.filters {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 0 1.5rem 1.5rem 1.5rem;
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
-    border: none;
-    margin-bottom: 0;
-}
-
-.filter-group {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.filter-group label {
-    font-weight: 500;
-    color: var(--wa-color-neutral-700);
-    font-size: 0.9rem;
-}
-
-.filter-group select,
-.filter-group input {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--wa-color-neutral-300);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    min-width: 140px;
-    transition: all 0.2s;
-    background-color: var(--wa-color-neutral-50);
-}
-
-.filter-group select:focus,
-.filter-group input:focus {
-    outline: none;
-    border-color: var(--wa-color-primary-500);
-    box-shadow: 0 0 0 2px var(--wa-color-primary-100);
-    background-color: white;
-}
-.filter-group wa-select::part(tag) {
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 2px 6px;
-}
 .id-tag {
     white-space: nowrap;
     font-weight: 600;

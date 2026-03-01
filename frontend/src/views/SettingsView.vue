@@ -23,7 +23,6 @@
       </div>
 
       <div slot="footer" class="actions">
-        <wa-button variant="default" @click="cancel">Abbrechen</wa-button>
         <wa-button variant="primary" @click="save" :loading="loading">Speichern</wa-button>
       </div>
     </wa-card>
@@ -79,9 +78,7 @@ const save = async () => {
     }
 };
 
-const cancel = () => {
-    router.back();
-};
+
 </script>
 
 <style scoped>
