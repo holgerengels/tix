@@ -1,7 +1,8 @@
 const Subscription = require('./models/subscription');
 const Ticket = require('./models/ticket');
 const { sendMail, nextcloud } = require('./publisher');
-const { getUserSettings } = require('./auth');
+const { getUserSettings, getUsers } = require('./auth');
+const workflowEngine = require('./workflow');
 const mongoose = require('mongoose');
 
 // Helper to translate frontend-style filter objects into MongoDB queries
@@ -68,18 +69,69 @@ async function runSubscriptionCheck() {
     console.log('[SubscriptionWorker] Starting periodic check...');
     try {
         const subscriptions = await Subscription.find({});
+        const users = await getUsers();
+        const allWorkflows = workflowEngine.getWorkflows();
 
         for (const sub of subscriptions) {
             const query = buildQueryFromFilter(sub.filter);
 
-            // Inject user-specific context into query
-            if (sub.filter.myRole === 'creator') {
-                query.creator = sub.userId;
-            } else if (sub.filter.myRole === 'assignee') {
-                query.assignee = sub.userId;
+            // Inject assignment filter logic
+            if (sub.filter.assignmentType) {
+                const user = users.find(u => u.username === sub.userId);
+                const userGroups = user ? user.groups : [];
+
+                if (sub.filter.assignmentType === 'personal') {
+                    query.assignee = sub.userId;
+                } else if (sub.filter.assignmentType === 'group') {
+                    const conditions = [];
+
+                    Object.values(allWorkflows).forEach(wf => {
+                        // Apply filter type if present
+                        if (sub.filter.type && sub.filter.type.length > 0) {
+                            const typeArr = Array.isArray(sub.filter.type) ? sub.filter.type : [sub.filter.type];
+                            if (!typeArr.includes(wf.type)) return;
+                        }
+
+                        if (wf.workflow) {
+                            wf.workflow.forEach(state => {
+                                const releavantActions = (state.actions || []).filter(action => {
+                                    if (action.optional) return false;
+                                    const hasGroupAccess = action.groups.some(g => userGroups.includes(g));
+                                    const hasAssigneeAccess = action.groups.includes('@assignee');
+                                    return hasGroupAccess || hasAssigneeAccess;
+                                });
+
+                                if (releavantActions.length > 0) {
+                                    const condition = { type: wf.type, state: { $in: state.states } };
+                                    if (releavantActions.some(a => a.groups.some(g => userGroups.includes(g)))) {
+                                        conditions.push(condition);
+                                    } else if (releavantActions.some(a => a.groups.includes('@assignee'))) {
+                                        conditions.push({ ...condition, assignee: sub.userId });
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    if (conditions.length > 0) {
+                        if (query.$or) {
+                            query.$and = [{ $or: query.$or }, { $or: conditions }];
+                            delete query.$or;
+                        } else {
+                            query.$or = conditions;
+                        }
+                    } else {
+                        // User has no group assignments matching this filter
+                        query.assignee = sub.userId;
+                    }
+                }
             } else {
-                // Even if no predefined 'myRole', if the user filtered explicitly by their own username
-                // we just execute the raw query.
+                // Legacy support if there are old subscriptions with myRole
+                if (sub.filter.myRole === 'creator') {
+                    query.creator = sub.userId;
+                } else if (sub.filter.myRole === 'assignee') {
+                    query.assignee = sub.userId;
+                }
             }
 
             // Fetch matching tickets

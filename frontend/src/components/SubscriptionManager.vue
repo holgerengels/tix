@@ -12,7 +12,8 @@
         <div class="sub-details">
           <small>
             <span v-if="sub.filter.type">Typ: {{ Array.isArray(sub.filter.type) ? sub.filter.type.join(', ') : sub.filter.type }}; </span>
-            <span v-if="sub.filter.states && sub.filter.states.length > 0">Status: {{ sub.filter.states.map(s => stateTranslations[s] || s).join(', ') }} </span>
+            <span v-if="sub.filter.states && sub.filter.states.length > 0">Status: {{ sub.filter.states.map(s => stateTranslations[s] || s).join(', ') }}; </span>
+            <span v-if="sub.filter.assignmentType">Zuweisung: {{ sub.filter.assignmentType === 'personal' ? 'Nur persönlich zugewiesen' : 'Persönlich oder Gruppe' }}; </span>
           </small>
         </div>
       </wa-card>
@@ -34,11 +35,12 @@
         </wa-select>
 
         <wa-select label="Status" v-model="newSub.filter.states" multiple clearable>
-          <wa-option value="offen">Alle Offenen</wa-option>
-          <wa-option value="offen.neu">Neu</wa-option>
-          <wa-option value="offen.inArbeit">In Arbeit</wa-option>
-          <wa-option value="offen.genehmigt">Genehmigt</wa-option>
-          <wa-option value="geschlossen">Alle Geschlossenen</wa-option>
+          <wa-option v-for="status in availableStatuses" :key="status" :value="status">{{ stateTranslations[status] || status }}</wa-option>
+        </wa-select>
+
+        <wa-select label="Zuweisung" v-model="newSub.filter.assignmentType" clearable>
+          <wa-option value="personal">Nur persönlich zugewiesen</wa-option>
+          <wa-option value="group">Persönlich oder meiner Gruppe zugewiesen</wa-option>
         </wa-select>
       </div>
       
@@ -52,32 +54,76 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
+import { workflow } from '../state/workflow';
 
 const subscriptions = ref([]);
 const loading = ref(false);
 
-const stateTranslations = {
-  'offen': 'Alle Offenen',
-  'offen.neu': 'Neu',
-  'offen.inArbeit': 'In Arbeit',
-  'offen.genehmigt': 'Genehmigt',
-  'geschlossen': 'Alle Geschlossenen'
-};
+const config = workflow.config;
+
+const stateTranslations = computed(() => {
+    const translations = {
+      'offen': 'Alle Offenen',
+      'geschlossen': 'Alle Geschlossenen'
+    };
+    
+    if (config.value) {
+        Object.values(config.value).forEach(wf => {
+            if (wf.states) {
+                wf.states.forEach(s => {
+                    translations[s.name] = s.label || s.name;
+                });
+            }
+        });
+    }
+    return translations;
+});
 
 const newSub = ref({
   name: '',
   filter: {
     type: [],
-    states: []
+    states: [],
+    assignmentType: ''
   }
 });
 
-// Mock/Fetch available types. In reality, pass this as prop or fetch from /api/workflows
-const availableTypes = ref(['IT-Ticket', 'Krankmeldung', 'Hausmeisterauftrag', 'Abwesenheitsantrag', 'Außerunterrichtliche Veranstaltung', 'Stundenplan-Ticket']);
+// Fetch available types from workflow config
+const availableTypes = computed(() => {
+    return config.value ? Object.keys(config.value) : [];
+});
+
+const availableStatuses = computed(() => {
+    if (!newSub.value.filter.type || newSub.value.filter.type.length === 0) {
+        return ['offen', 'geschlossen'];
+    }
+    
+    const types = Array.isArray(newSub.value.filter.type) ? newSub.value.filter.type : [newSub.value.filter.type];
+    const states = new Set();
+    
+    types.forEach(t => {
+        if (config.value && config.value[t] && config.value[t].states) {
+            config.value[t].states.forEach(s => states.add(s.name));
+        }
+    });
+    
+    if (states.size === 0) return ['offen', 'geschlossen'];
+    return Array.from(states);
+});
+
+watch(() => newSub.value.filter.type, () => {
+    // When the type changes, clear out any statuses that are no longer valid for the selected type
+    // If we transition to empty types, we only allow 'offen' and 'geschlossen'
+    if (!newSub.value.filter.states) return;
+    
+    const validStatuses = availableStatuses.value;
+    newSub.value.filter.states = newSub.value.filter.states.filter(s => validStatuses.includes(s));
+});
 
 onMounted(async () => {
+    await workflow.fetchConfig();
     await fetchSubscriptions();
 });
 
@@ -101,7 +147,7 @@ const createSubscription = async () => {
         });
         
         // Reset form
-        newSub.value = { name: '', filter: { type: [], states: [] } };
+        newSub.value = { name: '', filter: { type: [], states: [], assignmentType: '' } };
         await fetchSubscriptions();
         
         // Show success

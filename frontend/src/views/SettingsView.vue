@@ -12,7 +12,7 @@
     </div>
 
     <wa-card v-else class="settings-card">
-      <h2 slot="header">Einstellungen</h2>
+      <h2 slot="header">Benachrichtigungskanal</h2>
       
       <div class="form-group">
         <wa-input 
@@ -29,7 +29,7 @@
     </wa-card>
 
     <wa-card class="settings-card" v-if="!loadingConfig">
-      <h2>Meine Abonnements</h2>
+      <h2>Abonnements</h2>
       <SubscriptionManager />
     </wa-card>
   </div>
