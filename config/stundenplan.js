@@ -29,17 +29,12 @@ function isUrgent(dateInput) {
 
 function convert(ticket) {
   let text = "";
-  if (ticket.day) text += ticket.day + " ";
-  if (ticket.lessons) {
-    if (ticket.lessons.min == ticket.lessons.max) {
-      text += ticket.lessons.min;
-    } else {
-      text += ticket.lessons.min + ".." + ticket.lessons.max;
-    }
+  if (typeof evaluateTemplate !== 'undefined' && typeof currentWorkflow !== 'undefined' && currentWorkflow.template) {
+    text = evaluateTemplate(currentWorkflow.template, ticket);
   }
   text = text.trim();
   if (text) {
-    ticket.description = "[" + text + "] " + (ticket.description || "");
+    ticket.description = "Aus Stundenplan-Ticket: " + text + "\n" + (ticket.description || "");
   }
   ticket.type = "Vertretungsplan-Ticket";
 }

@@ -361,9 +361,16 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             scriptToRun = action.script;
         }
 
+        if (formData) {
+            Object.keys(formData).forEach(key => {
+                ticket.set(key, formData[key]);
+            });
+        }
+
         // Execute Script
         if (scriptToRun) {
-            const sandbox = { ticket };
+            const { evaluateTemplate } = require('./validation');
+            const sandbox = { ticket, evaluateTemplate, currentWorkflow: wf };
 
             // Inject functions from the workflow's specific JS file if it exists
             if (wf && wf.file) {
@@ -378,7 +385,9 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                             require: require,
                             console: console,
                             module: {},
-                            exports: {}
+                            exports: {},
+                            evaluateTemplate: require('./validation').evaluateTemplate,
+                            currentWorkflow: wf
                         };
                         contextSandbox.module.exports = contextSandbox.exports;
                         vm.createContext(contextSandbox);
@@ -397,12 +406,6 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                 console.error(`Error executing action script '${scriptToRun}':`, e);
                 return res.status(500).json({ message: 'Error executing action script.' });
             }
-        }
-
-        if (formData) {
-            Object.keys(formData).forEach(key => {
-                ticket.set(key, formData[key]);
-            });
         }
 
         // Validate modified ticket
