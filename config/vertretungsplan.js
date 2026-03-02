@@ -36,7 +36,7 @@ function convert(ticket) {
   if (text) {
     ticket.description = "Aus Vertretungsplan-Ticket: " + text + "\n" + (ticket.description || "");
   }
-  ticket.type = "Vertretungsplan-Ticket";
+  ticket.type = "Stundenplan-Ticket";
 }
 
 module.exports = {

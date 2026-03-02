@@ -1,7 +1,7 @@
 {
     "type": "Vertretungsplan-Ticket",
     "abbreviation": "VRP",
-    "template": "{{ticket.dateFrom + ' ' + ticket.lessonFrom + ' - ' + ticket.dateUntil + ' ' + ticket.lessonUntil}}",
+    "template": "{{ ((ticket.dateFrom ? ticket.dateFrom : '') + (ticket.lessonFrom ? ' ' + ticket.lessonFrom : '') + (ticket.dateUntil || ticket.lessonUntil ? ' - ' : '') + (ticket.dateUntil ? ticket.dateUntil : '') + (ticket.lessonUntil ? ' ' + ticket.lessonUntil : '')).trim() }}",
     "fields": [
         {
             "name": "assignee",
@@ -19,7 +19,7 @@
             "name": "dateFrom",
             "label": "Datum von",
             "type": "Date",
-            "required": true,
+            "required": false,
             "validation": {
                 "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
@@ -29,20 +29,20 @@
             "name": "lessonFrom",
             "label": "Stunde von",
             "type": "Lesson",
-            "required": true,
+            "required": "{{ticket.dateFrom ? true : false}}",
             "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}"
         },
         {
             "name": "dateUntil",
             "label": "Datum bis",
             "type": "Date",
-            "required": true
+            "required": false
         },
         {
             "name": "lessonUntil",
             "label": "Stunde bis",
             "type": "Lesson",
-            "required": true,
+            "required": "{{ticket.dateUntil ? true : false}}",
             "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}"
         }
     ],
