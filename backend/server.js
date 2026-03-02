@@ -27,16 +27,14 @@ app.get('*', (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
 
-    // Start Background Jobs
-    const { startPublisher } = require('./publisher');
-    startPublisher();
+        // Start Background Jobs via Unified Scheduler
+        const { startScheduler } = require('./scheduler');
+        startScheduler();
+    });
+}
 
-    const { startBots } = require('./bots');
-    startBots();
-
-    const { startWorker: startSubscriptionWorker } = require('./subscriptionWorker');
-    startSubscriptionWorker();
-});
+module.exports = app;

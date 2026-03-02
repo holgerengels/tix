@@ -1,6 +1,6 @@
 const Subscription = require('./models/subscription');
 const Ticket = require('./models/ticket');
-const { sendMail, nextcloud } = require('./publisher');
+const { sendMail, nextcloud, getTestNotifications } = require('./publisher');
 const { getUserSettings, getUsers } = require('./auth');
 const workflowEngine = require('./workflow');
 const mongoose = require('mongoose');
@@ -31,19 +31,15 @@ function buildQueryFromFilter(filter) {
         }
     }
 
-    // Role / Assignee filter
-    if (filter.myRole === 'creator') {
-        // Needs the userId context injected later
-        // query.creator = userId;
-    } else if (filter.myRole === 'assignee') {
-        // query.assignee = userId;
-    }
-
     // Additional fields like badges
     if (filter.badges && filter.badges.length > 0) {
         // Assume all selected badges must be present (or any, depending on frontend logic)
         // ListView does $in, meaning OR logic for badges
         query.badges = { $in: filter.badges };
+    }
+
+    if (filter.creator) {
+        query.creator = { $regex: filter.creator, $options: 'i' };
     }
 
     return query;
@@ -125,16 +121,10 @@ async function runSubscriptionCheck() {
                         query.assignee = sub.userId;
                     }
                 }
-            } else {
-                // Legacy support if there are old subscriptions with myRole
-                if (sub.filter.myRole === 'creator') {
-                    query.creator = sub.userId;
-                } else if (sub.filter.myRole === 'assignee') {
-                    query.assignee = sub.userId;
-                }
             }
 
             // Fetch matching tickets
+            console.log(`[SubscriptionWorker] Query for ${sub.userId} / ${sub.name}:`, JSON.stringify(query));
             const tickets = await Ticket.find(query, { _id: 1, id: 1, state: 1, title: 1 });
 
             // Format current result
@@ -157,6 +147,9 @@ async function runSubscriptionCheck() {
                             await sendMail(address, `Ticket Update: ${sub.name}`, message);
                         } else if (protocol === 'nctalk' && address) {
                             await nextcloud(address, message);
+                        } else if (protocol === 'test' && address) {
+                            getTestNotifications().push({ targetUser: sub.userId, address, message });
+                            console.log(`[SubscriptionWorker] Test notification stored for ${sub.userId}`);
                         } else {
                             console.warn(`[SubscriptionWorker] Unsupported protocol or missing address: ${notificationUri}`);
                         }
@@ -183,11 +176,8 @@ async function runSubscriptionCheck() {
     console.log('[SubscriptionWorker] Check completed. Waiting for next cycle.');
 }
 
-function startWorker(intervalMs = 60 * 60 * 1000 /* 1 hour */) {
-    console.log(`[SubscriptionWorker] Service registered. Interval: ${intervalMs / 1000}s`);
-    // Run once immediately (Optional, but good for testing and fast feedback after boot)
-    setTimeout(runSubscriptionCheck, 5000);
-    setInterval(runSubscriptionCheck, intervalMs);
+function startWorker() {
+    console.log(`[SubscriptionWorker] Service initialized. Handled by unified scheduler.`);
 }
 
 module.exports = { startWorker, runSubscriptionCheck };

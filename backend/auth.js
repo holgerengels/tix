@@ -187,124 +187,126 @@ const getUsers = async (filterGroups = []) => {
     let users = [];
 
     // 1. DevMode: Start with mock users
-    if (settings.devmode) {
+    if (settings.devmode || !settings.server || !settings.server.ldap) {
         users = MOCK_USERS.map(({ password, ...u }) => u);
+        if (filterGroups && filterGroups.length > 0) {
+            users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
+        }
+        return users;
     }
 
     // 2. LDAP
-    if (settings.server && settings.server.ldap) {
-        const ldapConfig = settings.server.ldap;
+    const ldapConfig = settings.server.ldap;
 
-        try {
-            const ldapUsers = await new Promise((resolve, reject) => {
-                const client = ldap.createClient({ url: ldapConfig.url });
+    try {
+        const ldapUsers = await new Promise((resolve, reject) => {
+            const client = ldap.createClient({ url: ldapConfig.url });
 
-                client.on('error', (err) => {
-                    console.error('[Auth] LDAP Client Error (getUsers):', err);
-                    resolve([]);
-                });
+            client.on('error', (err) => {
+                console.error('[Auth] LDAP Client Error (getUsers):', err);
+                resolve([]);
+            });
 
-                client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+            client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+                if (err) {
+                    client.unbind();
+                    console.error('[Auth] LDAP Bind Error (getUsers):', err);
+                    return resolve([]); // Gracefully return empty list on bind error
+                }
+
+                // Search for all users
+                const opts = {
+                    filter: ldapConfig.userfilter, // e.g. (&(objectclass=person))
+                    scope: 'sub',
+                    attributes: ['sAMAccountName', 'memberOf']
+                };
+
+                client.search(ldapConfig.basedn, opts, (err, searchRes) => {
                     if (err) {
                         client.unbind();
-                        console.error('[Auth] LDAP Bind Error (getUsers):', err);
-                        return resolve([]); // Gracefully return empty list on bind error
+                        console.error('[Auth] LDAP Search Error (getUsers):', err);
+                        return resolve([]);
                     }
 
-                    // Search for all users
-                    const opts = {
-                        filter: ldapConfig.userfilter, // e.g. (&(objectclass=person))
-                        scope: 'sub',
-                        attributes: ['sAMAccountName', 'memberOf']
-                    };
+                    const foundUsers = [];
+                    console.log(`[Auth] LDAP Search started. Base: ${ldapConfig.basedn}, Filter: ${opts.filter}`);
 
-                    client.search(ldapConfig.basedn, opts, (err, searchRes) => {
-                        if (err) {
-                            client.unbind();
-                            console.error('[Auth] LDAP Search Error (getUsers):', err);
-                            return resolve([]);
+                    searchRes.on('searchEntry', (entry) => {
+                        let username = '';
+                        let groups = [];
+
+                        // console.log('[Auth] LDAP Entry found:', entry.objectName.toString());
+
+                        let userAttributes = entry.object;
+
+                        if (!userAttributes) {
+                            // Fallback: Parse attributes manually if entry.object is missing
+                            userAttributes = {};
+                            if (entry.attributes) {
+                                entry.attributes.forEach(attr => {
+                                    const values = attr.values;
+                                    // Handle single value vs array? ldapjs usually gives array in values
+                                    userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
+                                    // Ensure sAMAccountName is accessible as property even if array?
+                                    if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
+                                        userAttributes.sAMAccountName = values[0];
+                                    }
+                                });
+                            }
                         }
 
-                        const foundUsers = [];
-                        console.log(`[Auth] LDAP Search started. Base: ${ldapConfig.basedn}, Filter: ${opts.filter}`);
+                        if (userAttributes) {
+                            // Normalize username
+                            username = userAttributes.sAMAccountName || userAttributes.samaccountname;
+                            if (Array.isArray(username)) username = username[0];
+                            username = username.toLowerCase();
 
-                        searchRes.on('searchEntry', (entry) => {
-                            let username = '';
-                            let groups = [];
+                            // Normalize memberOf
+                            let rawGroups = userAttributes.memberOf || userAttributes.memberof;
+                            if (rawGroups) {
+                                if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
 
-                            // console.log('[Auth] LDAP Entry found:', entry.objectName.toString());
-
-                            let userAttributes = entry.object;
-
-                            if (!userAttributes) {
-                                // Fallback: Parse attributes manually if entry.object is missing
-                                userAttributes = {};
-                                if (entry.attributes) {
-                                    entry.attributes.forEach(attr => {
-                                        const values = attr.values;
-                                        // Handle single value vs array? ldapjs usually gives array in values
-                                        userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
-                                        // Ensure sAMAccountName is accessible as property even if array?
-                                        if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
-                                            userAttributes.sAMAccountName = values[0];
+                                const prefix = ldapConfig.groupprefix || '';
+                                rawGroups.forEach(groupDn => {
+                                    const match = groupDn.match(/^CN=([^,]+)/i);
+                                    if (match) {
+                                        const cn = match[1];
+                                        if (cn.startsWith(prefix)) {
+                                            groups.push(cn.substring(prefix.length));
                                         }
-                                    });
-                                }
+                                    }
+                                });
                             }
+                        }
 
-                            if (userAttributes) {
-                                // Normalize username
-                                username = userAttributes.sAMAccountName || userAttributes.samaccountname;
-                                if (Array.isArray(username)) username = username[0];
-                                username = username.toLowerCase();
+                        if (username) {
+                            foundUsers.push({ username, groups });
+                        }
+                    });
 
-                                // Normalize memberOf
-                                let rawGroups = userAttributes.memberOf || userAttributes.memberof;
-                                if (rawGroups) {
-                                    if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
+                    searchRes.on('end', () => {
+                        console.log(`[Auth] LDAP Search finished. Found ${foundUsers.length} users.`);
+                        client.unbind();
+                        resolve(foundUsers);
+                    });
 
-                                    const prefix = ldapConfig.groupprefix || '';
-                                    rawGroups.forEach(groupDn => {
-                                        const match = groupDn.match(/^CN=([^,]+)/i);
-                                        if (match) {
-                                            const cn = match[1];
-                                            if (cn.startsWith(prefix)) {
-                                                groups.push(cn.substring(prefix.length));
-                                            }
-                                        }
-                                    });
-                                }
-                            }
-
-                            if (username) {
-                                foundUsers.push({ username, groups });
-                            }
-                        });
-
-                        searchRes.on('end', () => {
-                            console.log(`[Auth] LDAP Search finished. Found ${foundUsers.length} users.`);
-                            client.unbind();
-                            resolve(foundUsers);
-                        });
-
-                        searchRes.on('error', (err) => {
-                            client.unbind();
-                            console.error('[Auth] LDAP Search Stream Error:', err);
-                            resolve([]);
-                        });
+                    searchRes.on('error', (err) => {
+                        client.unbind();
+                        console.error('[Auth] LDAP Search Stream Error:', err);
+                        resolve([]);
                     });
                 });
             });
+        });
 
-            // Merge users avoiding duplicates (LDAP users appended if not exist)
-            for (const lUser of ldapUsers) {
-                if (!users.find(u => u.username === lUser.username)) {
-                    users.push(lUser);
-                }
+        // Merge users avoiding duplicates (LDAP users appended if not exist)
+        for (const lUser of ldapUsers) {
+            if (!users.find(u => u.username === lUser.username)) {
+                users.push(lUser);
             }
-        } catch (err) {
-            console.error('[Auth] General Error in getUsers:', err);
         }
+    } catch (err) {
+        console.error('[Auth] General Error in getUsers:', err);
     }
 
     // 3. Filter by groups if provided
@@ -323,9 +325,9 @@ const isDevMode = () => !!settings.devmode;
 const devSettingsStore = {};
 
 const getUserSettings = async (username) => {
-    // 2. LDAP
-    if (!settings.server || !settings.server.ldap) {
-        // Fallback to devstore if no LDAP
+    // 1. DevMode Check
+    if (settings.devmode || !settings.server || !settings.server.ldap) {
+        // Fallback to devstore if no LDAP or in DevMode
         return devSettingsStore[username] || { notificationUri: '' };
     }
     const ldapConfig = settings.server.ldap;
@@ -385,11 +387,11 @@ const getUserSettings = async (username) => {
 };
 
 const updateUserSettings = async (username, newSettings) => {
-    // 2. LDAP
-    if (!settings.server || !settings.server.ldap) {
+    // 1. DevMode Check
+    if (settings.devmode || !settings.server || !settings.server.ldap) {
         // Fallback to devstore
         devSettingsStore[username] = { ...devSettingsStore[username], ...newSettings };
-        console.log(`[Auth] No LDAP configured. DevMode Settings updated for ${username}:`, devSettingsStore[username]);
+        console.log(`[Auth] No LDAP mapping/DevMode. Settings updated for ${username}:`, devSettingsStore[username]);
         return;
     }
     const ldapConfig = settings.server.ldap;

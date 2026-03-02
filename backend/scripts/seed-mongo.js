@@ -13,54 +13,7 @@ const connectDB = async () => {
 };
 
 const mockTickets = [
-    // Aufgabe: Standard (Title, Desc, Assignee) + Dynamic (Location)
-    {
-        id: 'AUF-1',
-        title: 'Whiteboard reinigen',
-        description: 'Das Whiteboard in Raum 101 ist sehr schmutzig.',
-        type: 'Aufgabe',
-        state: 'offen.neu',
-        creator: 'lehrer1',
-        assignee: 'hausmeister', // visible: true for Aufgabe
-        location: 'Raum 101',
-        badges: ['dringend', 'wichtig'],
-        created: new Date('2024-05-20T08:00:00'),
-        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-20T08:00:00') }]
-    },
-    {
-        id: 'AUF-2',
-        title: 'Netzwerkdose defekt',
-        description: 'Kein Signal auf Dose 3.',
-        type: 'Aufgabe',
-        state: 'offen.inArbeit',
-        creator: 'lehrer2',
-        assignee: 'netzwerker',
-        location: 'Raum 202',
-        badges: ['eskaliert'],
-        created: new Date('2024-05-21T09:30:00'),
-        log: [
-            { editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-05-21T09:30:00') },
-            { editor: 'netzwerker', text: 'Übernahme', edited: new Date('2024-05-21T10:00:00') }
-        ]
-    },
-    {
-        id: 'AUF-3',
-        title: 'Stuhl reparieren',
-        description: 'Bein wackelt.',
-        type: 'Aufgabe',
-        state: 'offen.erledigt',
-        creator: 'lehrer1',
-        assignee: 'hausmeister',
-        location: 'Raum 102',
-        badges: ['obsolet', 'unwichtig'],
-        created: new Date('2024-05-10T11:00:00'),
-        log: [
-            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-10T11:00:00') },
-            { editor: 'hausmeister', text: 'Erledigt', edited: new Date('2024-05-12T14:00:00') }
-        ]
-    },
-
-    // Abwesenheit: Standard (Title, Desc) + Dynamic (Dates, Time, Reason) - Assignee hidden/unused
+    // Abwesenheit
     {
         id: 'ABW-1',
         title: 'Fortbildung Digitalisierung',
@@ -68,7 +21,6 @@ const mockTickets = [
         type: 'Abwesenheit',
         state: 'offen.neu',
         creator: 'lehrer1',
-        // assignee not set
         dateFrom: '2024-06-10',
         timeFrom: '09:00',
         dateUntil: '2024-06-12',
@@ -97,23 +49,110 @@ const mockTickets = [
             { editor: 'schulleiter', text: 'Genehmigt', edited: new Date('2024-05-27T09:00:00') }
         ]
     },
+
+    // Krankmeldung
     {
-        id: 'ABW-3',
-        title: 'Fortbildung Sport',
-        description: 'Abgelehnt wegen Personalmangel.',
-        type: 'Abwesenheit',
-        state: 'offen.abgelehnt',
+        id: 'KRM-1',
+        title: 'Krankmeldung Max Mustermann',
+        description: 'Starke Erkältung.',
+        type: 'Krankmeldung',
+        state: 'krank.gemeldet',
         creator: 'lehrer1',
-        dateFrom: '2024-06-20',
-        timeFrom: '08:00',
-        dateUntil: '2024-06-20',
-        timeUntil: '16:00',
-        reason: 'Fortbildung',
-        badges: ['wartet'],
-        created: new Date('2024-05-28T08:00:00'),
+        dateFrom: '2024-06-01',
+        badges: ['dringend'],
+        created: new Date('2024-06-01T07:00:00'),
+        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-01T07:00:00') }]
+    },
+    {
+        id: 'KRM-2',
+        title: 'Krankmeldung Anna Admin',
+        description: 'Grippe.',
+        type: 'Krankmeldung',
+        state: 'gesund.gemeldet',
+        creator: 'admin',
+        dateFrom: '2024-05-20',
+        dateReturn: '2024-05-25',
+        badges: [],
+        created: new Date('2024-05-20T07:00:00'),
+        log: [{ editor: 'admin', text: 'Ticket erstellt', edited: new Date('2024-05-20T07:00:00') }]
+    },
+
+    // IT-Ticket
+    {
+        id: 'ITT-1',
+        title: 'WLAN im Lehrerzimmer geht nicht',
+        description: 'Ständige Abbrüche.',
+        type: 'IT-Ticket',
+        state: 'offen.neu',
+        creator: 'lehrer2',
+        category: 'Netzwerk',
+        location: 'Lehrerzimmer',
+        badges: ['wichtig'],
+        created: new Date('2024-06-02T08:30:00'),
+        log: [{ editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-06-02T08:30:00') }]
+    },
+    {
+        id: 'ITT-2',
+        title: 'Drucker druckt streifig',
+        description: 'Der Drucker in Raum 202 druckt nur noch mit Streifen.',
+        type: 'IT-Ticket',
+        state: 'offen.inArbeit',
+        creator: 'lehrer1',
+        assignee: 'netzwerker',
+        category: 'Hardware',
+        location: 'Raum 202',
+        badges: [],
+        created: new Date('2024-06-01T10:00:00'),
         log: [
-            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-28T08:00:00') },
-            { editor: 'schulleiter', text: 'Abgelehnt', edited: new Date('2024-05-29T10:00:00') }
+            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-01T10:00:00') },
+            { editor: 'netzwerker', text: 'In Arbeit', edited: new Date('2024-06-01T10:30:00') }
+        ]
+    },
+    {
+        id: 'ITT-3',
+        title: 'Beamer Birne kaputt',
+        description: 'Beamer geht nicht mehr an.',
+        type: 'IT-Ticket',
+        state: 'offen.erledigt',
+        creator: 'lehrer1',
+        assignee: 'netzwerker',
+        category: 'Medien',
+        location: 'Raum 303',
+        badges: [],
+        created: new Date('2024-05-28T09:00:00'),
+        log: [
+            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-05-28T09:00:00') },
+            { editor: 'netzwerker', text: 'Erledigt', edited: new Date('2024-05-29T11:00:00') }
+        ]
+    },
+
+    // Hausmeisterauftrag
+    {
+        id: 'HMA-1',
+        title: 'Tischbein defekt',
+        description: 'Schülertisch wackelt stark.',
+        type: 'Hausmeisterauftrag',
+        state: 'offen.neu',
+        creator: 'lehrer2',
+        location: 'Raum 105',
+        badges: [],
+        created: new Date('2024-06-02T11:00:00'),
+        log: [{ editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-06-02T11:00:00') }]
+    },
+    {
+        id: 'HMA-2',
+        title: 'Fenster klemmt',
+        description: 'Lässt sich nicht mehr schließen.',
+        type: 'Hausmeisterauftrag',
+        state: 'offen.inArbeit',
+        creator: 'lehrer1',
+        assignee: 'hausmeister',
+        location: 'Raum 210',
+        badges: ['wichtig'],
+        created: new Date('2024-06-01T12:00:00'),
+        log: [
+            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-01T12:00:00') },
+            { editor: 'hausmeister', text: 'In Arbeit', edited: new Date('2024-06-01T13:00:00') }
         ]
     }
 ];
@@ -156,8 +195,10 @@ const seedTickets = async () => {
 
         // Reset Counters
         await Counter.insertMany([
-            { _id: 'AUF', seq: 3 },
-            { _id: 'ABW', seq: 3 }
+            { _id: 'ABW', seq: 2 },
+            { _id: 'KRM', seq: 2 },
+            { _id: 'ITT', seq: 3 },
+            { _id: 'HMA', seq: 2 }
         ]);
         console.log('Counters initialized');
 

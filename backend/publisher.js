@@ -59,7 +59,11 @@ async function sendMail(to, subject, text) {
     }
 }
 
-async function processLogs() {
+const testNotifications = [];
+function getTestNotifications() { return testNotifications; }
+function clearTestNotifications() { testNotifications.length = 0; }
+
+async function checkUnpublishedLogs() {
     try {
         const now = new Date();
         let nextRun = DELAY;
@@ -67,9 +71,14 @@ async function processLogs() {
         // Find all logs that are not yet published
         // We need to check explicitly for null or undefined (or missing)
         const unpublishedLogs = await Log.find({
-            $or: [
-                { published: { $exists: false } },
-                { published: null }
+            $and: [
+                {
+                    $or: [
+                        { published: { $exists: false } },
+                        { published: null }
+                    ]
+                },
+                { action: { $nin: ['created', 'Ticket erstellt'] } }
             ]
         }).populate('ticket');
 
@@ -122,6 +131,11 @@ async function processLogs() {
                                 console.warn(`[Publisher] Invalid mailto URI: ${notificationUri}`);
                             }
                         }
+                        // Handle test
+                        else if (protocol === 'test') {
+                            testNotifications.push({ targetUser, address, message });
+                            console.log(`[Publisher] Test notification stored for ${targetUser}`);
+                        }
                         // Unknown
                         else {
                             console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
@@ -153,14 +167,18 @@ async function processLogs() {
         // e.g. nextRun could be computed as 1ms. 
         if (nextRun < 1000) nextRun = 1000;
 
-        console.log(`[Publisher] Next run in ${Math.round(nextRun / 1000)}s`);
-        setTimeout(processLogs, nextRun);
+        return nextRun;
 
     } catch (err) {
-        console.error('[Publisher] Error:', err);
-        // Retry after default delay on error
-        setTimeout(processLogs, DELAY);
+        console.error('[Publisher] Error in checkUnpublishedLogs:', err);
+        return DELAY;
     }
+}
+
+async function processLogs() {
+    const nextRun = await checkUnpublishedLogs();
+    console.log(`[Publisher] Next run in ${Math.round(nextRun / 1000)}s`);
+    setTimeout(processLogs, nextRun);
 }
 
 // Nextcloud benötigt zwingend diesen Header für API Calls
@@ -222,4 +240,4 @@ function startPublisher() {
     processLogs();
 }
 
-module.exports = { startPublisher, sendMail, nextcloud };
+module.exports = { startPublisher, sendMail, nextcloud, checkUnpublishedLogs, getTestNotifications, clearTestNotifications };

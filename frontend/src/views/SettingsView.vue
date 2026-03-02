@@ -12,8 +12,7 @@
     </div>
 
     <wa-card v-else class="settings-card">
-      <h2 slot="header">Benachrichtigungskanal</h2>
-      
+      <h2 class="settings-header">Benachrichtigungskanal</h2>
       <div class="form-group">
         <wa-input 
           label="Benachrichtigungskanal" 
@@ -21,14 +20,10 @@
           hint="Z.B. nctalk:h.engels oder mailto:h.engels@valckenburgschule.de"
         ></wa-input>
       </div>
-
-      <div slot="footer" class="actions">
+      <div class="actions">
         <wa-button variant="primary" @click="save" :loading="loading">Speichern</wa-button>
       </div>
-    </wa-card>
-
-    <wa-card class="settings-card" v-if="!loadingConfig">
-      <h2>Abonnements</h2>
+      <h2 class="settings-header">Abonnements</h2>
       <SubscriptionManager />
     </wa-card>
   </div>
@@ -103,9 +98,12 @@ const save = async () => {
     width: auto;
     margin: 0 1rem 1rem 1rem;
 }
-
+.settings-header {
+    margin: 0;
+}
 .form-group {
-    margin-bottom: 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
 }
 
 .actions {

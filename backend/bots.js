@@ -58,7 +58,10 @@ function loadBots() {
                                     // Instead of a new Function, we can evaluate inside the VM with ticket.
                                     sandbox.ticket = ticket;
                                     try {
-                                        vm.runInContext(botConfig.script, sandbox);
+                                        const result = vm.runInContext(botConfig.script, sandbox);
+                                        if (result && typeof result.then === 'function') {
+                                            await result;
+                                        }
                                     } catch (e) {
                                         console.error(`Error running bot script ${botConfig.name}:`, e);
                                     }
@@ -134,10 +137,4 @@ async function runBotsForTicket(ticket) {
     }
 }
 
-function startBots() {
-    loadBots();
-    runBots();
-    setInterval(runBots, 60 * 1000);
-}
-
-module.exports = { startBots, runBots, runBotsForTicket };
+module.exports = { loadBots, runBots, runBotsForTicket };

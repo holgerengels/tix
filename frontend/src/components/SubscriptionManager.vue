@@ -176,12 +176,12 @@ const deleteSubscription = async (id) => {
 
 <style scoped>
 .subscription-manager {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .description {
   color: var(--wa-color-neutral-600);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .subscriptions-list {
