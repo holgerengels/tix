@@ -1,7 +1,7 @@
 {
-    "type": "Stundenplan-Ticket",
-    "abbreviation": "STU",
-    "template": "{{ticket.day}} {{ ticket.lessons ? (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) : '' }}",
+    "type": "Vertretungsplan-Ticket",
+    "abbreviation": "VRP",
+    "template": "{{ticket.dateFrom + ' ' + ticket.lessonFrom + ' - ' + ticket.dateUntil + ' ' + ticket.lessonUntil}}",
     "fields": [
         {
             "name": "assignee",
@@ -16,24 +16,49 @@
             "required": true
         },
         {
-            "name": "day",
-            "label": "Wochentag",
-            "type": "Weekday",
+            "name": "dateFrom",
+            "label": "Datum von",
+            "type": "Date",
+            "required": false,
+            "validation": {
+                "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
+                "message": "Datum von kann nicht in der Vergangenheit liegen"
+            }
+        },
+        {
+            "name": "lessonFrom",
+            "label": "Stunde von",
+            "type": "Lesson",
+            "required": "{{ticket.dateFrom ? true : false}}",
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}"
+        },
+        {
+            "name": "dateUntil",
+            "label": "Datum bis",
+            "type": "Date",
             "required": false
         },
         {
-            "name": "lessons",
-            "label": "Stunden",
-            "type": "Lessons",
-            "required": "{{ticket.day ? true : false}}"
+            "name": "lessonUntil",
+            "label": "Stunde bis",
+            "type": "Lesson",
+            "required": "{{ticket.dateUntil ? true : false}}",
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}"
         }
     ],
-    "validations": [],
+    "validations": [
+        {
+            "name": "dateRange",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
+            "message": "Datum von kann nicht nach Datum bis liegen"
+        }
+    ],
     "grid": [
         "title title title title",
         "badges badges badges badges",
         "description description description description",
-        "day day lessons lessons",
+        "dateFrom dateFrom lessonFrom lessonFrom",
+        "dateUntil dateUntil lessonUntil lessonUntil",
         "assignee assignee assignee assignee"
     ],
     "workflow": [
@@ -63,7 +88,7 @@
                     "script": "ticket.state = 'offen.abgelehnt'"
                 },
                 {
-                    "name": "an Vertretungsplanung",
+                    "name": "an Stundenplanung",
                     "groups": [
                         "Stundenplanung",
                         "Vertretungsplanung"

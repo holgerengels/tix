@@ -45,6 +45,7 @@ const loadWorkflows = () => {
                     }
                     workflow.fields = Array.from(fieldMap.values());
 
+                    workflow.file = file;
                     workflows[workflow.type] = workflow;
                     console.log(`Loaded workflow: ${workflow.type}`);
                 } catch (e) {

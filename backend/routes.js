@@ -9,6 +9,7 @@ const Subscription = require('./models/subscription');
 const workflowEngine = require('./workflow');
 const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
+const vm = require('vm');
 const { runBotsForTicket } = require('./bots');
 
 // Auth
@@ -362,9 +363,39 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         // Execute Script
         if (scriptToRun) {
-            const match = scriptToRun.match(/ticket\.state\s*=\s*'([^']+)'/);
-            if (match) {
-                ticket.state = match[1];
+            const sandbox = { ticket };
+
+            // Inject functions from the workflow's specific JS file if it exists
+            if (wf && wf.file) {
+                const fs = require('fs');
+                const path = require('path');
+                const baseName = wf.file.replace('.json', '');
+                const scriptPath = path.join(__dirname, '../config', `${baseName}.js`);
+                if (fs.existsSync(scriptPath)) {
+                    try {
+                        const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+                        const contextSandbox = {
+                            require: require,
+                            console: console,
+                            module: {},
+                            exports: {}
+                        };
+                        contextSandbox.module.exports = contextSandbox.exports;
+                        vm.createContext(contextSandbox);
+                        vm.runInContext(scriptContent, contextSandbox);
+                        Object.assign(sandbox, contextSandbox.module.exports);
+                    } catch (e) {
+                        console.error(`Error loading workflow JS ${scriptPath} for action script:`, e);
+                    }
+                }
+            }
+
+            vm.createContext(sandbox);
+            try {
+                vm.runInContext(scriptToRun, sandbox);
+            } catch (e) {
+                console.error(`Error executing action script '${scriptToRun}':`, e);
+                return res.status(500).json({ message: 'Error executing action script.' });
             }
         }
 
@@ -375,8 +406,9 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         // Validate modified ticket
+        const currentWf = workflowEngine.getWorkflowForType(ticket.type) || wf;
         const { validateTicket } = require('./validation');
-        const validationResult = validateTicket(ticket.toObject(), wf);
+        const validationResult = validateTicket(ticket.toObject(), currentWf);
         if (!validationResult.isValid) {
             return res.status(400).json({
                 message: `Validation failed: ${validationResult.errors.join(', ')}`

@@ -29,19 +29,23 @@ function isUrgent(dateInput) {
 
 function convert(ticket) {
   let text = "";
-  if (ticket.day) text += ticket.day + " ";
-  if (ticket.lessons) {
-    if (ticket.lessons.min == ticket.lessons.max) {
-      text += ticket.lessons.min;
-    } else {
-      text += ticket.lessons.min + ".." + ticket.lessons.max;
-    }
+  if (ticket.dateFrom) text += ticket.dateFrom;
+  if (ticket.lessonFrom) text += " " + ticket.lessonFrom;
+
+  let untilText = "";
+  if (ticket.dateUntil) untilText += ticket.dateUntil;
+  if (ticket.lessonUntil) untilText += " " + ticket.lessonUntil;
+  untilText = untilText.trim();
+
+  if (untilText) {
+    text += " - " + untilText;
   }
+
   text = text.trim();
   if (text) {
     ticket.description = "[" + text + "] " + (ticket.description || "");
   }
-  ticket.type = "Vertretungsplan-Ticket";
+  ticket.type = "Stundenplan-Ticket";
 }
 
 module.exports = {
