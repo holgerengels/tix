@@ -409,8 +409,6 @@ onMounted(fetchData);
 .error {
     color: var(--wa-color-danger-700);
 }
-
-/* Narrow/Mobile state */
 .is-narrow .ticket-content, .is-mobile .ticket-content {
     flex-direction: column;
     display: flex;
@@ -433,8 +431,6 @@ onMounted(fetchData);
     padding-left: 0;
     margin-top: 2rem;
 }
-
-/* Specific mobile overrides */
 .is-mobile {
     height: auto;
     overflow: visible;

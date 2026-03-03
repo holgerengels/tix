@@ -244,7 +244,7 @@ onMounted(fetchData);
     flex-direction: row;
     gap: 2rem;
     align-items: stretch;
-    min-height: 0; /* Crucial for nested scrolling */
+    min-height: 0;
 }
 .ticket-body {
     height: 100%;
@@ -269,7 +269,7 @@ onMounted(fetchData);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Comments component handles internal scrolling */
+    overflow: hidden;
 }
 .loading, .error {
     text-align: center;

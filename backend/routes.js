@@ -73,6 +73,40 @@ router.post('/settings', verifyToken, async (req, res) => {
     }
 });
 
+// Config Docs
+router.get('/config/:type/doc', verifyToken, async (req, res) => {
+    try {
+        const typeStr = req.params.type;
+        const allWorkflows = workflowEngine.getWorkflows();
+        const wf = allWorkflows[typeStr];
+
+        let mdPath = null;
+        const fs = require('fs');
+        const path = require('path');
+        const configDir = path.join(__dirname, '../config');
+
+        if (wf && wf.file) {
+            const baseName = wf.file.replace('.json', '');
+            mdPath = path.join(configDir, `${baseName}.md`);
+        }
+
+        if (!mdPath || !fs.existsSync(mdPath)) {
+            mdPath = path.join(configDir, 'default.md');
+        }
+
+        if (fs.existsSync(mdPath)) {
+            const content = fs.readFileSync(mdPath, 'utf8');
+            res.send(content);
+        } else {
+            res.send('Keine Dokumentation verfügbar.');
+        }
+
+    } catch (err) {
+        console.error('Error fetching doc:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
     const { filter, type, status, creator, dateFrom, dateTo, badge } = req.query; // 'my', 'assigned', 'all' AND granular filters

@@ -30,6 +30,13 @@
             <div v-else-if="newTicketType" class="error">
                 Konfiguration für diesen Typ nicht gefunden.
             </div>
+
+            <aside class="workflow-info-sidebar" v-if="newTicketType">
+                <div v-if="loadingDoc" class="loading">
+                    <wa-spinner></wa-spinner> Lade Infos...
+                </div>
+                <div v-else class="markdown-body" v-html="workflowDocHtml"></div>
+            </aside>
         </div>
 
 
@@ -47,6 +54,8 @@ import { ui } from '../state/ui';
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
 import { validateTicket } from '../utils/evaluation';
+import { marked } from 'marked';
+
 const getFieldLabel = (name) => {
     // Fallback or simple implementation if needed, but DynamicForm handles labels now
     return name;
@@ -61,6 +70,9 @@ const loadingConfig = ref(true);
 const isDirty = ref(false);
 const formRef = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+const workflowDocHtml = ref('');
+const loadingDoc = ref(false);
 
 watch(newTicketData, () => {
     if (Object.keys(newTicketData.value).length > 0) {
@@ -90,6 +102,29 @@ const fetchConfig = async () => {
         loadingConfig.value = false;
     }
 };
+
+const fetchWorkflowDoc = async (type) => {
+    if (!type) {
+        workflowDocHtml.value = '';
+        return;
+    }
+    loadingDoc.value = true;
+    try {
+        const res = await axios.get(`/api/config/${type}/doc`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        workflowDocHtml.value = marked(res.data);
+    } catch (err) {
+        console.error("Doc fetch error", err);
+        workflowDocHtml.value = '<p>Dokumentation konnte nicht geladen werden.</p>';
+    } finally {
+        loadingDoc.value = false;
+    }
+};
+
+watch(newTicketType, (newType) => {
+    fetchWorkflowDoc(newType);
+});
 
 const resetForm = () => {
     newTicketData.value = {};
@@ -140,7 +175,7 @@ onMounted(fetchConfig);
 
 <style scoped>
 .new-ticket-view {
-    max-width: 1000px;
+    max-width: 1600px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -190,11 +225,63 @@ onMounted(fetchConfig);
     overflow-y: auto;
     padding-right: 0.5rem;
 }
+.workflow-info-sidebar {
+    height: 100%;
+    flex: 1;
+    min-width: 300px;
+    border-left: 1px solid var(--wa-color-neutral-200);
+    padding-left: 2rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.markdown-body :deep(h1), 
+.markdown-body :deep(h2), 
+.markdown-body :deep(h3) {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: var(--wa-color-neutral-800);
+}
+.markdown-body :deep(p), 
+.markdown-body :deep(ul), 
+.markdown-body :deep(ol) {
+    margin-bottom: 1rem;
+    line-height: 1.5;
+    color: var(--wa-color-neutral-700);
+}
+.markdown-body :deep(li) {
+    margin-bottom: 0.25rem;
+}
 .loading, .error {
     text-align: center;
+    padding: 3rem;
+    color: var(--wa-color-neutral-500);
+}
+.error {
+    color: var(--wa-color-danger-700);
+}
+.is-narrow .ticket-content, .is-mobile .ticket-content {
+    flex-direction: column;
+    display: flex;
+    overflow-y: visible; 
 }
 
+.is-narrow .dynamic-form, .is-mobile .dynamic-form {
+    flex: none;
+    height: auto;
+    overflow-y: visible;
+    padding-right: 0;
+}
 
+.is-narrow .workflow-info-sidebar, .is-mobile .workflow-info-sidebar {
+    flex: none;
+    height: auto;
+    overflow: visible;
+    border-left: none;
+    border-top: 1px solid var(--wa-color-neutral-200);
+    padding-left: 0;
+    margin-top: 2rem;
+}
 .is-mobile {
     height: auto;
     overflow: visible;
@@ -206,11 +293,13 @@ onMounted(fetchConfig);
 .is-mobile .ticket-card::part(body) {
     overflow: visible;
 }
-.is-mobile .dynamic-form {
-    overflow-y: visible;
-    height: auto;
+.is-mobile wa-card {
+    border-radius: 0;
 }
 .is-mobile .header h2 {
     font-size: 1.2rem;
+}
+.is-narrow .ticket-card h3 {
+    font-size: 1rem !important;
 }
 </style>

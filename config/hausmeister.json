@@ -1,6 +1,6 @@
 {
     "type": "Hausmeisterauftrag",
-    "abbreviation": "HMA",
+    "abbreviation": "HSM",
     "template": "{{ticket.category}}",
     "fields": [
         {

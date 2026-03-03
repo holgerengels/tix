@@ -1,7 +1,7 @@
 {
     "type": "Außerunterrichtliche Veranstaltung",
-    "abbreviation": "AUß",
-    "template": "{{ticket.dateFrom}} S {{ticket.lessonFrom}} - {{ticket.dateUntil}} S {{ticket.lessonUntil}} {{ticket.location}}",
+    "abbreviation": "AUV",
+    "template": "{{ticket.dateFrom}} [{{ticket.lessonFrom}}] - {{ticket.dateUntil}} [{{ticket.lessonUntil}}] {{ticket.location}}",
     "fields": [
         {
             "name": "dateFrom",

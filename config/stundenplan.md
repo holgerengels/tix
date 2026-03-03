@@ -9,3 +9,9 @@ Ein Stundenplan-Ticket wird verwendet, um langfristige Stundenplanänderungen zu
 ### Kein Beispiel
 
 * Bitte um Raumtausch für die 3. Stunde am 3.3.
+
+### Prozess
+
+[neu] → [in Arbeit] → [erledigt] → [ok]
+
+* Die Bearbeitung erfolgt durch das Stundenplanteam

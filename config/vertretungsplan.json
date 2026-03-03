@@ -1,7 +1,7 @@
 {
     "type": "Vertretungsplan-Ticket",
     "abbreviation": "VRP",
-    "template": "{{ ((ticket.dateFrom ? ticket.dateFrom : '') + (ticket.lessonFrom ? ' ' + ticket.lessonFrom : '') + (ticket.dateUntil || ticket.lessonUntil ? ' - ' : '') + (ticket.dateUntil ? ticket.dateUntil : '') + (ticket.lessonUntil ? ' ' + ticket.lessonUntil : '')).trim() }}",
+    "template": "{{ ((ticket.dateFrom ? ticket.dateFrom : '') + (ticket.lessonFrom ? ' [' + ticket.lessonFrom + ']' : '') + (ticket.dateUntil || ticket.lessonUntil ? ' - ' : '') + (ticket.dateUntil ? ticket.dateUntil : '') + (ticket.lessonUntil ? ' [' + ticket.lessonUntil + ']' : '')).trim() }}",
     "fields": [
         {
             "name": "assignee",

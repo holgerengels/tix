@@ -1,7 +1,7 @@
 {
     "type": "Stundenplan-Ticket",
-    "abbreviation": "STU",
-    "template": "{{ ((ticket.day ? ticket.day + ' ' : '') + (ticket.lessons ? (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) : '')).trim() }}",
+    "abbreviation": "STP",
+    "template": "{{ ((ticket.day ? ticket.day + ' ' : '') + (ticket.lessons ? '[' + (ticket.lessons.min == ticket.lessons.max ? ticket.lessons.min : ticket.lessons.min + '..' + ticket.lessons.max) + ']' : '')).trim() }}",
     "fields": [
         {
             "name": "assignee",
