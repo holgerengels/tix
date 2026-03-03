@@ -160,6 +160,38 @@ async function runSubscriptionCheck() {
                     console.log(`[SubscriptionWorker] No notification URI for user ${sub.userId}`);
                 }
 
+                // NEW: Web Push Notifications
+                try {
+                    const { webpush } = require('./utils/push');
+                    const PushSubscription = require('./models/pushSubscription');
+                    const pushSubs = await PushSubscription.find({ userId: sub.userId });
+
+                    const payload = JSON.stringify({
+                        title: `Ticket-Abo: ${sub.name}`,
+                        body: `Es gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`,
+                        // In Frontend router, we use ?filter=... depending on the subscription logic, 
+                        // but a generic link to the home page or specific sub-filter is fine.
+                        // Ideally we could pass the actual JSON filter, but that's complex to stringify in a URL reliably.
+                        // Let's bring them to the root so they see their tickets.
+                        url: `/?filter=all`
+                    });
+
+                    for (const pushSub of pushSubs) {
+                        try {
+                            await webpush.sendNotification(pushSub.subscription, payload);
+                        } catch (error) {
+                            if (error.statusCode === 410 || error.statusCode === 404) {
+                                console.log(`[SubscriptionWorker] Subscription for ${sub.userId} expired. Removing.`);
+                                await PushSubscription.deleteOne({ _id: pushSub._id });
+                            } else {
+                                console.error(`[SubscriptionWorker] Error sending push notification:`, error);
+                            }
+                        }
+                    }
+                } catch (pushErr) {
+                    console.error('[SubscriptionWorker] Web Push notification failed:', pushErr.message);
+                }
+
                 // Update the state so we don't notify next time if it stays the same
                 sub.lastMatchingTickets = currentTickets.map(t => ({ id: t.id, state: t.state }));
 

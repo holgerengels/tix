@@ -1,6 +1,11 @@
 <template>
   <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated.value, 'sidebar-collapsed': !ui.state.sidebarOpen && auth.isAuthenticated.value }">
     
+    <div v-if="needRefresh" class="pwa-update-prompt">
+        <span>Eine neue Version von TIX ist verfügbar.</span>
+        <wa-button size="small" variant="primary" @click="handleSWUpdate">Jetzt aktualisieren</wa-button>
+    </div>
+
     <LoginOverlay v-if="auth.state.showLogin" />
     
     <div v-if="ui.state.isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
@@ -35,7 +40,7 @@
 
         <div class="footer">
              <div class="user-info" v-if="auth.state.user">
-                <small class="nav-text">{{ auth.state.user.username }}</small>
+                <span class="nav-text">{{ auth.state.user.username }}</span>
              </div>
              <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
@@ -60,6 +65,17 @@ import axios from 'axios';
 import { auth } from './state/auth';
 import { ui } from './state/ui';
 import LoginOverlay from './components/LoginOverlay.vue';
+import { useRegisterSW } from 'virtual:pwa-register/vue';
+
+// PWA Update Logic
+const {
+  needRefresh,
+  updateServiceWorker,
+} = useRegisterSW();
+
+const handleSWUpdate = () => {
+    updateServiceWorker(true);
+};
 
 const router = useRouter();
 const route = useRoute();
@@ -316,5 +332,21 @@ body {
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
     }
+}
+
+.pwa-update-prompt {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 1rem;
+    border-radius: var(--wa-border-radius-medium);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--wa-color-primary-200);
 }
 </style>

@@ -863,4 +863,47 @@ router.delete('/settings/subscriptions/:id', verifyToken, async (req, res) => {
     }
 });
 
+// --- Web Push API ---
+
+router.get('/push/public-key', verifyToken, (req, res) => {
+    try {
+        const { getPublicKey } = require('./utils/push');
+        res.status(200).send(getPublicKey());
+    } catch (err) {
+        console.error('[API] Error getting public key:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+router.post('/push/subscribe', verifyToken, async (req, res) => {
+    try {
+        const subscription = req.body;
+        const PushSubscription = require('./models/pushSubscription');
+
+        // Check if subscription already exists (using endpoint as unique identifier)
+        const existing = await PushSubscription.findOne({ 'subscription.endpoint': subscription.endpoint });
+
+        if (existing) {
+            // If user changed or we just want to ensure it's up to date
+            existing.userId = req.user.username;
+            existing.subscription = subscription;
+            await existing.save();
+            console.log(`[API] Web Push subscription updated for ${req.user.username}`);
+            return res.status(200).json({ message: 'Subscription updated' });
+        }
+
+        const newSub = new PushSubscription({
+            userId: req.user.username,
+            subscription: subscription
+        });
+
+        await newSub.save();
+        console.log(`[API] New Web Push subscription stored for ${req.user.username}`);
+        res.status(201).json({ message: 'Subscription saved' });
+    } catch (error) {
+        console.error('[API] Error saving push subscription:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 module.exports = router;

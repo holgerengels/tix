@@ -144,6 +144,36 @@ async function checkUnpublishedLogs() {
                         console.log(`[Publisher] No notification URI configured for ${targetUser}`);
                     }
 
+                    // NEW: Web Push Notifications
+                    try {
+                        const { webpush } = require('./utils/push');
+                        const PushSubscription = require('./models/pushSubscription');
+                        const subs = await PushSubscription.find({ userId: targetUser });
+
+                        // Payload contains title (to display), message (body), and url (where to navigate on click)
+                        const payload = JSON.stringify({
+                            title: `Ticket Update: ${log.ticket.title}`,
+                            body: message,
+                            url: `/tickets/${log.ticket.id}/view`
+                        });
+
+                        for (const sub of subs) {
+                            try {
+                                await webpush.sendNotification(sub.subscription, payload);
+                            } catch (error) {
+                                if (error.statusCode === 410 || error.statusCode === 404) {
+                                    // Subscription has expired or is no longer valid
+                                    console.log(`[Publisher] Subscription for ${targetUser} expired. Removing.`);
+                                    await PushSubscription.deleteOne({ _id: sub._id });
+                                } else {
+                                    console.error(`[Publisher] Error sending push notification:`, error);
+                                }
+                            }
+                        }
+                    } catch (pushErr) {
+                        console.error('[Publisher] Web Push notification failed:', pushErr.message);
+                    }
+
                 } catch (notifyErr) {
                     console.error('[Publisher] Notification failed:', notifyErr.message);
                 }

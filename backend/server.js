@@ -34,6 +34,10 @@ if (require.main === module) {
         // Start Background Jobs via Unified Scheduler
         const { startScheduler } = require('./scheduler');
         startScheduler();
+
+        // Initialize Web Push Keys
+        const { initWebPush } = require('./utils/push');
+        initWebPush();
     });
 }
 

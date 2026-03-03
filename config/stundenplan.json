@@ -114,14 +114,13 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte"
+                "Stundenplanung"
             ]
         },
         {
             "name": "edit",
             "groups": [
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
@@ -129,7 +128,6 @@
             "groups": [
                 "@creator",
                 "Stundenplanung",
-                "Vertretungsplanung",
                 "Schulleitung"
             ]
         },
@@ -137,24 +135,21 @@
             "name": "undo",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
             "name": "delete",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
             "name": "comment",
             "groups": [
                 "@creator",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         }
     ],
