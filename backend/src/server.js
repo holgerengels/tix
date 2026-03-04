@@ -16,14 +16,14 @@ connectDB();
 
 // Serve Static Frontend (for Docker/Production)
 const path = require('path');
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
 app.use('/api', routes);
 
 // SPA Catch-All
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
 // Start Server
