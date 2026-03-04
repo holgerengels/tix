@@ -33,6 +33,7 @@
             "type": "Autocomplete",
             "required": true,
             "options": [
+                "Kein Raum",
                 "Raum 100 (Textilarbeit / Werken)",
                 "Raum 101 (Textilarbeit / Werken)",
                 "Raum 102 (Textilarbeit / Werken)",
