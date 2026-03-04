@@ -21,7 +21,9 @@ coverage/
 
 # configuration overrides
 config/settings.json
+config/vapid.json
 deploy/config/settings.json
+deploy/config/vapid.json
 
 # OS / misc
 .DS_Store
