@@ -4,7 +4,7 @@ const { checkUnpublishedLogs } = require('./publisher');
 const path = require('path');
 const fs = require('fs');
 
-let settingsPath = path.join(__dirname, '../config/settings.json');
+let settingsPath = path.join(__dirname, '../../config/settings.json');
 let settings = {};
 
 try {

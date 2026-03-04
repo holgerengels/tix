@@ -81,7 +81,7 @@
                     "groups": [
                         "Schulleitung"
                     ],
-                    "inlineComment": true,
+                    "inline": "comment",
                     "script": "ticket.state = 'offen.abgelehnt'"
                 }
             ]

@@ -6,8 +6,7 @@
         {
             "name": "assignee",
             "groups": [
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ],
             "visible": true
         },
@@ -73,25 +72,29 @@
                     "groups": [
                         "@assignee",
                         "Schulleitung",
-                        "Stundenplanung",
-                        "Vertretungsplanung"
+                        "Stundenplanung"
                     ],
                     "form": "aufgabe.bearbeiten"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "Stundenplanung"
+                    ],
+                    "inline": "assign"
                 },
                 {
                     "name": "ablehnen",
                     "groups": [
                         "Schulleitung",
-                        "Stundenplanung",
-                        "Vertretungsplanung"
+                        "Stundenplanung"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
                 },
                 {
                     "name": "an Stundenplanung",
                     "groups": [
-                        "Stundenplanung",
-                        "Vertretungsplanung"
+                        "Stundenplanung"
                     ],
                     "script": "convert(ticket)"
                 }
@@ -145,8 +148,7 @@
         {
             "name": "edit",
             "groups": [
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
@@ -154,7 +156,6 @@
             "groups": [
                 "@creator",
                 "Stundenplanung",
-                "Vertretungsplanung",
                 "Schulleitung"
             ]
         },
@@ -162,24 +163,21 @@
             "name": "undo",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
             "name": "delete",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         },
         {
             "name": "comment",
             "groups": [
                 "@creator",
-                "Stundenplanung",
-                "Vertretungsplanung"
+                "Stundenplanung"
             ]
         }
     ],

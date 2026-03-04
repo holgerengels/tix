@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 
-let settingsPath = path.join(__dirname, '../config/settings.json');
+let settingsPath = path.join(__dirname, '../../config/settings.json');
 let settings = {};
 
 try {

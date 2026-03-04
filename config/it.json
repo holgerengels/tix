@@ -184,8 +184,15 @@
                         "Schulleitung",
                         "Netzwerkteam"
                     ],
-                    "inlineComment": true,
+                    "inline": "comment",
                     "script": "ticket.state = 'offen.abgelehnt'"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "Netzwerkteam"
+                    ],
+                    "inline": "assign"
                 }
             ]
         },

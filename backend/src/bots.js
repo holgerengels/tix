@@ -3,7 +3,7 @@ const path = require('path');
 const vm = require('vm');
 const Ticket = require('./models/ticket');
 
-const CONFIG_DIR = path.join(__dirname, '../config');
+const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
 
 function loadBots() {

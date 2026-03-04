@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const Ticket = require('../models/ticket');
-const Counter = require('../models/counter');
+const Ticket = require('../src/models/ticket');
+const Counter = require('../src/models/counter');
 
 const connectDB = async () => {
     try {
@@ -56,7 +56,7 @@ const mockTickets = [
         title: 'Krankmeldung Max Mustermann',
         description: 'Starke Erkältung.',
         type: 'Krankmeldung',
-        state: 'krank.gemeldet',
+        state: 'offen.neu',
         creator: 'lehrer1',
         dateFrom: '2024-06-01',
         badges: ['dringend'],
@@ -68,7 +68,7 @@ const mockTickets = [
         title: 'Krankmeldung Anna Admin',
         description: 'Grippe.',
         type: 'Krankmeldung',
-        state: 'gesund.gemeldet',
+        state: 'offen.inArbeit',
         creator: 'admin',
         dateFrom: '2024-05-20',
         dateReturn: '2024-05-25',
@@ -157,7 +157,7 @@ const mockTickets = [
     }
 ];
 
-const Log = require('../models/log');
+const Log = require('../src/models/log');
 
 const seedTickets = async () => {
     await connectDB();

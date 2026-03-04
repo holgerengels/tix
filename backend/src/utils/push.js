@@ -2,7 +2,7 @@ const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 
-const vapidPath = path.join(__dirname, '../../config/vapid.json');
+const vapidPath = path.join(__dirname, '../../../config/vapid.json');
 let vapidKeys = {};
 
 function initWebPush() {

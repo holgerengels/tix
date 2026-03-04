@@ -1,4 +1,4 @@
-const { getUsers } = require('../auth');
+const { getUsers } = require('../src/auth');
 
 (async () => {
     try {

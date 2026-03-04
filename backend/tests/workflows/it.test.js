@@ -1,15 +1,15 @@
 const request = require('supertest');
-const app = require('../../server'); // This will start connecting to DB asynchronously
+const app = require('../../src/server'); // This will start connecting to DB asynchronously
 const mongoose = require('mongoose');
 const { getTokens, clearDatabase, closeDatabase } = require('../setup');
 
-const { getWorkflowForType } = require('../../workflow');
-const { updateUserSettings } = require('../../auth');
-const Subscription = require('../../models/subscription');
-const Log = require('../../models/log');
-const { checkUnpublishedLogs, getTestNotifications, clearTestNotifications } = require('../../publisher');
-const { runSubscriptionCheck } = require('../../subscriptionWorker');
-const { loadBots } = require('../../bots');
+const { getWorkflowForType } = require('../../src/workflow');
+const { updateUserSettings } = require('../../src/auth');
+const Subscription = require('../../src/models/subscription');
+const Log = require('../../src/models/log');
+const { checkUnpublishedLogs, getTestNotifications, clearTestNotifications } = require('../../src/publisher');
+const { runSubscriptionCheck } = require('../../src/subscriptionWorker');
+const { loadBots } = require('../../src/bots');
 
 let tokens;
 

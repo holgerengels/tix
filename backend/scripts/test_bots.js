@@ -1,9 +1,9 @@
 console.log("Script starting...");
-const connectDB = require('../db');
+const connectDB = require('../src/db');
 console.log("DB module loaded");
-const Ticket = require('../models/ticket');
+const Ticket = require('../src/models/ticket');
 console.log("Ticket module loaded");
-const { startBots } = require('../bots');
+const { startBots } = require('../src/bots');
 console.log("Bots module loaded");
 
 async function test() {

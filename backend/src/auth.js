@@ -6,7 +6,7 @@ const path = require('path');
 // Load Settings
 let settings = {};
 try {
-    const settingsPath = path.join(__dirname, '../config/settings.json');
+    const settingsPath = path.join(__dirname, '../../config/settings.json');
     if (fs.existsSync(settingsPath)) {
         settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
     }

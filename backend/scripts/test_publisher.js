@@ -1,4 +1,4 @@
-const { sendTalkMessageToUser } = require('../publisher');
+const { sendTalkMessageToUser } = require('../src/publisher');
 
 async function test() {
     console.log('Testing formatted message...');

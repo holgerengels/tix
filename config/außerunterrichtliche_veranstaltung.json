@@ -98,7 +98,7 @@
                 },
                 {
                     "name": "ablehnen",
-                    "inlineComment": true,
+                    "inline": "comment",
                     "groups": [
                         "Abteilungsleitung"
                     ],
@@ -118,6 +118,13 @@
                         "Stundenplanung"
                     ],
                     "form": "abwesenheit.bearbeiten"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "Stundenplanung"
+                    ],
+                    "inline": "assign"
                 }
             ]
         },

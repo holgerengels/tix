@@ -83,7 +83,7 @@ router.get('/config/:type/doc', verifyToken, async (req, res) => {
         let mdPath = null;
         const fs = require('fs');
         const path = require('path');
-        const configDir = path.join(__dirname, '../config');
+        const configDir = path.join(__dirname, '../../config');
 
         if (wf && wf.file) {
             const baseName = wf.file.replace('.json', '');
@@ -411,7 +411,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                 const fs = require('fs');
                 const path = require('path');
                 const baseName = wf.file.replace('.json', '');
-                const scriptPath = path.join(__dirname, '../config', `${baseName}.js`);
+                const scriptPath = path.join(__dirname, '../../config', `${baseName}.js`);
                 if (fs.existsSync(scriptPath)) {
                     try {
                         const scriptContent = fs.readFileSync(scriptPath, 'utf8');
