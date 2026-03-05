@@ -158,7 +158,7 @@
                                         hoist
                                     >
                                         <wa-option v-for="u in getAvailableAssignees(ticket)" :key="u.username" :value="u.username">
-                                            {{ u.firstName }} {{ u.lastName }} ({{ u.username }})
+                                            {{ u.username }}
                                         </wa-option>
                                     </wa-select>
                                     <div class="popover-actions">
