@@ -153,6 +153,12 @@
                 "Gebäude D",
                 "Gebäude E (Sporthalle)"
             ]
+        },
+        {
+            "name": "raumbelegung",
+            "type": "Text",
+            "visible": "{{ticket.state && ticket.state.startsWith('offen.') && ticket.location && ticket.location.startsWith('Raum ')}}",
+            "readonly": true
         }
     ],
     "grid": [
@@ -160,6 +166,7 @@
         "badges badges badges badges",
         "description description description description",
         "location location category category",
+        "raumbelegung raumbelegung raumbelegung raumbelegung",
         "assignee assignee assignee assignee"
     ],
     "workflow": [
@@ -235,6 +242,14 @@
                 "offen.neu"
             ],
             "script": "dringend(ticket)"
+        },
+        {
+            "name": "raumbelegung",
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "script": "raum(ticket)"
         }
     ],
     "access": [
