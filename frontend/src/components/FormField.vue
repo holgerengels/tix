@@ -204,6 +204,13 @@
         @update:modelValue="updateValue"
       />
 
+      <!-- Timeline -->
+      <TimelineDisplay
+        v-else-if="field.type === 'Timeline'"
+        :label="field.label"
+        :blocks="modelValue || []"
+      />
+
        <!-- Standard Text -->
       <wa-input 
         v-else
@@ -224,6 +231,7 @@ import RichTextEditor from './RichTextEditor.vue';
 import WAAutocomplete from './WAAutocomplete.vue';
 import BadgeEditor from './BadgeEditor.vue';
 import ArrayFieldEditor from './ArrayFieldEditor.vue';
+import TimelineDisplay from './TimelineDisplay.vue';
 
 const props = defineProps({
   field: { type: Object, required: true },

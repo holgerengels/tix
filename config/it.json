@@ -156,7 +156,8 @@
         },
         {
             "name": "raumbelegung",
-            "type": "Text",
+            "label": "Raumbelegung (heute)",
+            "type": "Timeline",
             "visible": "{{ticket.state && ticket.state.startsWith('offen.') && ticket.location && ticket.location.startsWith('Raum ')}}",
             "readonly": true
         }

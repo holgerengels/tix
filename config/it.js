@@ -84,62 +84,59 @@ async function raum(ticket) {
 
       const periods = ttRes.data.data.result.data.elementPeriods[room.id];
       if (!periods || periods.length === 0) {
-        ticket.set('raumbelegung', "frei ab 7:50");
+        ticket.set('raumbelegung', [{ status: 'free', start: 750, end: 1505 }]);
         return;
       }
 
       // Sort periods by start time
       periods.sort((a, b) => a.startTime - b.startTime);
 
-      // Merge consecutive periods
-      let merged = [];
+      // Merge consecutive occupied periods
+      let mergedOccupied = [];
       for (const p of periods) {
-        if (merged.length === 0) {
-          merged.push({ start: p.startTime, end: p.endTime });
+        if (mergedOccupied.length === 0) {
+          mergedOccupied.push({ start: p.startTime, end: p.endTime });
         } else {
-          const last = merged[merged.length - 1];
+          const last = mergedOccupied[mergedOccupied.length - 1];
           if (last.end >= p.startTime) {
             last.end = Math.max(last.end, p.endTime);
           } else {
-            merged.push({ start: p.startTime, end: p.endTime });
+            mergedOccupied.push({ start: p.startTime, end: p.endTime });
           }
         }
       }
 
-      const formatTime = (t) => {
-        const tStr = t.toString();
-        const mins = tStr.slice(-2);
-        const hrs = tStr.slice(0, -2) || '0';
-        return `${hrs}:${mins}`;
-      };
-
+      // Build continuous blocks of free/occupied
       const dayStart = 750;
-      let freePeriods = [];
+      const dayEnd = 1505;
+      let blocks = [];
       let currentStart = dayStart;
 
-      for (const p of merged) {
+      for (const p of mergedOccupied) {
         if (p.start > currentStart) {
-          freePeriods.push({ start: currentStart, end: p.start });
+          blocks.push({ status: 'free', start: currentStart, end: p.start });
         }
         if (p.end > currentStart) {
+          // If the occupied period starts before our bounds but ends inside,
+          // or spans entirely across, clamp it.
+          const blockStart = Math.max(currentStart, p.start);
+          const blockEnd = Math.min(dayEnd, p.end);
+          if (blockStart < blockEnd) {
+            blocks.push({ status: 'occupied', start: blockStart, end: blockEnd });
+          }
           currentStart = p.end;
         }
       }
-      freePeriods.push({ start: currentStart, end: null });
 
-      const formatted = freePeriods.map(p => {
-        if (p.end === null) {
-          return `frei ab ${formatTime(p.start)}`;
-        }
-        return `frei ${formatTime(p.start)} bis ${formatTime(p.end)}`;
-      }).join(', ');
+      if (currentStart < dayEnd) {
+        blocks.push({ status: 'free', start: currentStart, end: dayEnd });
+      }
 
-      console.log(formatted);
-      ticket.set('raumbelegung', formatted);
+      ticket.set('raumbelegung', blocks);
 
     } catch (e) {
       console.error("Fehler beim Laden der Raumbelegung:", e);
-      ticket.set('raumbelegung', "Fehler beim Laden der Raumbelegung");
+      ticket.set('raumbelegung', []);
     }
   }
 }

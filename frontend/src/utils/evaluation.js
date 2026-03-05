@@ -38,12 +38,10 @@ export function evaluateTemplate(templateStr, ticketData) {
         const expr = boolMatch[1];
         try {
             const evaluate = createSafeEvaluator(expr, ticketData);
-            const result = evaluate();
-            if (typeof result === 'boolean') {
-                return result;
-            }
+            return !!evaluate(); // Coerce undefined/null to actual false for visibility checks
         } catch (e) {
-            // Fall through to string replacement
+            console.warn(`Failed to evaluate boolean expression: ${expr}`, e);
+            return false;
         }
     }
 

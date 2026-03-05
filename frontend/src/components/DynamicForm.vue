@@ -3,6 +3,7 @@
     <div class="dynamic-form-grid" :style="gridStyle">
       <div v-for="field in orderedFields" :key="field.name" class="form-field" :style="getFieldStyle(field)">
           <FormField 
+              v-if="field.visible !== false"
               :field="field"
               :modelValue="modelValue[field.name]"
               @update:modelValue="updateField(field.name, $event)"
@@ -84,7 +85,9 @@ const evaluatedFields = computed(() => {
 
 const visibleFields = computed(() => {
     // Rely on computed evaluated fields
-    return evaluatedFields.value.filter(f => f.visible !== false);
+    const visible = evaluatedFields.value.filter(f => f.visible !== false);
+    console.log("evaluatedFields", evaluatedFields.value, "visibleFields", visible);
+    return visible;
 });
 
 const orderedFields = computed(() => {
