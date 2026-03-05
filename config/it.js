@@ -22,10 +22,12 @@ async function raum(ticket) {
       const axios = require('axios');
       const otpauth = require('otpauth');
       const fs = require('fs');
+      const path = require('path');
       const { wrapper } = require('axios-cookiejar-support');
       const { CookieJar } = require('tough-cookie');
 
-      const settings = JSON.parse(fs.readFileSync('/home/holger/jdevel/tix/config/settings.json', 'utf8'));
+      const settingsPath = path.join(__dirname, 'settings.json');
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
       const { url, login, user, password, secret } = settings.webuntis;
 
       const jar = new CookieJar();
