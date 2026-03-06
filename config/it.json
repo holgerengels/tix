@@ -242,6 +242,8 @@
             "states": [
                 "offen.neu"
             ],
+            "onChange": "insync",
+            "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
         },
         {
@@ -250,6 +252,8 @@
                 "offen.neu",
                 "offen.inArbeit"
             ],
+            "onChange": "async",
+            "schedule": "0 8 * * 1-5",
             "script": "raum(ticket)"
         }
     ],

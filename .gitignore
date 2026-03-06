@@ -38,3 +38,4 @@ deploy/config/vapid.json
 *.njsproj
 *.sln
 *.sw?
+next steps.txt
