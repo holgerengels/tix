@@ -160,19 +160,6 @@
             ]
         }
     ],
-    "bots": [
-        {
-            "name": "dringend",
-            "states": [
-                "offen.neu",
-                "offen.genehmigt",
-                "offen.inArbeit"
-            ],
-            "onChange": "insync",
-            "schedule": "0 8 * * 1-5",
-            "script": "dringend(ticket)"
-        }
-    ],
     "access": [
         {
             "name": "create",
@@ -219,6 +206,8 @@
                 "offen.genehmigt",
                 "offen.inArbeit"
             ],
+            "onChange": "insync",
+            "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
         }
     ],
