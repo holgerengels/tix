@@ -1,0 +1,364 @@
+{
+    "type": "Bewirtungsauftrag",
+    "abbreviation": "BWT",
+    "template": "{{ticket.title}} - {{ticket.date}}",
+    "fields": [
+        {
+            "name": "title",
+            "label": "Veranstaltungsname",
+            "type": "Text"
+        },
+        {
+            "name": "type",
+            "label": "Art",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "intern",
+                "extern"
+            ]
+        },
+        {
+            "name": "date",
+            "label": "Datum der Veranstaltung",
+            "type": "Date",
+            "required": true
+        },
+        {
+            "name": "numberOfPersons",
+            "label": "Personenanzahl",
+            "type": "Integer",
+            "required": true
+        },
+        {
+            "name": "room",
+            "label": "Raum der Veranstaltung",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "breakfast",
+            "label": "Verpflegung Frühstück",
+            "type": "Boolean"
+        },
+        {
+            "name": "bfDrinksKaffee",
+            "label": "Kaffee",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfDrinksWasser",
+            "label": "Wasser",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfDrinksOrangensaft",
+            "label": "Orangensaft",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfDrinksApfelsaft",
+            "label": "Apfelsaft",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfDrinksTee",
+            "label": "Tee",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfFoodBrezeln",
+            "label": "Brezeln",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfFoodKuchen",
+            "label": "Kuchen",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfFoodObst",
+            "label": "Obst",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "bfFoodSuesseStueckle",
+            "label": "Süße Stückle",
+            "type": "Boolean",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "breakfastTime",
+            "label": "Bereitstellung bis:",
+            "type": "Time",
+            "visible": "{{ticket.breakfast === true}}"
+        },
+        {
+            "name": "lunch",
+            "label": "Mittagessen",
+            "type": "Boolean"
+        },
+        {
+            "name": "lunchReservation",
+            "label": "inklusive Tischreservierung",
+            "type": "Boolean",
+            "visible": "{{ticket.lunch === true}}"
+        },
+        {
+            "name": "lunchTime",
+            "label": "Uhrzeit:",
+            "type": "Time",
+            "visible": "{{ticket.lunch === true}}"
+        },
+        {
+            "name": "afternoon",
+            "label": "Verpflegung Nachmittag",
+            "type": "Boolean"
+        },
+        {
+            "name": "afDrinksKaffee",
+            "label": "Kaffee",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afDrinksWasser",
+            "label": "Wasser",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afDrinksOrangensaft",
+            "label": "Orangensaft",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afDrinksApfelsaft",
+            "label": "Apfelsaft",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afDrinksTee",
+            "label": "Tee",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afFoodBrezeln",
+            "label": "Brezeln",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afFoodKuchen",
+            "label": "Kuchen",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afFoodObst",
+            "label": "Obst",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afFoodSuesseStueckle",
+            "label": "Süße Stückle",
+            "type": "Boolean",
+            "visible": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "afternoonTime",
+            "label": "Bereitstellung bis:",
+            "type": "Time",
+            "visible": "{{ticket.afternoon === true}}"
+        }
+    ],
+    "grid": [
+        "title title eventType .",
+        "eventDate eventDate numberOfPersons .",
+        "room room . .",
+        "badges badges badges badges",
+        "breakfast lunch afternoon .",
+        "bfDrinksKaffee lunchReservation afDrinksKaffee .",
+        "bfDrinksWasser lunchTime afDrinksWasser .",
+        "bfDrinksOrangensaft . afDrinksOrangensaft .",
+        "bfDrinksApfelsaft . afDrinksApfelsaft .",
+        "bfDrinksTee . afDrinksTee .",
+        "bfFoodBrezeln . afFoodBrezeln .",
+        "bfFoodKuchen . afFoodKuchen .",
+        "bfFoodObst . afFoodObst .",
+        "bfFoodSuesseStueckle . afFoodSuesseStueckle .",
+        "breakfastTime . afternoonTime ."
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu"
+            ],
+            "actions": [
+                {
+                    "name": "genehmigen",
+                    "groups": [
+                        "Schulleitung"
+                    ],
+                    "script": "ticket.state = 'offen.genehmigt'"
+                },
+                {
+                    "name": "ablehnen",
+                    "groups": [
+                        "Schulleitung"
+                    ],
+                    "inline": "comment",
+                    "script": "ticket.state = 'offen.abgelehnt'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.genehmigt",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "Mensateam"
+                    ],
+                    "form": "bearbeiten"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.neu",
+                "offen.genehmigt"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'geschlossen.storniert'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.erledigt",
+                "offen.abgelehnt"
+            ],
+            "actions": [
+                {
+                    "name": "ok",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "script": "ticket.state = 'geschlossen.ok'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Schulleitung",
+                "Mensateam"
+            ]
+        },
+        {
+            "name": "undo",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "Schulleitung",
+                "Mensateam",
+                "@creator"
+            ]
+        }
+    ],
+    "bots": [],
+    "forms": [
+        {
+            "name": "bearbeiten",
+            "title": "bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'offen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "ok",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "geschlossen",
+            "color": "green"
+        }
+    ]
+}

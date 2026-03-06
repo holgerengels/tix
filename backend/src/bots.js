@@ -32,6 +32,7 @@ function loadBots() {
                         exports: {},
                         // Add process if needed, or other globals
                         process: process,
+                        path: path,
                         __dirname: CONFIG_DIR,
                         setTimeout: setTimeout,
                         setInterval: setInterval,
