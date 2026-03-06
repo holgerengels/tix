@@ -135,6 +135,11 @@
     "bots": [
         {
             "name": "dringend",
+            "states": [
+                "offen.neu"
+            ],
+            "onChange": "insync",
+            "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
         }
     ],

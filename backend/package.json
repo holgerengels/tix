@@ -19,6 +19,7 @@
         "jsonwebtoken": "^9.0.2",
         "ldapjs": "^3.0.7",
         "mongoose": "^8.3.1",
+        "node-cron": "^4.2.1",
         "nodemailer": "^8.0.0",
         "otpauth": "^9.5.0",
         "tough-cookie": "^6.0.0",

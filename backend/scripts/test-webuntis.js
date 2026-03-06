@@ -1,4 +1,6 @@
 const axios = require('axios');
+const { wrapper } = require('axios-cookiejar-support');
+const { CookieJar } = require('tough-cookie');
 const otpauth = require('otpauth');
 const fs = require('fs');
 const path = require('path');
@@ -50,7 +52,8 @@ if (proxyUrl) {
 }
 console.log("--------------------------------------------------");
 
-const client = axios.create(axiosConfig);
+const jar = new CookieJar();
+const client = wrapper(axios.create({ ...axiosConfig, jar }));
 
 async function testWebuntis() {
     try {
@@ -58,7 +61,7 @@ async function testWebuntis() {
         console.log(`1. Hole CSRF-Token von ${webuntis.url}index.do ...`);
         const indexRes = await client.get(`${webuntis.url}index.do`);
         const csrfMatch = indexRes.data.match(/"csrfToken":"([^"]+)"/);
-        const csrfToken = csrfMatch ? csrfMatch[1] : null;
+        let csrfToken = csrfMatch ? csrfMatch[1] : null;
 
         if (!csrfToken) {
             console.warn("⚠️ Konnte CSRF-Token nicht extrahieren (HTTP " + indexRes.status + ")");
@@ -112,6 +115,15 @@ async function testWebuntis() {
             console.error("❌ 403 Forbidden beim Login!");
         } else if (loginRes.status >= 200 && loginRes.status < 400) {
             console.log("✅ Login-Anfrage war erfolgreich (Redirect/OK)!");
+
+            // Try to extract a new CSRF token if one is present in the response body
+            if (typeof loginRes.data === 'string') {
+                const newCsrfMatch = loginRes.data.match(/"csrfToken":"([^"]+)"/);
+                if (newCsrfMatch && newCsrfMatch[1] && newCsrfMatch[1] !== csrfToken) {
+                    console.log(`✅ Neues CSRF-Token nach Login erhalten: ${newCsrfMatch[1]}`);
+                    csrfToken = newCsrfMatch[1];
+                }
+            }
         }
 
         console.log("\n4. Versuche pageconfig abzurufen (als Raum-Test)...");

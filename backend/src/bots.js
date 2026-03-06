@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const cron = require('node-cron');
 const Ticket = require('./models/ticket');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
@@ -73,6 +74,8 @@ function loadBots() {
                                     name: botConfig.name,
                                     type: config.type,
                                     states: botConfig.states || [],
+                                    onChange: botConfig.onChange || 'insync',
+                                    schedule: botConfig.schedule || null,
                                     run: runFn
                                 });
                                 console.log(`Loaded bot: ${botConfig.name} for type ${config.type} with script: ${botConfig.script}`);
@@ -124,19 +127,78 @@ async function runBots() {
 async function runBotsForTicket(ticket) {
     const matchingBots = BOTS.filter(bot => bot.type === ticket.type && bot.states.includes(ticket.state));
 
-    for (const bot of matchingBots) {
+    const syncBots = matchingBots.filter(bot => bot.onChange === 'insync');
+    const asyncBots = matchingBots.filter(bot => bot.onChange === 'async');
+
+    // Run synchronous bots sequentially and await them
+    for (const bot of syncBots) {
         try {
-            console.log(`Bot ${bot.name} processing ticket ${ticket.id}`);
+            console.log(`Bot ${bot.name} (insync) processing ticket ${ticket.id}`);
             await bot.run(ticket);
 
             if (ticket.isModified()) {
                 await ticket.save();
-                console.log(`Ticket ${ticket.id} updated by bot ${bot.name}`);
+                console.log(`Ticket ${ticket.id} updated by sync bot ${bot.name}`);
             }
         } catch (err) {
-            console.error(`Error in bot ${bot.name} for ticket ${ticket.id}:`, err);
+            console.error(`Error in sync bot ${bot.name} for ticket ${ticket.id}:`, err);
         }
     }
+
+    // Run asynchronous bots in the background
+    asyncBots.forEach(bot => {
+        (async () => {
+            try {
+                // Fetch a fresh ticket instance for the async bot to avoid version conflicts
+                const asyncTicket = await Ticket.findById(ticket._id);
+                if (!asyncTicket) return;
+
+                console.log(`Bot ${bot.name} (async) processing ticket ${asyncTicket.id}`);
+                await bot.run(asyncTicket);
+
+                if (asyncTicket.isModified()) {
+                    await asyncTicket.save();
+                    console.log(`Ticket ${asyncTicket.id} updated by async bot ${bot.name}`);
+                }
+            } catch (err) {
+                console.error(`Error in async bot ${bot.name} for ticket ${ticket.id}:`, err);
+            }
+        })();
+    });
 }
 
-module.exports = { loadBots, runBots, runBotsForTicket };
+function scheduleBots() {
+    console.log('[Bots] Initializing bot schedules');
+    BOTS.forEach(bot => {
+        if (bot.schedule) {
+            if (cron.validate(bot.schedule)) {
+                console.log(`[Bots] Scheduling bot ${bot.name} with cron: ${bot.schedule}`);
+                cron.schedule(bot.schedule, async () => {
+                    console.log(`[Bots] Running scheduled bot ${bot.name}`);
+                    try {
+                        const tickets = await Ticket.find({
+                            type: bot.type,
+                            state: { $in: bot.states }
+                        });
+                        for (const t of tickets) {
+                            try {
+                                await bot.run(t);
+                                if (t.isModified()) {
+                                    await t.save();
+                                }
+                            } catch (err) {
+                                console.error(`Error in scheduled bot ${bot.name} for ticket ${t.id}:`, err);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`Error querying tickets for scheduled bot ${bot.name}:`, err);
+                    }
+                });
+            } else {
+                console.error(`[Bots] Invalid cron schedule for bot ${bot.name}: ${bot.schedule}`);
+            }
+        }
+    });
+}
+
+module.exports = { loadBots, runBots, runBotsForTicket, scheduleBots };

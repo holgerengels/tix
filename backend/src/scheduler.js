@@ -1,6 +1,7 @@
-const { loadBots, runBots } = require('./bots');
+const { loadBots, runBots, scheduleBots } = require('./bots');
 const { runSubscriptionCheck } = require('./subscriptionWorker');
 const { checkUnpublishedLogs } = require('./publisher');
+const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,33 +17,27 @@ try {
     console.error(`[Scheduler] Error reading settings file: ${err.message}`);
 }
 
-// Default intervals if not specified in config
-const BOTS_INTERVAL = (settings.scheduler && settings.scheduler.botsInterval)
-    ? settings.scheduler.botsInterval * 1000 : 60 * 1000; // 60s
-
-const SUBSCRIPTION_INTERVAL = (settings.scheduler && settings.scheduler.subscriptionInterval)
-    ? settings.scheduler.subscriptionInterval * 1000 : 60 * 60 * 1000; // 1h
+const SUBSCRIPTION_SCHEDULE = (settings.scheduler && settings.scheduler.subscriptionSchedule)
+    ? settings.scheduler.subscriptionSchedule : '0 * * * *'; // default to top of every hour
 
 const PUBLISHER_INTERVAL = (settings.scheduler && settings.scheduler.publisherInterval)
     ? settings.scheduler.publisherInterval * 1000 : 60 * 1000; // 60s
 
-async function scheduleBots() {
-    try {
-        await runBots();
-    } catch (err) {
-        console.error('[Scheduler] Error running bots:', err);
-    } finally {
-        setTimeout(scheduleBots, BOTS_INTERVAL);
-    }
-}
+// We no longer loop bots globally here; they have their own cron schedules in `bots.js`.
 
-async function scheduleSubscriptions() {
-    try {
-        await runSubscriptionCheck();
-    } catch (err) {
-        console.error('[Scheduler] Error running subscription check:', err);
-    } finally {
-        setTimeout(scheduleSubscriptions, SUBSCRIPTION_INTERVAL);
+function scheduleSubscriptions() {
+    if (cron.validate(SUBSCRIPTION_SCHEDULE)) {
+        console.log(`[Scheduler] Scheduling subscriptions with cron: ${SUBSCRIPTION_SCHEDULE}`);
+        cron.schedule(SUBSCRIPTION_SCHEDULE, async () => {
+            console.log('[Scheduler] Running scheduled subscription check');
+            try {
+                await runSubscriptionCheck();
+            } catch (err) {
+                console.error('[Scheduler] Error running subscription check:', err);
+            }
+        });
+    } else {
+        console.error(`[Scheduler] Invalid cron schedule for subscriptions: ${SUBSCRIPTION_SCHEDULE}`);
     }
 }
 
@@ -65,16 +60,15 @@ async function schedulePublisher() {
 
 function startScheduler() {
     console.log(`[Scheduler] Starting central background scheduler...`);
-    console.log(`[Scheduler] Bots interval: ${BOTS_INTERVAL / 1000}s`);
-    console.log(`[Scheduler] Subscriptions interval: ${SUBSCRIPTION_INTERVAL / 1000}s`);
+    console.log(`[Scheduler] Subscriptions schedule: ${SUBSCRIPTION_SCHEDULE}`);
     console.log(`[Scheduler] Publisher interval (max): ${PUBLISHER_INTERVAL / 1000}s`);
 
-    // Initialize standard dependencies like loadBots
+    // Initialize logic and load configs
     loadBots();
 
-    // Start the loops (wait a few seconds before first run to let server settle)
-    setTimeout(scheduleBots, 5000);
-    setTimeout(scheduleSubscriptions, 6000);
+    // Start schedules
+    scheduleBots();
+    scheduleSubscriptions();
     setTimeout(schedulePublisher, 7000);
 }
 

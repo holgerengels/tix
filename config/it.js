@@ -1,7 +1,15 @@
 const axios = require('axios');
+const { wrapper } = require('axios-cookiejar-support');
+const { CookieJar } = require('tough-cookie');
 const otpauth = require('otpauth');
 const fs = require('fs');
 const path = require('path');
+
+// We need a persistent jar per ticket fetch to avoid session mixups
+const createClient = () => {
+  const jar = new CookieJar();
+  return wrapper(axios.create({ jar, validateStatus: () => true }));
+};
 
 function dringend(ticket) {
   if (ticket.state === 'offen.neu' && ticket.category === 'Medien') {
@@ -39,14 +47,22 @@ async function fetchblocks(roomName) {
   const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
   const { url, login, user, password, secret } = settings.webuntis;
 
-  await dologin(otpauth, secret, url, login, user, password);
-  const csrfToken = await fetchtoken(url);
+  const client = createClient();
 
-  const room = await fetchroom(url, csrfToken, roomName);
+  // 1. Initial Token from index.do
+  let csrfToken = await fetchtoken(client, url);
+
+  // 2. Perform Login and optionally get the rotated token
+  const newCsrf = await dologin(client, otpauth, secret, url, login, user, password);
+  if (newCsrf) {
+    csrfToken = newCsrf; // Update with the rotated token if given
+  }
+
+  const room = await fetchroom(client, url, csrfToken, roomName);
   if (!room) {
     return "Raum nicht gefunden";
   }
-  const periods = await fetchtimetable(url, room, csrfToken);
+  const periods = await fetchtimetable(client, url, room, csrfToken);
   if (!periods || periods.length === 0) {
     return [{ status: 'free', start: 750, end: 1505 }];
   }
@@ -98,8 +114,8 @@ async function fetchblocks(roomName) {
   return blocks;
 }
 
-async function time(url) {
-  const timeRes = await axios.head(url, { maxRedirects: 0, validateStatus: () => true });
+async function time(client, url) {
+  const timeRes = await client.head(url, { maxRedirects: 0 });
   let serverTimeMs = Date.now();
   if (timeRes.headers['date']) {
     serverTimeMs = new Date(timeRes.headers['date']).getTime();
@@ -108,7 +124,7 @@ async function time(url) {
   return serverTimeMs;
 }
 
-async function dologin(otpauth, secret, url, login, user, password) {
+async function dologin(client, otpauth, secret, url, login, user, password) {
   let totp = new otpauth.TOTP({
     issuer: "WebUntis",
     label: "test",
@@ -118,23 +134,33 @@ async function dologin(otpauth, secret, url, login, user, password) {
     secret: otpauth.Secret.fromBase32(secret)
   });
 
-  let serverTimeMs = await time(url);
+  let serverTimeMs = await time(client, url);
   const token = totp.generate({ timestamp: serverTimeMs });
   const loginUrl = url + login;
-  const params = { 'j_username': user, 'j_password': password, 'token': token };
+  const params = new URLSearchParams();
+  params.append('j_username', user);
+  params.append('j_password', password);
+  params.append('token', token);
 
-  let resp = await axios.post(loginUrl, params, {
+  let resp = await client.post(loginUrl, params.toString(), {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }
   });
-  console.log("login");
-  console.log(resp);
+  console.log("login status:", resp.status);
+
+  if (typeof resp.data === 'string') {
+    const newCsrfMatch = resp.data.match(/"csrfToken":"([^"]+)"/);
+    if (newCsrfMatch && newCsrfMatch[1]) {
+      return newCsrfMatch[1];
+    }
+  }
+  return null;
 }
 
-async function fetchroom(url, csrfToken, roomName) {
+async function fetchroom(client, url, csrfToken, roomName) {
   const pageConfigUrl = `${url}api/public/timetable/weekly/pageconfig?type=4`;
-  const pRes = await axios.get(pageConfigUrl, {
+  const pRes = await client.get(pageConfigUrl, {
     headers: {
       'Accept': 'application/json',
       'Referer': `${url}index.do`,
@@ -142,26 +168,29 @@ async function fetchroom(url, csrfToken, roomName) {
       'X-CSRF-TOKEN': csrfToken
     }
   });
-  console.log("timetable")
-  console.log(pRes);
+
+  if (!pRes.data || !pRes.data.data) {
+    console.error("fetchroom HTTP Status:", pRes.status);
+    return null;
+  }
 
   const elements = pRes.data.data.elements;
   const room = elements.find(e => e.type === 4 && e.name === roomName);
   return room;
 }
 
-async function fetchtoken(url) {
-  const indexRes = await axios.get(`${url}index.do`);
+async function fetchtoken(client, url) {
+  const indexRes = await client.get(`${url}index.do`);
   const csrfMatch = indexRes.data.match(/"csrfToken":"([^"]+)"/);
   const csrfToken = csrfMatch ? csrfMatch[1] : null;
   console.log("token: " + csrfToken);
   return csrfToken;
 }
 
-async function fetchtimetable(url, room, csrfToken) {
+async function fetchtimetable(client, url, room, csrfToken) {
   const dateStr = new Date().toISOString().split('T')[0];
   const timetableUrl = `${url}api/public/timetable/weekly/data?elementType=4&elementId=${room.id}&date=${dateStr}&formatId=2`;
-  const ttRes = await axios.get(timetableUrl, {
+  const ttRes = await client.get(timetableUrl, {
     headers: {
       'Accept': 'application/json',
       'Referer': `${url}index.do`,
@@ -169,8 +198,11 @@ async function fetchtimetable(url, room, csrfToken) {
       'X-CSRF-TOKEN': csrfToken
     }
   });
-  console.log("timetable");
-  console.log(ttRes);
+
+  if (!ttRes.data || !ttRes.data.data) {
+    console.error("fetchtimetable HTTP Status:", ttRes.status);
+    return [];
+  }
 
   const periods = ttRes.data.data.result.data.elementPeriods[room.id];
   return periods;
