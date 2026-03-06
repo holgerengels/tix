@@ -1,14 +1,64 @@
 const axios = require('axios');
-const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
-const otpauth = require('otpauth');
-const fs = require('fs');
-const path = require('path');
+
+let HttpsProxyAgent;
+try {
+  // Only use if available, mimicking the test script
+  HttpsProxyAgent = require('https-proxy-agent').HttpsProxyAgent;
+} catch (e) { }
+
+const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+let proxyConfig = { proxy: false };
+
+if (proxyUrl && HttpsProxyAgent) {
+  try {
+    proxyConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
+  } catch (e) {
+    console.error("WebUntis Proxy-Error in it.js:", e.message);
+  }
+}
 
 // We need a persistent jar per ticket fetch to avoid session mixups
 const createClient = () => {
   const jar = new CookieJar();
-  return wrapper(axios.create({ jar, validateStatus: () => true }));
+  const client = axios.create({ ...proxyConfig, validateStatus: () => true });
+
+  client.interceptors.request.use(async config => {
+    try {
+      const urlToUse = config.baseURL && !config.url.startsWith('http')
+        ? config.baseURL + config.url
+        : config.url;
+
+      const cookie = await jar.getCookieString(urlToUse);
+      if (cookie) {
+        config.headers = config.headers || {};
+        config.headers.Cookie = cookie;
+      }
+    } catch (err) {
+      console.error("CookieJar get error in it.js:", err.message);
+    }
+    return config;
+  });
+
+  client.interceptors.response.use(async response => {
+    try {
+      const setCookieHeaders = response.headers['set-cookie'];
+      if (setCookieHeaders) {
+        const urlToUse = response.config.baseURL && !response.config.url.startsWith('http')
+          ? response.config.baseURL + response.config.url
+          : response.config.url;
+
+        for (const cookie of setCookieHeaders) {
+          await jar.setCookie(cookie, urlToUse);
+        }
+      }
+    } catch (err) {
+      console.error("CookieJar set error in it.js:", err.message);
+    }
+    return response;
+  });
+
+  return client;
 };
 
 function dringend(ticket) {
