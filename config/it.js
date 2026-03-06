@@ -41,8 +41,15 @@ async function raum(ticket) {
         period: 30,
         secret: otpauth.Secret.fromBase32(secret)
       });
-      const token = totp.generate();
 
+      // Fetch server time to prevent TOTP desync due to VM clock drift
+      const timeRes = await client.head(url, { maxRedirects: 0, validateStatus: () => true });
+      let serverTimeMs = Date.now();
+      if (timeRes.headers['date']) {
+        serverTimeMs = new Date(timeRes.headers['date']).getTime();
+        console.log(`[WebUntis] Server time: ${new Date(serverTimeMs).toISOString()} | Local time: ${new Date().toISOString()}`);
+      }
+      const token = totp.generate({ timestamp: serverTimeMs });
       const loginUrl = url + login;
       const params = { 'j_username': user, 'j_password': password, 'token': token };
 
