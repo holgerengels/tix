@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
 const otpauth = require('otpauth');
 const fs = require('fs');
@@ -53,7 +52,43 @@ if (proxyUrl) {
 console.log("--------------------------------------------------");
 
 const jar = new CookieJar();
-const client = wrapper(axios.create({ ...axiosConfig, jar }));
+const client = axios.create(axiosConfig);
+
+client.interceptors.request.use(async config => {
+    try {
+        // Fallback for full URL if baseURL is used, although script uses full URL mostly
+        const urlToUse = config.baseURL && !config.url.startsWith('http')
+            ? config.baseURL + config.url
+            : config.url;
+
+        const cookie = await jar.getCookieString(urlToUse);
+        if (cookie) {
+            config.headers = config.headers || {};
+            config.headers.Cookie = cookie;
+        }
+    } catch (err) {
+        console.error("CookieJar get error:", err.message);
+    }
+    return config;
+});
+
+client.interceptors.response.use(async response => {
+    try {
+        const setCookieHeaders = response.headers['set-cookie'];
+        if (setCookieHeaders) {
+            const urlToUse = response.config.baseURL && !response.config.url.startsWith('http')
+                ? response.config.baseURL + response.config.url
+                : response.config.url;
+
+            for (const cookie of setCookieHeaders) {
+                await jar.setCookie(cookie, urlToUse);
+            }
+        }
+    } catch (err) {
+        console.error("CookieJar set error:", err.message);
+    }
+    return response;
+});
 
 async function testWebuntis() {
     try {
