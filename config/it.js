@@ -31,7 +31,20 @@ async function raum(ticket) {
       const { url, login, user, password, secret } = settings.webuntis;
 
       const jar = new CookieJar();
-      const client = wrapper(axios.create({ jar }));
+
+      const axiosConfig = {
+        jar,
+        withCredentials: true,
+        maxRedirects: 5 // follow-redirects with cookiejar should handle this, but explicit is good
+      };
+      const proxyUrl = process.env.https_proxy || process.env.http_proxy || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+      if (proxyUrl) {
+        const { HttpsProxyAgent } = require('https-proxy-agent');
+        axiosConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
+        axiosConfig.proxy = false; // Disable axios default proxy handling to avoid conflicts
+      }
+
+      const client = wrapper(axios.create(axiosConfig));
 
       let totp = new otpauth.TOTP({
         issuer: "WebUntis",
@@ -41,18 +54,38 @@ async function raum(ticket) {
         period: 30,
         secret: otpauth.Secret.fromBase32(secret)
       });
-      const token = totp.generate();
+
+      // Fetch server time to prevent TOTP desync due to VM clock drift
+      const timeRes = await client.head(url, { maxRedirects: 0, validateStatus: () => true });
+      let serverTimeMs = Date.now();
+      if (timeRes.headers['date']) {
+        serverTimeMs = new Date(timeRes.headers['date']).getTime();
+        console.log(`[WebUntis] Server time: ${new Date(serverTimeMs).toISOString()} | Local time: ${new Date().toISOString()}`);
+      }
+      const token = totp.generate({ timestamp: serverTimeMs });
 
       const loginUrl = url + login;
       const params = { 'j_username': user, 'j_password': password, 'token': token };
 
-      await client.post(loginUrl, params, {
+      const loginRes = await client.post(loginUrl, params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        },
+        maxRedirects: 0, // Catch redirect to save cookies properly
+        validateStatus: status => status >= 200 && status < 400
       });
 
-      const indexRes = await client.get(`${url}index.do`);
+      // Manually extract cookies to ensure they survive the proxy redirect
+      let rawCookies = [];
+      if (loginRes.headers['set-cookie']) {
+        rawCookies = Array.isArray(loginRes.headers['set-cookie']) ? loginRes.headers['set-cookie'] : [loginRes.headers['set-cookie']];
+      }
+      const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
+
+      const indexRes = await client.get(`${url}index.do`, {
+        headers: { ...(cookieStr ? { 'Cookie': cookieStr } : {}) }
+      });
+
       const csrfMatch = indexRes.data.match(/"csrfToken":"([^"]+)"/);
       const csrfToken = csrfMatch ? csrfMatch[1] : null;
 
@@ -62,7 +95,8 @@ async function raum(ticket) {
           'Accept': 'application/json',
           'Referer': `${url}index.do`,
           'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': csrfToken
+          'X-CSRF-TOKEN': csrfToken,
+          ...(cookieStr ? { 'Cookie': cookieStr } : {})
         }
       });
 
@@ -80,7 +114,8 @@ async function raum(ticket) {
           'Accept': 'application/json',
           'Referer': `${url}index.do`,
           'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': csrfToken
+          'X-CSRF-TOKEN': csrfToken,
+          ...(cookieStr ? { 'Cookie': cookieStr } : {})
         }
       });
 
@@ -136,8 +171,9 @@ async function raum(ticket) {
 
       ticket.set('raumbelegung', blocks);
 
-    } catch (e) {
-      console.error("Fehler beim Laden der Raumbelegung:", e);
+    } catch (error) {
+      console.error('Bot raumbelegung fetch error:', error.response?.data || error.message);
+      ticket.raumbelegung = "Fehler beim Laden (403/Forbidden)";
       ticket.set('raumbelegung', []);
     }
   }
