@@ -84,9 +84,8 @@ const evaluatedFields = computed(() => {
 });
 
 const visibleFields = computed(() => {
-    // Rely on computed evaluated fields
+    // Rely on cached evaluated fields
     const visible = evaluatedFields.value.filter(f => f.visible !== false);
-    console.log("evaluatedFields", evaluatedFields.value, "visibleFields", visible);
     return visible;
 });
 

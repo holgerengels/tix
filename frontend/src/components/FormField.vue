@@ -141,7 +141,7 @@
             <span slot="reference" class="tick">11</span>
         </wa-slider>
 
-        <!-- Boolean -->
+      <!-- Boolean -->
       <wa-checkbox
         v-else-if="field.type === 'Boolean'"
         :checked="modelValue === true"
@@ -149,6 +149,7 @@
         :required="field.required === true"
         :hint="field.hint"
         @wa-change="updateValue($event.target.checked)"
+        @change="updateValue($event.target.checked)"
       >{{ field.label }}</wa-checkbox>
 
       <!-- Integer -->
@@ -285,19 +286,24 @@ const displayUsers = computed(() => {
     return displayUsers;
 });
 
+const userGroupsKey = computed(() => {
+    if (props.field.type !== 'User') return null;
+    return (props.field.groups || []).join(',');
+});
+
 // Fetch users if needed when field definition changes or mostly on mount
-watch(() => props.field, () => {
+watch(userGroupsKey, () => {
     if (props.field.type === 'User') {
         fetchUsers();
     }
 }, { immediate: true });
 
 // Initialize Default Values for Sliders if empty
-watch(() => props.field, (newField) => {
+watch(() => props.field.type, (newType) => {
     if (props.modelValue == null) {
-        if (newField.type === 'Lesson') {
+        if (newType === 'Lesson') {
             updateValue(1);
-        } else if (newField.type === 'Lessons') {
+        } else if (newType === 'Lessons') {
             updateValue({ min: 1, max: 11 });
         }
     }

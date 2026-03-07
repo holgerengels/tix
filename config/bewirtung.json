@@ -38,7 +38,7 @@
         },
         {
             "name": "breakfast",
-            "label": "Verpflegung Frühstück",
+            "label": "Frühstück",
             "type": "Boolean"
         },
         {
@@ -108,7 +108,7 @@
         },
         {
             "name": "lunchReservation",
-            "label": "inklusive Tischreservierung",
+            "label": "Tischreservierung",
             "type": "Boolean",
             "visible": "{{ticket.lunch === true}}"
         },
@@ -120,7 +120,7 @@
         },
         {
             "name": "afternoon",
-            "label": "Verpflegung Nachmittag",
+            "label": "Nachmittag",
             "type": "Boolean"
         },
         {
@@ -185,21 +185,22 @@
         }
     ],
     "grid": [
-        "title title title type",
+        "title title type .",
         "date date numberOfPersons .",
         "room room . .",
-        "badges badges badges badges",
+        "badges badges badges .",
         "breakfast lunch afternoon .",
         "bfDrinksKaffee lunchReservation afDrinksKaffee .",
         "bfDrinksWasser lunchTime afDrinksWasser .",
-        "bfDrinksOrangensaft . afDrinksOrangensaft .",
+        "bfDrinksOrangensaft lunchTime afDrinksOrangensaft .",
         "bfDrinksApfelsaft . afDrinksApfelsaft .",
         "bfDrinksTee . afDrinksTee .",
         "bfFoodBrezeln . afFoodBrezeln .",
         "bfFoodKuchen . afFoodKuchen .",
         "bfFoodObst . afFoodObst .",
         "bfFoodSuesseStueckle . afFoodSuesseStueckle .",
-        "breakfastTime . afternoonTime ."
+        "breakfastTime . afternoonTime .",
+        "description description description ."
     ],
     "workflow": [
         {

@@ -46,9 +46,6 @@ if (proxyUrl) {
 let transporter = null;
 if (settings.publisher && settings.publisher.mail) {
     let mailOptions = settings.publisher.mail;
-    if (proxyUrl) {
-        mailOptions = { ...mailOptions, proxy: proxyUrl };
-    }
     transporter = nodemailer.createTransport(mailOptions);
 } else {
     console.warn('[Publisher] Mail configuration missing in settings.json');
@@ -174,8 +171,9 @@ async function checkUnpublishedLogs() {
                         for (const sub of subs) {
                             try {
                                 const pushOptions = {};
-                                if (proxyUrl && HttpsProxyAgent) {
-                                    pushOptions.agent = new HttpsProxyAgent(proxyUrl);
+                                // web-push expects 'proxy' as a string, it instantiates HttpsProxyAgent internally
+                                if (proxyUrl) {
+                                    pushOptions.proxy = proxyUrl;
                                 }
                                 await webpush.sendNotification(sub.subscription, payload, pushOptions);
                             } catch (error) {

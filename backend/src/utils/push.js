@@ -2,6 +2,8 @@ const webpush = require('web-push');
 const fs = require('fs');
 const path = require('path');
 
+// Use the same config path resolution as other services
+// __dirname is backend/src/utils
 const vapidPath = path.join(__dirname, '../../../config/vapid.json');
 let vapidKeys = {};
 

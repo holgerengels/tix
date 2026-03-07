@@ -420,6 +420,10 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                             console: console,
                             module: {},
                             exports: {},
+                            process: process,
+                            path: path,
+                            fs: fs,
+                            otpauth: require('otpauth'),
                             evaluateTemplate: require('./validation').evaluateTemplate,
                             currentWorkflow: wf
                         };

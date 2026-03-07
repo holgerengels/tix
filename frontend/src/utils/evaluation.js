@@ -2,14 +2,15 @@ import { format, formatDistance, addDays, subDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const createSafeEvaluator = (expr, ticketData) => {
-    const keys = Object.keys(ticketData || {});
-    const values = Object.values(ticketData || {});
-    const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
-    const validValues = validKeys.map(k => values[keys.indexOf(k)]);
+    // We cannot just use Object.keys(ticketData) because Vue needs to track GET requests
+    // for specific properties inside the expression, even if they don't exist on the object yet.
+    // By passing 'ticket' as the proxy itself, evaluating `ticket.breakfast` will trigger
+    // Vue's reactive getter for 'breakfast' and correctly register the dependency!
 
-    // Always include 'ticket' for backward compatibility
-    validKeys.push('ticket');
-    validValues.push(ticketData || {});
+    // Wait, some expressions use variables directly without 'ticket.', so we must still inject them.
+    // But to preserve reactivity on missing keys, we can use a `with (ticketData)` block 
+    // inside the evaluator function! A `with` statement will intercept all variable reads 
+    // and route them through the proxy getter.
 
     // Inject helpers
     const helpers = {
@@ -20,12 +21,18 @@ const createSafeEvaluator = (expr, ticketData) => {
         now: new Date()
     };
 
-    for (const [key, val] of Object.entries(helpers)) {
-        validKeys.push(key);
-        validValues.push(val);
-    }
+    const validKeys = ['ticket', 'helpers'];
+    const validValues = [ticketData || {}, helpers];
 
-    const func = new Function(...validKeys, `return ${expr}`);
+    const funcBody = `
+        with(helpers) {
+            with(ticket) {
+                return ${expr};
+            }
+        }
+    `;
+
+    const func = new Function(...validKeys, funcBody);
     return () => func(...validValues);
 };
 
