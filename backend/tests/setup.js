@@ -13,7 +13,7 @@ const getTokens = () => {
     return {
         admin: generateToken('admin', ['Administration', 'Schulleitung', 'Stundenplanung']),
         lehrer1: generateToken('lehrer1', ['Lehrkräfte']),
-        lehrer2: generateToken('lehrer2', ['Lehrkräfte']),
+        lehrer2: generateToken('lehrer2', ['Lehrkräfte', 'Mensateam']),
         schulleiter: generateToken('schulleiter', ['Schulleitung', 'Lehrkräfte']),
         stundenplaner: generateToken('stundenplaner', ['Stundenplanung', 'Lehrkräfte']),
         hausmeister: generateToken('hausmeister', ['Hausmeister']),

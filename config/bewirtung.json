@@ -185,10 +185,10 @@
         }
     ],
     "grid": [
-        "title title type .",
-        "date date numberOfPersons .",
+        "title title title title",
+        "date date numberOfPersons type",
         "room room . .",
-        "badges badges badges .",
+        "badges badges badges badges",
         "breakfast lunch afternoon .",
         "bfDrinksKaffee lunchReservation afDrinksKaffee .",
         "bfDrinksWasser lunchTime afDrinksWasser .",
@@ -302,7 +302,15 @@
             ]
         }
     ],
-    "bots": [],
+    "bots": [
+        {
+            "name": "automatisch_genehmigen",
+            "states": [
+                "offen.neu"
+            ],
+            "script": "automatisch_genehmigen(ticket)"
+        }
+    ],
     "forms": [
         {
             "name": "bearbeiten",

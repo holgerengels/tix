@@ -18,7 +18,7 @@ console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 const MOCK_USERS = [
     { username: 'admin', password: 'password', groups: ['Administration', 'Schulleitung', 'Stundenplanung'] },
     { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
-    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte'] },
+    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte', 'Mensateam'] },
     { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },
     { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'] },
     { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'] },

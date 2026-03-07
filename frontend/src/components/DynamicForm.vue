@@ -144,8 +144,15 @@ const gridStyle = computed(() => {
         
         let areas = props.grid.filter(rowStr => {
             const tokens = rowStr.split(/\s+/);
-            // Check if any token is a visible field OR not a defined field
-            return tokens.some(token => visibleNames.has(token) || !allFieldNames.has(token));
+            const fieldsInRow = tokens.filter(token => allFieldNames.has(token));
+            
+            if (fieldsInRow.length > 0) {
+                // If row contains defined fields, keep it ONLY if at least one is visible
+                return fieldsInRow.some(fieldName => visibleNames.has(fieldName));
+            } else {
+                // If row contains NO defined fields (e.g. only '.'), preserve it as a fixed spacer
+                return true; 
+            }
         });
         
         // Find fields not present in the original grid
