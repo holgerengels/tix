@@ -2,7 +2,7 @@ const auth = require('./auth');
 const workflow = require('./workflow');
 
 async function automatisch_genehmigen(ticket) {
-  if (ticket.state) return;
+  if (ticket.state !== 'offen.neu') return;
 
   // Get creator's groups
   const users = await auth.getUsers();
