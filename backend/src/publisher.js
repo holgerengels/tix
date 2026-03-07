@@ -32,10 +32,24 @@ if (!BASE_URL || !NEXTCLOUD_URL || !NEXTCLOUD_AUTH.username || !NEXTCLOUD_AUTH.p
 
 const nodemailer = require('nodemailer');
 
+const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+let HttpsProxyAgent;
+if (proxyUrl) {
+    try {
+        HttpsProxyAgent = require('https-proxy-agent').HttpsProxyAgent;
+    } catch (e) {
+        console.warn('[Publisher] https-proxy-agent not installed, web-push proxy will be ignored');
+    }
+}
+
 // Mail Transporter Setup
 let transporter = null;
 if (settings.publisher && settings.publisher.mail) {
-    transporter = nodemailer.createTransport(settings.publisher.mail);
+    let mailOptions = settings.publisher.mail;
+    if (proxyUrl) {
+        mailOptions = { ...mailOptions, proxy: proxyUrl };
+    }
+    transporter = nodemailer.createTransport(mailOptions);
 } else {
     console.warn('[Publisher] Mail configuration missing in settings.json');
 }
@@ -159,7 +173,11 @@ async function checkUnpublishedLogs() {
 
                         for (const sub of subs) {
                             try {
-                                await webpush.sendNotification(sub.subscription, payload);
+                                const pushOptions = {};
+                                if (proxyUrl && HttpsProxyAgent) {
+                                    pushOptions.agent = new HttpsProxyAgent(proxyUrl);
+                                }
+                                await webpush.sendNotification(sub.subscription, payload, pushOptions);
                             } catch (error) {
                                 if (error.statusCode === 410 || error.statusCode === 404) {
                                     // Subscription has expired or is no longer valid

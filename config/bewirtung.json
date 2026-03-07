@@ -185,8 +185,8 @@
         }
     ],
     "grid": [
-        "title title eventType .",
-        "eventDate eventDate numberOfPersons .",
+        "title title title type",
+        "date date numberOfPersons .",
         "room room . .",
         "badges badges badges badges",
         "breakfast lunch afternoon .",
