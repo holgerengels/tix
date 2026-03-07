@@ -187,12 +187,13 @@ async function dologin(client, otpauth, secret, url, login, user, password) {
   let serverTimeMs = await time(client, url);
   const token = totp.generate({ timestamp: serverTimeMs });
   const loginUrl = url + login;
-  const params = new URLSearchParams();
-  params.append('j_username', user);
-  params.append('j_password', password);
-  params.append('token', token);
+  const params = {
+    j_username: user,
+    j_password: password,
+    token: token
+  };
 
-  let resp = await client.post(loginUrl, params.toString(), {
+  let resp = await client.post(loginUrl, params, {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
     }

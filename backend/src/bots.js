@@ -33,6 +33,8 @@ function loadBots() {
                         // Add process if needed, or other globals
                         process: process,
                         path: path,
+                        fs: fs,
+                        otpauth: require('otpauth'),
                         __dirname: CONFIG_DIR,
                         setTimeout: setTimeout,
                         setInterval: setInterval,
