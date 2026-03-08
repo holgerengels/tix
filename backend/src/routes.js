@@ -875,8 +875,20 @@ router.get('/caldav/availability', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Date parameter is required (YYYY-MM-DD)' });
         }
 
+        const fs = require('fs');
+        const path = require('path');
+        const rrConfigPath = path.join(__dirname, '../../config/raumreservierung.json');
+        let allowedRooms = null;
+        if (fs.existsSync(rrConfigPath)) {
+            const rrConfig = JSON.parse(fs.readFileSync(rrConfigPath, 'utf8'));
+            const terminField = rrConfig.fields.find(f => f.type === 'Termin');
+            if (terminField && terminField.rooms) {
+                allowedRooms = terminField.rooms;
+            }
+        }
+
         const { getAllAvailability } = require('./caldav');
-        const availability = await getAllAvailability(date);
+        const availability = await getAllAvailability(date, allowedRooms);
         res.json(availability);
     } catch (error) {
         console.error('[API] Error fetching CalDAV availability:', error);

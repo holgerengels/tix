@@ -60,7 +60,7 @@ function getXmlKey(obj, baseKey) {
  * Fetches all available calendars (rooms) from the CalDAV server.
  * Returns an array of objects: { name: "Raum 101", href: "/path/to/calendar/" }
  */
-async function getCalendars() {
+async function getCalendars(allowedRooms = null) {
     const config = getCaldavSettings();
     if (!config) return [];
 
@@ -112,7 +112,9 @@ async function getCalendars() {
                     const href = getXmlKey(resp, 'href');
                     const name = getXmlKey(prop, 'displayname') || href.split('/').filter(Boolean).pop();
                     // Some calendars are not rooms (like Personal Calendar)
-                    calendars.push({ name, href });
+                    if (!allowedRooms || allowedRooms.includes(name)) {
+                        calendars.push({ name, href });
+                    }
                 }
             }
         }
@@ -266,8 +268,8 @@ async function fetchCalendarEvents(calendarHref, targetDateStr) {
  * Fetches availability for all calendars on a specific date.
  * Returns: { "Raum 101": [{ start: '0900', end: '1000', status: 'occupied' }, ...], ... }
  */
-async function getAllAvailability(dateStr) {
-    const calendars = await getCalendars();
+async function getAllAvailability(dateStr, allowedRooms = null) {
+    const calendars = await getCalendars(allowedRooms);
     const availability = {};
 
     // Fetch sequentially to avoid triggering concurrent connection limits on SOGo/Nginx

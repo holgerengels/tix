@@ -2,16 +2,27 @@
   <div class="termin-input">
     <label v-if="label" class="termin-label">{{ label }}</label>
     
-    <div v-if="!date" class="termin-empty">
-      Bitte wählen Sie zuerst ein Datum aus.
-    </div>
-    
-    <div v-else-if="loading" class="termin-loading">
-      Termine werden geladen...
+    <div v-if="readonly" class="termin-readonly">
+      <div v-if="!modelValue || !modelValue.room" class="termin-empty">
+        Kein Raum gebucht.
+      </div>
+      <div v-else class="termin-readonly-value">
+        <div class="readonly-room">{{ modelValue.room }}</div>
+        <div class="readonly-time">{{ modelValue.start }} - {{ modelValue.end }} Uhr</div>
+      </div>
     </div>
 
-    <div v-else class="termin-calendars">
-      <div v-for="room in calendars" :key="room" class="calendar-row">
+    <template v-else>
+      <div v-if="!date" class="termin-empty">
+        Bitte wählen Sie zuerst ein Datum aus.
+      </div>
+      
+      <div v-else-if="loading" class="termin-loading">
+        Termine werden geladen...
+      </div>
+
+      <div v-else class="termin-calendars">
+        <div v-for="room in calendars" :key="room" class="calendar-row">
         <div class="calendar-name">{{ room }}</div>
         
         <div class="timeline-track" 
@@ -65,6 +76,7 @@
       </div>
       
     </div>
+    </template>
   </div>
 </template>
 
@@ -74,6 +86,7 @@ import { computed, ref, watch, onMounted } from 'vue';
 const props = defineProps({
   label: { type: String, default: '' },
   date: { type: String, default: null }, // YYYY-MM-DD
+  readonly: { type: Boolean, default: false },
   modelValue: { type: Object, default: () => null } // { room: "Raum 1", start: "09:00", end: "10:00" }
 });
 
@@ -404,7 +417,7 @@ const onMouseUp = () => {
   color: var(--wa-color-neutral-700);
 }
 
-.termin-empty, .termin-loading {
+.termin-empty, .termin-loading, .termin-readonly {
   background: var(--wa-color-neutral-50);
   border: 1px dashed var(--wa-color-neutral-300);
   padding: 1rem;
@@ -412,6 +425,30 @@ const onMouseUp = () => {
   text-align: center;
   color: var(--wa-color-neutral-500);
   font-size: 0.875rem;
+}
+
+.termin-readonly {
+  border: 1px solid var(--wa-color-neutral-200);
+  background: var(--wa-color-neutral-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.termin-readonly-value {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.readonly-room {
+  font-weight: 600;
+  color: var(--wa-color-neutral-800);
+}
+
+.readonly-time {
+  color: var(--wa-color-neutral-600);
+  font-size: 0.9em;
 }
 
 .termin-calendars {

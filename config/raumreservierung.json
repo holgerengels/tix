@@ -28,14 +28,11 @@
         },
         {
             "name": "description",
-            "label": "Verwendungszweck",
-            "type": "Text",
-            "required": true
+            "visible": false
         }
     ],
     "grid": [
         "title title title title",
-        "description description description description",
         "date date date date",
         "termin termin termin termin"
     ],

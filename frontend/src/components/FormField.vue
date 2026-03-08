@@ -217,6 +217,7 @@
         v-else-if="field.type === 'Termin'"
         :label="field.label"
         :date="context?.date"
+        :readonly="field.readonly === true"
         :modelValue="modelValue || null"
         @update:modelValue="updateValue"
       />
