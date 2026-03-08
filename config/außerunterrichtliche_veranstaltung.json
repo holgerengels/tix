@@ -117,7 +117,7 @@
                     "groups": [
                         "Stundenplanung"
                     ],
-                    "form": "abwesenheit.bearbeiten"
+                    "form": "bearbeiten"
                 },
                 {
                     "name": "zuweisen",
@@ -213,8 +213,8 @@
     ],
     "forms": [
         {
-            "name": "abwesenheit.bearbeiten",
-            "title": "Abwesenheit bearbeiten",
+            "name": "bearbeiten",
+            "title": "Außerunterrichtliche Veranstaltung bearbeiten",
             "fields": [
                 {
                     "name": "badges",

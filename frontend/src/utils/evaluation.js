@@ -48,7 +48,7 @@ export function evaluateTemplate(templateStr, ticketData) {
             return !!evaluate(); // Coerce undefined/null to actual false for visibility checks
         } catch (e) {
             console.warn(`Failed to evaluate boolean expression: ${expr}`, e);
-            return false;
+            return templateStr;
         }
     }
 

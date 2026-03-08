@@ -49,7 +49,7 @@
                         "Schulleitung",
                         "Stundenplanung"
                     ],
-                    "form": "aufgabe.bearbeiten"
+                    "form": "bearbeiten"
                 },
                 {
                     "name": "zuweisen",
@@ -163,7 +163,7 @@
     ],
     "forms": [
         {
-            "name": "aufgabe.bearbeiten",
+            "name": "bearbeiten",
             "title": "Aufgabe bearbeiten",
             "fields": [
                 {

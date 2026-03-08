@@ -52,6 +52,21 @@
                     "script": "ticket.state = 'offen.storniert'"
                 }
             ]
+        },
+        {
+            "states": [
+                "offen.eingetragen"
+            ],
+            "actions": [
+                {
+                    "name": "verschieben",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "form": "verschieben"
+                }
+            ]
         }
     ],
     "access": [
@@ -85,6 +100,13 @@
             "script": "eintragen(ticket)"
         },
         {
+            "name": "verschieben",
+            "states": [
+                "offen.verschoben"
+            ],
+            "script": "verschieben(ticket, dataBefore)"
+        },
+        {
             "name": "stornieren",
             "states": [
                 "offen.storniert"
@@ -99,6 +121,18 @@
             "onChange": "async",
             "schedule": "0 23 * * *",
             "script": "abschliessen(ticket)"
+        }
+    ],
+    "forms": [
+        {
+            "name": "verschieben",
+            "title": "Termin verschieben",
+            "actions": [
+                {
+                    "name": "verschieben",
+                    "script": "ticket.state = 'offen.verschoben'"
+                }
+            ]
         }
     ],
     "states": [
@@ -116,6 +150,11 @@
             "name": "offen.eingetragen",
             "label": "reserviert",
             "color": "green"
+        },
+        {
+            "name": "offen.verschoben",
+            "label": "verschoben",
+            "color": "yellow"
         },
         {
             "name": "offen.storniert",

@@ -97,7 +97,7 @@
                     "groups": [
                         "Stundenplanung"
                     ],
-                    "form": "abwesenheit.bearbeiten"
+                    "form": "bearbeiten"
                 }
             ]
         },
@@ -190,7 +190,7 @@
     ],
     "forms": [
         {
-            "name": "abwesenheit.bearbeiten",
+            "name": "bearbeiten",
             "title": "Abwesenheit bearbeiten",
             "fields": [
                 {

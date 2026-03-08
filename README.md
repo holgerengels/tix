@@ -47,7 +47,7 @@ Statusübergänge und komplexe Aktionen werden direkt und transparent als JavaSc
             {
                 "name": "bearbeiten",
                 "groups": ["@assignee", "Schulleitung", "Netzwerkteam"],
-                "form": "aufgabe.bearbeiten"
+                "form": "bearbeiten"
             }
         ]
     }

@@ -62,8 +62,46 @@ async function abschliessen(ticket) {
     }
 }
 
+async function verschieben(ticket, dataBefore) {
+    if (ticket.state !== 'offen.verschoben') return;
+
+    if (!ticket.date || !ticket.termin || !ticket.termin.room || !ticket.termin.start || !ticket.termin.end) {
+        console.error(`[Raumreservierung] Invalid ticket data for ${ticket._id}: Missing termin or date.`);
+        return;
+    }
+
+    try {
+        // Check if room changed using dataBefore
+        let oldRoom = null;
+        if (dataBefore && dataBefore.termin) {
+            oldRoom = dataBefore.termin.room;
+        }
+
+        if (oldRoom && oldRoom !== ticket.termin.room) {
+            console.log(`[Raumreservierung] Room changed from ${oldRoom} to ${ticket.termin.room}, deleting old event.`);
+            await deleteEvent(oldRoom, ticket._id.toString());
+        }
+
+        // caldav.js addEvent will overwrite if the uid is the same and the calendar is the same.
+        // It uses PUT on the specific ICS file, so it acts as an upset.
+        await addEvent(
+            ticket.termin.room,
+            ticket._id.toString(),
+            ticket.date,
+            ticket.termin.start,
+            ticket.termin.end,
+            ticket.description || ticket.title
+        );
+        ticket.state = 'offen.eingetragen';
+        console.log(`[Raumreservierung] Termin for ticket ${ticket._id} verschoben.`);
+    } catch (err) {
+        console.error(`[Raumreservierung] Failed to reschedule event for ${ticket._id}:`, err);
+    }
+}
+
 module.exports = {
     eintragen,
     stornieren,
-    abschliessen
+    abschliessen,
+    verschieben
 };

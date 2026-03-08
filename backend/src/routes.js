@@ -303,7 +303,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         await newTicket.save();
 
         // Run bots immediately
-        await runBotsForTicket(newTicket);
+        await runBotsForTicket(newTicket, null);
 
         // Log creation
         const log = new Log({
@@ -398,6 +398,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         if (formData) {
             Object.keys(formData).forEach(key => {
                 ticket.set(key, formData[key]);
+                ticket.markModified(key);
             });
         }
 
@@ -461,7 +462,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         // Run bots immediately
-        await runBotsForTicket(ticket);
+        await runBotsForTicket(ticket, dataBefore);
 
         // Create Log
         await new Log({
