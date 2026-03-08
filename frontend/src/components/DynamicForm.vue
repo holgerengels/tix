@@ -5,6 +5,7 @@
           <FormField 
               v-if="field.visible !== false"
               :field="field"
+              :context="modelValue"
               :modelValue="modelValue[field.name]"
               @update:modelValue="updateField(field.name, $event)"
           />

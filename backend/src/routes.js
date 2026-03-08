@@ -867,6 +867,23 @@ router.delete('/settings/subscriptions/:id', verifyToken, async (req, res) => {
     }
 });
 
+// --- CalDAV API ---
+router.get('/caldav/availability', verifyToken, async (req, res) => {
+    try {
+        const { date } = req.query;
+        if (!date) {
+            return res.status(400).json({ message: 'Date parameter is required (YYYY-MM-DD)' });
+        }
+
+        const { getAllAvailability } = require('./caldav');
+        const availability = await getAllAvailability(date);
+        res.json(availability);
+    } catch (error) {
+        console.error('[API] Error fetching CalDAV availability:', error);
+        res.status(500).json({ message: 'Internal Server Error fetching calendars' });
+    }
+});
+
 // --- Web Push API ---
 
 router.get('/push/public-key', verifyToken, (req, res) => {

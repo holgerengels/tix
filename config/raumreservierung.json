@@ -1,0 +1,144 @@
+{
+    "type": "Raumreservierung",
+    "abbreviation": "RR",
+    "template": "{{ticket.termin.room || 'Raum'}} - {{ticket.date}}",
+    "fields": [
+        {
+            "name": "date",
+            "label": "Datum",
+            "type": "Date",
+            "required": true,
+            "validation": {
+                "expression": "ticket.state || !ticket.date || ticket.date >= format(now, 'yyyy-MM-dd')",
+                "message": "Datum kann nicht in der Vergangenheit liegen"
+            }
+        },
+        {
+            "name": "termin",
+            "label": "Termin & Raum",
+            "type": "Termin",
+            "rooms": [
+                "Raum 008 (Entspannung)",
+                "Raum 318 (Konferenz)",
+                "Raum 401 (Recherche)",
+                "Raum 405 (Mediathek)",
+                "Raum 513 (Besprechung)"
+            ],
+            "required": true
+        },
+        {
+            "name": "description",
+            "label": "Verwendungszweck",
+            "type": "Text",
+            "required": true
+        }
+    ],
+    "grid": [
+        "title title title title",
+        "description description description description",
+        "date date date date",
+        "termin termin termin termin"
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.eingetragen"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'offen.storniert'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Lehrkräfte",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Schulleitung"
+            ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "eintragen",
+            "states": [
+                "offen.neu"
+            ],
+            "script": "eintragen(ticket)"
+        },
+        {
+            "name": "stornieren",
+            "states": [
+                "offen.storniert"
+            ],
+            "script": "stornieren(ticket)"
+        },
+        {
+            "name": "abschliessen",
+            "states": [
+                "offen.eingetragen"
+            ],
+            "onChange": "async",
+            "schedule": "0 23 * * *",
+            "script": "abschliessen(ticket)"
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.eingetragen",
+            "label": "reserviert",
+            "color": "green"
+        },
+        {
+            "name": "offen.storniert",
+            "label": "storniere...",
+            "color": "yellow"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "abgeschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "geschlossen",
+            "color": "green"
+        }
+    ]
+}

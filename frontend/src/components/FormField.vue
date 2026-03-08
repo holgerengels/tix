@@ -212,6 +212,15 @@
         :blocks="modelValue || []"
       />
 
+      <!-- Termin (Interactive Calendar Selection) -->
+      <TerminInput
+        v-else-if="field.type === 'Termin'"
+        :label="field.label"
+        :date="context?.date"
+        :modelValue="modelValue || null"
+        @update:modelValue="updateValue"
+      />
+
        <!-- Standard Text -->
       <wa-input 
         v-else
@@ -233,9 +242,11 @@ import WAAutocomplete from './WAAutocomplete.vue';
 import BadgeEditor from './BadgeEditor.vue';
 import ArrayFieldEditor from './ArrayFieldEditor.vue';
 import TimelineDisplay from './TimelineDisplay.vue';
+import TerminInput from './TerminInput.vue';
 
 const props = defineProps({
   field: { type: Object, required: true },
+  context: { type: Object, default: () => ({}) },
   modelValue: { required: true } // Can be String, Number, Boolean, Object, Array
 });
 
