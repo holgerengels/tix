@@ -382,9 +382,48 @@ async function deleteEvent(calendarName, ticketId) {
     }
 }
 
+/**
+ * Deletes an event associated with a ticket, without knowing the calendar in advance.
+ * It queries all possible calendars for the system and attempts to delete it.
+ */
+async function deleteEventByTicketId(ticketId) {
+    const calendars = await getCalendars();
+    const client = getClient();
+    const uid = `TIX-${ticketId}`;
+
+    let deletedCount = 0;
+
+    for (const calendar of calendars) {
+        const eventUrl = `${calendar.href}${uid}.ics`;
+        const absoluteEventUrl = new URL(eventUrl, client.defaults.baseURL).href;
+
+        try {
+            await client.request({
+                method: 'DELETE',
+                url: absoluteEventUrl
+            });
+            console.log(`[CalDAV] Successfully deleted event ${uid} from ${calendar.name}`);
+            deletedCount++;
+        } catch (err) {
+            // Ignore 404, we expect this for all calendars except the one that holds the event
+            if (err.response && err.response.status === 404) {
+                continue;
+            }
+            console.error(`[CalDAV] Error deleting event from ${calendar.name}:`, err.message);
+        }
+    }
+
+    if (deletedCount === 0) {
+        console.log(`[CalDAV] Event ${uid} not found in any calendar. Assuming already deleted.`);
+    }
+
+    return true;
+}
+
 module.exports = {
     getCalendars,
     getAllAvailability,
     addEvent,
-    deleteEvent
+    deleteEvent,
+    deleteEventByTicketId
 };

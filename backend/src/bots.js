@@ -52,9 +52,9 @@ function loadBots() {
                             if (botConfig.script) {
                                 // Compile the script into a function that takes 'ticket' as an argument
                                 // We combine the exports from the file with the script string
-                                const runFn = async (ticket, dataBefore) => {
+                                const runFn = async (ticket) => {
                                     // Make exported functions available in the execution scope
-                                    const scope = { ticket, dataBefore, ...scriptExports };
+                                    const scope = { ticket, ...scriptExports };
                                     const keys = Object.keys(scope);
                                     const values = Object.values(scope);
 
@@ -63,7 +63,6 @@ function loadBots() {
                                     // Since script file already ran in `sandbox`, its declarations are in `sandbox`.
                                     // Instead of a new Function, we can evaluate inside the VM with ticket.
                                     sandbox.ticket = ticket;
-                                    sandbox.dataBefore = dataBefore;
                                     try {
                                         const result = vm.runInContext(botConfig.script, sandbox);
                                         if (result && typeof result.then === 'function') {
@@ -128,7 +127,7 @@ async function runBots() {
     }
 }
 
-async function runBotsForTicket(ticket, dataBefore) {
+async function runBotsForTicket(ticket) {
     const matchingBots = BOTS.filter(bot => bot.type === ticket.type && bot.states.includes(ticket.state));
 
     const syncBots = matchingBots.filter(bot => bot.onChange === 'insync');
@@ -138,7 +137,7 @@ async function runBotsForTicket(ticket, dataBefore) {
     for (const bot of syncBots) {
         try {
             console.log(`Bot ${bot.name} (insync) processing ticket ${ticket.id}`);
-            await bot.run(ticket, dataBefore);
+            await bot.run(ticket);
 
             if (ticket.isModified()) {
                 await ticket.save();
@@ -158,7 +157,7 @@ async function runBotsForTicket(ticket, dataBefore) {
                 if (!asyncTicket) return;
 
                 console.log(`Bot ${bot.name} (async) processing ticket ${asyncTicket.id}`);
-                await bot.run(asyncTicket, dataBefore);
+                await bot.run(asyncTicket);
 
                 if (asyncTicket.isModified()) {
                     await asyncTicket.save();

@@ -303,7 +303,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         await newTicket.save();
 
         // Run bots immediately
-        await runBotsForTicket(newTicket, null);
+        await runBotsForTicket(newTicket);
 
         // Log creation
         const log = new Log({
@@ -462,7 +462,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         // Run bots immediately
-        await runBotsForTicket(ticket, dataBefore);
+        await runBotsForTicket(ticket);
 
         // Create Log
         await new Log({

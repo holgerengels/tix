@@ -5,11 +5,35 @@ const { getTokens, clearDatabase, closeDatabase } = require('../setup');
 const { loadBots } = require('../../src/bots');
 const Ticket = require('../../src/models/ticket');
 
-// Mock CalDAV module to avoid real network traffic during tests
+// Stateful mock for CalDAV
+const mockEvents = {
+    'Raum 101': [],
+    'Raum 318 (Konferenz)': []
+};
+
 jest.mock('../../src/caldav', () => ({
-    addEvent: jest.fn().mockResolvedValue(true),
-    deleteEvent: jest.fn().mockResolvedValue(true),
-    getCalendars: jest.fn().mockResolvedValue([{ name: 'Raum 101', href: '/r101' }]),
+    _mockEvents: mockEvents,
+    addEvent: jest.fn().mockImplementation(async (calendarName, ticketId, targetDate, startHHMM, endHHMM, description) => {
+        if (!mockEvents[calendarName]) mockEvents[calendarName] = [];
+        mockEvents[calendarName].push({ id: ticketId, targetDate, startHHMM, endHHMM });
+        return true;
+    }),
+    deleteEvent: jest.fn().mockImplementation(async (calendarName, ticketId) => {
+        if (mockEvents[calendarName]) {
+            mockEvents[calendarName] = mockEvents[calendarName].filter(e => e.id !== ticketId);
+        }
+        return true;
+    }),
+    deleteEventByTicketId: jest.fn().mockImplementation(async (ticketId) => {
+        Object.keys(mockEvents).forEach(cal => {
+            mockEvents[cal] = mockEvents[cal].filter(e => e.id !== ticketId);
+        });
+        return true;
+    }),
+    getCalendars: jest.fn().mockResolvedValue([
+        { name: 'Raum 101', href: '/r101' },
+        { name: 'Raum 318 (Konferenz)', href: '/r318' }
+    ]),
     getAllAvailability: jest.fn().mockResolvedValue({})
 }));
 
@@ -30,6 +54,9 @@ beforeAll(async () => {
 beforeEach(async () => {
     await clearDatabase();
     jest.clearAllMocks();
+    // clear calendar state
+    mockEvents['Raum 101'] = [];
+    mockEvents['Raum 318 (Konferenz)'] = [];
 });
 
 afterAll(async () => {
@@ -65,12 +92,18 @@ describe('Workflow: Raumreservierung', () => {
         expect(caldav.addEvent).toHaveBeenCalledTimes(1);
         expect(caldav.addEvent).toHaveBeenCalledWith(
             'Raum 101',
-            t1._id.toString(),
+            t1.id,
             ticketPayload.date,
             '14:00',
             '15:00',
             ticketPayload.description
         );
+
+        // Verify the event is in the simulated calendar server
+        expect(caldav._mockEvents['Raum 101'].length).toBe(1);
+        expect(caldav._mockEvents['Raum 101'][0].id).toBe(t1.id);
+        expect(caldav._mockEvents['Raum 101'][0].startHHMM).toBe('14:00');
+        expect(caldav._mockEvents['Raum 101'][0].endHHMM).toBe('15:00');
 
         // --- 2. lehrer1 verschiebt (reschedules) the reservation ---
         const resVerschieben = await request(app)
@@ -100,16 +133,26 @@ describe('Workflow: Raumreservierung', () => {
         expect(caldav.addEvent).toHaveBeenCalledTimes(2);
         expect(caldav.addEvent).toHaveBeenCalledWith(
             'Raum 318 (Konferenz)',
-            t1._id.toString(),
+            t1.id,
             ticketPayload.date,
             '15:00',
             '16:00',
             ticketPayload.description
         );
 
-        // Verify that the old event was deleted during verschieben
-        expect(caldav.deleteEvent).toHaveBeenCalledTimes(1);
-        expect(caldav.deleteEvent).toHaveBeenCalledWith('Raum 101', t1._id.toString());
+        // Verify that the old event was deleted during verschieben using the new ID-based method
+        expect(caldav.deleteEventByTicketId).toHaveBeenCalledTimes(1);
+        expect(caldav.deleteEventByTicketId).toHaveBeenCalledWith(t1.id);
+        // Normal deleteEvent is not called yet
+        expect(caldav.deleteEvent).toHaveBeenCalledTimes(0);
+
+        // TEST SAYS: check kalender-server to see if the ticket is in the correct room-calendar and has the correct time
+        expect(caldav._mockEvents['Raum 101'].length).toBe(0); // completely removed from old room
+        expect(caldav._mockEvents['Raum 318 (Konferenz)'].length).toBe(1); // placed securely in the new room
+        const movedEvent = caldav._mockEvents['Raum 318 (Konferenz)'][0];
+        expect(movedEvent.id).toBe(t1.id);
+        expect(movedEvent.startHHMM).toBe('15:00');
+        expect(movedEvent.endHHMM).toBe('16:00');
 
         // --- 3. lehrer1 storniert (cancels) the reservation ---
         const resStorno = await request(app)
@@ -122,8 +165,11 @@ describe('Workflow: Raumreservierung', () => {
         // The action sets state to 'offen.storniert'. The bot then runs "stornieren" function.
         // It calls caldav.deleteEvent, and then sets state to 'geschlossen.storniert'.
         expect(resStorno.body.state).toBe('geschlossen.storniert');
-        // deleteEvent was called once during verschieben and once during stornieren
-        expect(caldav.deleteEvent).toHaveBeenCalledTimes(2);
-        expect(caldav.deleteEvent).toHaveBeenCalledWith('Raum 318 (Konferenz)', t1._id.toString());
+        // deleteEvent is called once during stornieren
+        expect(caldav.deleteEvent).toHaveBeenCalledTimes(1);
+        expect(caldav.deleteEvent).toHaveBeenCalledWith('Raum 318 (Konferenz)', t1.id);
+
+        // Verify it was cleared out of the simulated calendar server entirely
+        expect(caldav._mockEvents['Raum 318 (Konferenz)'].length).toBe(0);
     });
 });

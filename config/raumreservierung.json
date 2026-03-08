@@ -1,6 +1,6 @@
 {
     "type": "Raumreservierung",
-    "abbreviation": "RR",
+    "abbreviation": "RES",
     "template": "{{ticket.termin.room || 'Raum'}} - {{ticket.date}}",
     "fields": [
         {
@@ -104,7 +104,7 @@
             "states": [
                 "offen.verschoben"
             ],
-            "script": "verschieben(ticket, dataBefore)"
+            "script": "verschieben(ticket)"
         },
         {
             "name": "stornieren",
