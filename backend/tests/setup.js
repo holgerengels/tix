@@ -15,6 +15,7 @@ const getTokens = () => {
         lehrer1: generateToken('lehrer1', ['Lehrkräfte']),
         lehrer2: generateToken('lehrer2', ['Lehrkräfte', 'Mensateam']),
         schulleiter: generateToken('schulleiter', ['Schulleitung', 'Lehrkräfte']),
+        abteilungsleiter: generateToken('abteilungsleiter', ['Abteilungsleitung', 'Lehrkräfte']),
         stundenplaner: generateToken('stundenplaner', ['Stundenplanung', 'Lehrkräfte']),
         hausmeister: generateToken('hausmeister', ['Hausmeister']),
         netzwerker: generateToken('netzwerker', ['Netzwerkteam', 'Lehrkräfte']),
