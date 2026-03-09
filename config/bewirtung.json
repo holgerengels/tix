@@ -9,6 +9,10 @@
             "type": "Text"
         },
         {
+            "name": "description",
+            "label": "Bemerkungen"
+        },
+        {
             "name": "type",
             "label": "Art",
             "type": "Select",
@@ -20,7 +24,7 @@
         },
         {
             "name": "date",
-            "label": "Datum der Veranstaltung",
+            "label": "Datum",
             "type": "Date",
             "required": true
         },
@@ -32,7 +36,7 @@
         },
         {
             "name": "room",
-            "label": "Raum der Veranstaltung",
+            "label": "Raum",
             "type": "Text",
             "required": true
         },
