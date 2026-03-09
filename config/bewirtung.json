@@ -42,64 +42,28 @@
             "type": "Boolean"
         },
         {
-            "name": "bfDrinksKaffee",
-            "label": "Kaffee",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfDrinksWasser",
-            "label": "Wasser",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfDrinksOrangensaft",
-            "label": "Orangensaft",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfDrinksApfelsaft",
-            "label": "Apfelsaft",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfDrinksTee",
-            "label": "Tee",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfFoodBrezeln",
-            "label": "Brezeln",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfFoodKuchen",
-            "label": "Kuchen",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfFoodObst",
-            "label": "Obst",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
-        },
-        {
-            "name": "bfFoodSuesseStueckle",
-            "label": "Süße Stückle",
-            "type": "Boolean",
-            "visible": "{{ticket.breakfast === true}}"
+            "name": "bfDrinksAndFood",
+            "label": "Getränke und Speisen",
+            "type": "Select",
+            "multiple": true,
+            "readonly": "{{ticket.breakfast === false}}",
+            "options": [
+                "Kaffee",
+                "Wasser",
+                "Orangensaft",
+                "Apfelsaft",
+                "Tee",
+                "Brezeln",
+                "Kuchen",
+                "Obst",
+                "Süße Stückle"
+            ]
         },
         {
             "name": "breakfastTime",
             "label": "Bereitstellung bis:",
             "type": "Time",
-            "visible": "{{ticket.breakfast === true}}"
+            "readonly": "{{ticket.breakfast === false}}"
         },
         {
             "name": "lunch",
@@ -110,13 +74,13 @@
             "name": "lunchReservation",
             "label": "Tischreservierung",
             "type": "Boolean",
-            "visible": "{{ticket.lunch === true}}"
+            "readonly": "{{ticket.lunch === false}}"
         },
         {
             "name": "lunchTime",
             "label": "Uhrzeit:",
             "type": "Time",
-            "visible": "{{ticket.lunch === true}}"
+            "readonly": "{{ticket.lunch === false}}"
         },
         {
             "name": "afternoon",
@@ -124,64 +88,28 @@
             "type": "Boolean"
         },
         {
-            "name": "afDrinksKaffee",
-            "label": "Kaffee",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afDrinksWasser",
-            "label": "Wasser",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afDrinksOrangensaft",
-            "label": "Orangensaft",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afDrinksApfelsaft",
-            "label": "Apfelsaft",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afDrinksTee",
-            "label": "Tee",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afFoodBrezeln",
-            "label": "Brezeln",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afFoodKuchen",
-            "label": "Kuchen",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afFoodObst",
-            "label": "Obst",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
-        },
-        {
-            "name": "afFoodSuesseStueckle",
-            "label": "Süße Stückle",
-            "type": "Boolean",
-            "visible": "{{ticket.afternoon === true}}"
+            "name": "afDrinksAndFood",
+            "label": "Getränke und Speisen",
+            "type": "Select",
+            "multiple": true,
+            "readonly": "{{ticket.afternoon === false}}",
+            "options": [
+                "Kaffee",
+                "Wasser",
+                "Orangensaft",
+                "Apfelsaft",
+                "Tee",
+                "Brezeln",
+                "Kuchen",
+                "Obst",
+                "Süße Stückle"
+            ]
         },
         {
             "name": "afternoonTime",
             "label": "Bereitstellung bis:",
             "type": "Time",
-            "visible": "{{ticket.afternoon === true}}"
+            "readonly": "{{ticket.afternoon === false}}"
         }
     ],
     "grid": [
@@ -189,18 +117,10 @@
         "date date numberOfPersons type",
         "room room . .",
         "badges badges badges badges",
-        "breakfast lunch afternoon .",
-        "bfDrinksKaffee lunchReservation afDrinksKaffee .",
-        "bfDrinksWasser lunchTime afDrinksWasser .",
-        "bfDrinksOrangensaft lunchTime afDrinksOrangensaft .",
-        "bfDrinksApfelsaft . afDrinksApfelsaft .",
-        "bfDrinksTee . afDrinksTee .",
-        "bfFoodBrezeln . afFoodBrezeln .",
-        "bfFoodKuchen . afFoodKuchen .",
-        "bfFoodObst . afFoodObst .",
-        "bfFoodSuesseStueckle . afFoodSuesseStueckle .",
-        "breakfastTime . afternoonTime .",
-        "description description description ."
+        "breakfast bfDrinksAndFood bfDrinksAndFood breakfastTime",
+        "lunch lunchReservation lunchReservation lunchTime",
+        "afternoon afDrinksAndFood afDrinksAndFood afternoonTime",
+        "description description description description"
     ],
     "workflow": [
         {

@@ -28,12 +28,13 @@
       <wa-select
         v-else-if="field.type === 'Select'"
         hoist
+        :multiple="field.multiple === true"
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value="modelValue || (field.multiple ? [] : '')"
         :hint="field.hint"
-        @change.stop="updateValue($event.target.value)"
+        @change.stop="updateValue(field.multiple && $event.target.value === '' ? [] : $event.target.value)"
         @input.stop
       >
         <wa-option v-for="opt in field.options" :key="opt" :value="opt">

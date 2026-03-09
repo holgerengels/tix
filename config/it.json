@@ -273,6 +273,7 @@
         {
             "name": "read",
             "groups": [
+                "@creator",
                 "Lehrkräfte"
             ]
         },
