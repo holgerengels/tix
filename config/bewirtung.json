@@ -67,7 +67,8 @@
             "name": "breakfastTime",
             "label": "Bereitstellung bis:",
             "type": "Time",
-            "readonly": "{{ticket.breakfast === false}}"
+            "readonly": "{{ticket.breakfast === false}}",
+            "required": "{{ticket.breakfast === true}}"
         },
         {
             "name": "lunch",
@@ -84,7 +85,8 @@
             "name": "lunchTime",
             "label": "Uhrzeit:",
             "type": "Time",
-            "readonly": "{{ticket.lunch === false}}"
+            "readonly": "{{ticket.lunch === false}}",
+            "required": "{{ticket.lunch === true}}"
         },
         {
             "name": "afternoon",
@@ -113,7 +115,8 @@
             "name": "afternoonTime",
             "label": "Bereitstellung bis:",
             "type": "Time",
-            "readonly": "{{ticket.afternoon === false}}"
+            "readonly": "{{ticket.afternoon === false}}",
+            "required": "{{ticket.afternoon === true}}"
         }
     ],
     "grid": [
