@@ -18,7 +18,11 @@ const getCaldavSettings = () => {
                 username: settings.calendar.login,
                 password: settings.calendar.password
             };
+        } else {
+            console.warn("[CalDAV] Warning: 'calendar' object or 'server' key is missing in config/settings.json.");
         }
+    } else {
+        console.warn(`[CalDAV] Warning: Settings file not found at ${settingsPath}`);
     }
     return null;
 };
@@ -146,10 +150,10 @@ function parseIcs(icsData) {
             if (line.startsWith('UID:')) currentEvent.uid = line.substring(4);
             else if (line.startsWith('DTSTART:')) currentEvent.start = line.substring(8);
             else if (line.startsWith('DTSTART;TZID=')) currentEvent.start = line.split(':')[1];
-            else if (line.startsWith('DTSTART;VALUE=DATE:')) currentEvent.start = line.substring(19) + 'T000000Z';
+            else if (line.startsWith('DTSTART;VALUE=DATE:')) currentEvent.start = line.substring(19);
             else if (line.startsWith('DTEND:')) currentEvent.end = line.substring(6);
             else if (line.startsWith('DTEND;TZID=')) currentEvent.end = line.split(':')[1];
-            else if (line.startsWith('DTEND;VALUE=DATE:')) currentEvent.end = line.substring(17) + 'T235959Z';
+            else if (line.startsWith('DTEND;VALUE=DATE:')) currentEvent.end = line.substring(17);
             else if (line.startsWith('DESCRIPTION:')) currentEvent.description = line.substring(12);
         }
     }
@@ -165,10 +169,14 @@ async function fetchCalendarEvents(calendarHref, targetDateStr) {
     const client = getClient();
     const targetDate = parseISO(targetDateStr);
 
-    // Construct start and end of day in UTC format required by CalDAV time-range
-    // Format: YYYYMMDDTHHMMSSZ
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0)).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999)).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    // Create a safe padded time range in UTC that overlaps the requested Berlin day entirely
+    const searchStart = new Date(targetDate);
+    searchStart.setDate(searchStart.getDate() - 1);
+    const startOfDay = searchStart.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+    const searchEnd = new Date(targetDate);
+    searchEnd.setDate(searchEnd.getDate() + 2);
+    const endOfDay = searchEnd.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
     const reportXml = `
         <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -236,22 +244,81 @@ async function fetchCalendarEvents(calendarHref, targetDateStr) {
                         const rawStart = evt.start;
                         const rawEnd = evt.end;
 
-                        if (rawStart && rawEnd && rawStart.includes('T')) {
-                            // Convert back to local time components if they are UTC (Z)
-                            // Using string parsing for HHMM to match Timeline component
-                            const hStart = parseInt(rawStart.substring(9, 11), 10);
-                            const mStart = parseInt(rawStart.substring(11, 13), 10);
-                            const startHHMM = hStart * 100 + mStart;
+                        if (rawStart && rawEnd) {
+                            // Convert back to local time components depending on format
+                            function parseBerlinLocal(icsString, isEnd = false) {
+                                // Full-day event format: YYYYMMDD (length 8)
+                                if (icsString.length === 8) {
+                                    // For full day events, CalDAV DTEND is usually exclusive (the next day).
+                                    let dateStr = icsString.substring(0, 4) + '-' + icsString.substring(4, 6) + '-' + icsString.substring(6, 8);
+                                    let timeStr = isEnd ? '2359' : '0000';
 
-                            const hEnd = parseInt(rawEnd.substring(9, 11), 10);
-                            const mEnd = parseInt(rawEnd.substring(11, 13), 10);
-                            const endHHMM = hEnd * 100 + mEnd;
+                                    if (isEnd) {
+                                        // If it's an end date for a full day event, we actually want to block up until 23:59 of the PREVIOUS day.
+                                        const d = new Date(`${dateStr}T12:00:00Z`);
+                                        d.setDate(d.getDate() - 1);
+                                        const y = d.getUTCFullYear();
+                                        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                        const dd = String(d.getUTCDate()).padStart(2, '0');
+                                        dateStr = `${y}-${m}-${dd}`;
+                                    }
+                                    return { dateStr, timeStr };
+                                }
 
-                            events.push({
-                                start: startHHMM.toString().padStart(4, '0'),
-                                end: endHHMM.toString().padStart(4, '0'),
-                                status: 'occupied'
-                            });
+                                // Standard Time format: YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
+                                if (icsString.endsWith('Z')) {
+                                    const yyyy = icsString.substring(0, 4);
+                                    const mm = icsString.substring(4, 6);
+                                    const dd = icsString.substring(6, 8);
+                                    const hh = icsString.substring(9, 11);
+                                    const min = icsString.substring(11, 13);
+                                    const ss = icsString.substring(13, 15);
+                                    const d = new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}Z`);
+
+                                    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+                                    let outY, outM, outD, outH, outMin;
+                                    for (const p of parts) {
+                                        if (p.type === 'year') outY = p.value;
+                                        if (p.type === 'month') outM = p.value.padStart(2, '0');
+                                        if (p.type === 'day') outD = p.value.padStart(2, '0');
+                                        if (p.type === 'hour') {
+                                            const h = p.value === '24' ? '00' : p.value;
+                                            outH = h.padStart(2, '0');
+                                        }
+                                        if (p.type === 'minute') outMin = p.value.padStart(2, '0');
+                                    }
+                                    return { dateStr: `${outY}-${outM}-${outD}`, timeStr: `${outH}${outMin}` };
+                                } else {
+                                    // Floating time (already local)
+                                    return {
+                                        dateStr: icsString.substring(0, 4) + '-' + icsString.substring(4, 6) + '-' + icsString.substring(6, 8),
+                                        timeStr: icsString.substring(9, 13)
+                                    };
+                                }
+                            }
+
+                            const parsedStart = parseBerlinLocal(rawStart, false);
+                            const parsedEnd = parseBerlinLocal(rawEnd, true);
+
+                            console.log(`[CalDAV Debug] Event parsing - Raw Start: ${rawStart}, Parsed Start Date: ${parsedStart.dateStr}, Target Date: ${targetDateStr}`);
+
+                            // Only include if the event overlaps or is on the targetDateStr
+                            // Full day events might span multiple days.
+                            // In this simple iteration, we block it if either the start or end falls on the target date.
+                            // Real overlap logic for multi-day events would require expanding dates, but UI only shows one day.
+                            if (parsedStart.dateStr === targetDateStr || parsedEnd.dateStr === targetDateStr) {
+                                console.log(`[CalDAV Debug] Match successful! Adding event from ${parsedStart.timeStr} to ${parsedEnd.timeStr}`);
+                                // If it started on a previous day and continued to today, it blocks from 00:00
+                                const effectiveStart = (parsedStart.dateStr < targetDateStr) ? '0000' : parsedStart.timeStr;
+                                // If it ends on a future day, it blocks until 23:59
+                                const effectiveEnd = (parsedEnd.dateStr > targetDateStr) ? '2359' : parsedEnd.timeStr;
+
+                                events.push({
+                                    start: effectiveStart.padStart(4, '0'),
+                                    end: effectiveEnd.padStart(4, '0'),
+                                    status: 'occupied'
+                                });
+                            }
                         }
                     });
                 }
@@ -298,22 +365,21 @@ async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, des
     const client = getClient();
     const targetDate = parseISO(dateStr);
 
-    // Parse times
-    const startH = parseInt(startHHMM.toString().replace(':', '').substring(0, 2), 10);
-    const startM = parseInt(startHHMM.toString().replace(':', '').substring(2, 4), 10);
-    const endH = parseInt(endHHMM.toString().replace(':', '').substring(0, 2), 10);
-    const endM = parseInt(endHHMM.toString().replace(':', '').substring(2, 4), 10);
+    // Parse local dates directly without relying on Docker Node UTC Date
+    const yyyy = dateStr.substring(0, 4);
+    const mm = dateStr.substring(5, 7);
+    const dd = dateStr.substring(8, 10);
 
-    const startDate = new Date(targetDate);
-    startDate.setHours(startH, startM, 0, 0);
+    // Clean HHMM strings to exactly 4 chars
+    const cleanStart = startHHMM.toString().replace(':', '').padStart(4, '0');
+    const cleanEnd = endHHMM.toString().replace(':', '').padStart(4, '0');
 
-    const endDate = new Date(targetDate);
-    endDate.setHours(endH, endM, 0, 0);
+    // Generate TZID specific timestamp properties
+    const dtStartProp = `DTSTART;TZID=Europe/Berlin:${yyyy}${mm}${dd}T${cleanStart}00`;
+    const dtEndProp = `DTEND;TZID=Europe/Berlin:${yyyy}${mm}${dd}T${cleanEnd}00`;
 
     // Format for ICS (UTC, Z suffix)
     const formatIcsDate = (date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const dtStart = formatIcsDate(startDate);
-    const dtEnd = formatIcsDate(endDate);
     const dtStamp = formatIcsDate(new Date());
 
     const uid = `TIX-${ticketId}`;
@@ -324,8 +390,8 @@ PRODID:-//Tix Ticket System//DE
 BEGIN:VEVENT
 UID:${uid}
 DTSTAMP:${dtStamp}
-DTSTART:${dtStart}
-DTEND:${dtEnd}
+${dtStartProp}
+${dtEndProp}
 SUMMARY:${description}
 DESCRIPTION:Tix Reservierung (Ticket ID: ${ticketId})
 END:VEVENT
