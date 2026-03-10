@@ -13,7 +13,7 @@
             "label": "Bemerkungen"
         },
         {
-            "name": "type",
+            "name": "eventType",
             "label": "Art",
             "type": "Select",
             "required": true,
@@ -121,7 +121,7 @@
     ],
     "grid": [
         "title title title title",
-        "date date numberOfPersons type",
+        "date date numberOfPersons eventType",
         "room room . .",
         "badges badges badges badges",
         "breakfast bfDrinksAndFood bfDrinksAndFood breakfastTime",
