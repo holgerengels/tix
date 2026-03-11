@@ -56,12 +56,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
-import { workflow } from '../state/workflow';
+import { useWorkflowStore } from '../stores/workflow';
 
 const subscriptions = ref([]);
 const loading = ref(false);
 
-const config = workflow.config;
+const workflow = useWorkflowStore();
+const config = computed(() => workflow.config);
 
 const stateTranslations = computed(() => {
     const translations = {

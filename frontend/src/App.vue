@@ -1,16 +1,16 @@
 <template>
-  <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated.value, 'sidebar-collapsed': !ui.state.sidebarOpen && auth.isAuthenticated.value }">
+  <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated, 'sidebar-collapsed': !ui.sidebarOpen && auth.isAuthenticated }">
     
     <div v-if="needRefresh" class="pwa-update-prompt">
         <span>Eine neue Version von TIX ist verfügbar.</span>
         <wa-button size="small" variant="primary" @click="handleSWUpdate">Jetzt aktualisieren</wa-button>
     </div>
 
-    <LoginOverlay v-if="auth.state.showLogin" />
+    <LoginOverlay v-if="auth.showLogin" />
     
-    <div v-if="ui.state.isMobile && ui.state.sidebarOpen && auth.isAuthenticated.value" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
+    <div v-if="ui.isMobile && ui.sidebarOpen && auth.isAuthenticated" class="sidebar-backdrop" @click="ui.toggleSidebar()"></div>
 
-    <aside v-if="auth.isAuthenticated.value" class="sidebar">
+    <aside v-if="auth.isAuthenticated" class="sidebar">
         <div class="logo"><img src="/vu.svg" alt="TIX" height="44"/>&nbsp;TIX</div>
         
         <nav>
@@ -29,7 +29,7 @@
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
                 <wa-icon name="journal-text"></wa-icon> <span class="nav-text">Protokoll</span>
             </router-link>
-            <router-link v-if="auth.state.user && auth.state.user.groups && auth.state.user.groups.includes('Administration')" to="/admin" class="nav-item" :class="{ active: $route.path === '/admin' }">
+            <router-link v-if="auth.user && auth.user.groups && auth.user.groups.includes('Administration')" to="/admin" class="nav-item" :class="{ active: $route.path === '/admin' }">
                 <wa-icon name="shield-lock"></wa-icon> <span class="nav-text">Administration</span>
             </router-link>
             <router-link to="/settings" class="nav-item" :class="{ active: $route.path === '/settings' }">
@@ -39,8 +39,8 @@
         </nav>
 
         <div class="footer">
-             <div class="user-info" v-if="auth.state.user">
-                <span class="nav-text">{{ auth.state.user.username }}</span>
+             <div class="user-info" v-if="auth.user">
+                <span class="nav-text">{{ auth.user.username }}</span>
              </div>
              <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
@@ -62,10 +62,13 @@
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
-import { auth } from './state/auth';
-import { ui } from './state/ui';
+import { useAuthStore } from './stores/auth';
+import { useUiStore } from './stores/ui';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
+
+const auth = useAuthStore();
+const ui = useUiStore();
 
 // PWA Update Logic
 const {
@@ -82,7 +85,7 @@ const route = useRoute();
 const isDev = ref(false);
 
 const checkDevMode = async () => {
-     if (auth.isAuthenticated.value) {
+     if (auth.isAuthenticated) {
         try {
             const res = await axios.get('/api/config/status');
             isDev.value = res.data.devmode;
@@ -95,7 +98,7 @@ const checkDevMode = async () => {
 onMounted(checkDevMode);
 
 // Re-check dev mode on login
-watch(auth.isAuthenticated, (newVal) => {
+watch(() => auth.isAuthenticated, (newVal) => {
     if (newVal) checkDevMode();
 });
 
@@ -149,7 +152,7 @@ onMounted(() => {
 });
 
 watch(route, () => {
-    if (ui.state.isMobile && ui.state.sidebarOpen) {
+    if (ui.isMobile && ui.sidebarOpen) {
         ui.setSidebar(false);
     }
 });
@@ -158,7 +161,7 @@ watch(route, () => {
 const reloadConfig = async () => {
     try {
         await axios.post('/api/config/reload', {}, {
-            headers: { Authorization: `Bearer ${auth.state.token}` }
+            headers: { Authorization: `Bearer ${auth.token}` }
         });
         window.location.reload();
     } catch (err) {

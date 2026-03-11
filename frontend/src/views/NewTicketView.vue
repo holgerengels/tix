@@ -1,5 +1,5 @@
 <template>
-  <div class="new-ticket-view" :class="{ 'is-mobile': ui.state.isMobile }">
+  <div class="new-ticket-view" :class="{ 'is-mobile': ui.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -50,7 +50,9 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
-import { ui } from '../state/ui';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
 import { validateTicket } from '../utils/evaluation';

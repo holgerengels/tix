@@ -31,8 +31,11 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
-import { auth } from '../state/auth';
-import { requestQueue } from '../state/requestQueue';
+import { useAuthStore } from '../stores/auth';
+import { useRequestQueueStore } from '../stores/requestQueue';
+
+const auth = useAuthStore();
+const requestQueue = useRequestQueueStore();
 
 const username = ref('');
 const password = ref('');

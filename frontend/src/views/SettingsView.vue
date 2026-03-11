@@ -1,5 +1,5 @@
 <template>
-  <div class="settings-view" :class="{ 'is-mobile': ui.state.isMobile }">
+  <div class="settings-view" :class="{ 'is-mobile': ui.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -41,7 +41,9 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { ui } from '../state/ui';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 import SubscriptionManager from '../components/SubscriptionManager.vue';
 
 const router = useRouter();

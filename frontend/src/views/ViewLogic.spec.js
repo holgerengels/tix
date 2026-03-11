@@ -5,11 +5,12 @@ import ActionView from './ActionView.vue';
 import axios from 'axios';
 
 // Mock UI State
-vi.mock('../state/ui', () => ({
-    ui: {
-        state: { isNarrow: false, isMobile: false },
+vi.mock('../stores/ui', () => ({
+    useUiStore: () => ({
+        isNarrow: false,
+        isMobile: false,
         toggleSidebar: vi.fn()
-    }
+    })
 }));
 
 // Mock Router and Route
@@ -30,12 +31,12 @@ const mockConfig = {
 };
 
 // Mock Workflow State
-vi.mock('../state/workflow', () => {
+vi.mock('../stores/workflow', () => {
     return {
-        workflow: {
-            get config() { return { value: mockConfig }; },
+        useWorkflowStore: () => ({
+            config: mockConfig,
             fetchConfig: async () => { }
-        }
+        })
     };
 });
 

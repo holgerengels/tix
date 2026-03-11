@@ -1,5 +1,5 @@
 <template>
-  <div class="view-ticket-view" :class="{ 'is-mobile': ui.state.isMobile, 'is-narrow': ui.state.isNarrow }">
+  <div class="view-ticket-view" :class="{ 'is-mobile': ui.isMobile, 'is-narrow': ui.isNarrow }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -76,15 +76,18 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { ui } from '../state/ui';
-import { workflow } from '../state/workflow';
+import { useUiStore } from '../stores/ui';
+import { useWorkflowStore } from '../stores/workflow';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
+
+const ui = useUiStore();
+const workflow = useWorkflowStore();
 
 const route = useRoute();
 const router = useRouter();
 const ticket = ref(null);
-const config = workflow.config;
+const config = computed(() => workflow.config);
 const loading = ref(true);
 const error = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');

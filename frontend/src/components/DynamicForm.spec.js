@@ -1,13 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import DynamicForm from './DynamicForm.vue';
-import { ui } from '../state/ui';
 
 // Mock UI state
-vi.mock('../state/ui', () => ({
-    ui: {
-        state: { isNarrow: false }
-    }
+vi.mock('../stores/ui', () => ({
+    useUiStore: () => ({
+        isNarrow: false
+    })
 }));
 
 // JSDOM does not implement scrollIntoView

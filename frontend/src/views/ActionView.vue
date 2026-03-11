@@ -1,5 +1,5 @@
 <template>
-  <div class="action-view" :class="{ 'is-mobile': ui.state.isMobile, 'is-narrow': ui.state.isNarrow }">
+  <div class="action-view" :class="{ 'is-mobile': ui.isMobile, 'is-narrow': ui.isNarrow }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -77,7 +77,9 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { ui } from '../state/ui';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import { validateTicket } from '../utils/evaluation';

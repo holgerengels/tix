@@ -56,8 +56,10 @@
 
 <script setup>
 import { computed } from 'vue';
-import { workflow } from '../state/workflow';
+import { useWorkflowStore } from '../stores/workflow';
 import { format, subDays, subMonths } from 'date-fns';
+
+const workflow = useWorkflowStore();
 
 const type = defineModel('type', { type: Array, default: () => [] });
 const status = defineModel('status', { type: String, default: '' });
@@ -69,7 +71,7 @@ const badges = defineModel('badges', { type: Array, default: () => [] });
 
 const emit = defineEmits(['apply', 'apply-debounced', 'reset']);
 
-const config = workflow.config;
+const config = computed(() => workflow.config);
 
 const availableTypes = computed(() => {
     return config.value ? Object.keys(config.value) : [];

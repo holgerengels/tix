@@ -209,17 +209,17 @@ const getTooltip = (block) => {
 }
 
 .timeline-block.free {
-  background-color: var(--wa-color-red-70); /* Emerald 200 */
+  background-color: var(--wa-color-green-70); /* Emerald 200 */
 }
 .timeline-block.free:hover {
-  background-color: var(--wa-color-red-80); /* Emerald 300 */
+  background-color: var(--wa-color-green-80); /* Emerald 300 */
 }
 
 .timeline-block.occupied {
-  background-color: var(--wa-color-green-70); /* Red 200 */
+  background-color: var(--wa-color-red-70); /* Red 200 */
 }
 .timeline-block.occupied:hover {
-  background-color: var(--wa-color-green-80); /* Red 300 */
+  background-color: var(--wa-color-red-80); /* Red 300 */
 }
 
 /* Static Markers inside the track */

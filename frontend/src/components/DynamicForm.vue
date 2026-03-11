@@ -24,7 +24,9 @@
 import { defineProps, defineEmits, defineExpose, computed, watch, ref, nextTick } from 'vue';
 import FormField from './FormField.vue';
 import { evaluateFields, validateTicket } from '../utils/evaluation';
-import { ui } from '../state/ui';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 
 const props = defineProps({
   fields: { type: Array, required: true },
@@ -94,7 +96,7 @@ const orderedFields = computed(() => {
     const visible = visibleFields.value;
     
     // Only reorder if grid layout is active (not narrow and grid exists)
-    if (ui.state.isNarrow || !props.grid || props.grid.length === 0) {
+    if (ui.isNarrow || !props.grid || props.grid.length === 0) {
         return visible;
     }
 
@@ -135,7 +137,7 @@ const orderedFields = computed(() => {
 });
 
 const gridStyle = computed(() => {
-    if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
+    if (!ui.isNarrow && props.grid && props.grid.length > 0) {
         // Collect visible field names
         const visibleNames = new Set(visibleFields.value.map(f => f.name));
         
@@ -177,7 +179,7 @@ const gridStyle = computed(() => {
 });
 
 const getFieldStyle = (field) => {
-    if (!ui.state.isNarrow && props.grid && props.grid.length > 0) {
+    if (!ui.isNarrow && props.grid && props.grid.length > 0) {
         return {
             gridArea: field.name
         };

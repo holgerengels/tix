@@ -1,5 +1,5 @@
 <template>
-  <div class="log-view" :class="{ 'is-mobile': ui.state.isMobile }">
+  <div class="log-view" :class="{ 'is-mobile': ui.isMobile }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -79,7 +79,9 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
-import { ui } from '../state/ui';
+import { useUiStore } from '../stores/ui';
+
+const ui = useUiStore();
 
 const logs = ref([]);
 const loading = ref(true);
