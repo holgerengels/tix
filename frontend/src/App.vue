@@ -53,7 +53,7 @@
     </aside>
 
     <main class="main-content" ref="mainContent">
-      <router-view />
+      <router-view :key="auth.user?.username || ''" />
     </main>
   </div>
 </template>
@@ -97,9 +97,14 @@ const checkDevMode = async () => {
 
 onMounted(checkDevMode);
 
-// Re-check dev mode on login
-watch(() => auth.isAuthenticated, (newVal) => {
-    if (newVal) checkDevMode();
+// Re-check dev mode on login, navigate home on logout
+watch(() => auth.isAuthenticated, (newVal, oldVal) => {
+    if (newVal) {
+        checkDevMode();
+    } else if (oldVal) {
+        // User logged out — leave detail views and go to list
+        router.push('/');
+    }
 });
 
 const handleResize = (e) => {
