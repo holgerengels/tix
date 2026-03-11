@@ -40,7 +40,7 @@ export function evaluateTemplate(templateStr, ticketData) {
     if (typeof templateStr !== 'string') return templateStr;
 
     // Check if the string perfectly matches a boolean expression
-    const boolMatch = templateStr.match(/^\{\{(.+)\}\}$/);
+    const boolMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
     if (boolMatch) {
         const expr = boolMatch[1];
         try {
