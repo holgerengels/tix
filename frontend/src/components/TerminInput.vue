@@ -27,11 +27,12 @@
         
         <div class="timeline-track" 
              @click="onTrackClick($event, room)"
+             @touchend.prevent="onTrackTap($event, room)"
              :data-room="room"
              ref="tracks">
              
           <!-- Render occupied blocks (red) -->
-          <div v-for="(block, idx) in availability[room]" :key="'occ-'+idx"
+          <div v-for="(block, idx) in filteredAvailability[room]" :key="'occ-'+idx"
                class="timeline-block occupied"
                :style="{ left: getPositionPercent(block.startMin) + '%', width: getWidthPercent(block.startMin, block.endMin) + '%' }"
                :title="`Belegt: ${minutesToTime(block.startMin)} - ${minutesToTime(block.endMin)}`">
@@ -42,6 +43,7 @@
                class="timeline-block selection"
                :style="{ left: getPositionPercent(selection.startMin) + '%', width: getWidthPercent(selection.startMin, selection.endMin) + '%' }"
                @mousedown.left.stop="startDrag($event)"
+               @touchstart.stop.prevent="startDrag($event)"
                @click.stop>
                
                <div class="selection-time">
@@ -49,7 +51,7 @@
                </div>
                
                <!-- Right edge resize handle -->
-               <div class="resize-handle" @mousedown.left.stop="startResize($event)"></div>
+               <div class="resize-handle" @mousedown.left.stop="startResize($event)" @touchstart.stop.prevent="startResize($event)"></div>
           </div>
           
           <!-- Render explicit requested marker ticks (behind everything) -->
@@ -103,6 +105,25 @@ const loading = ref(false);
 const availability = ref({});
 const selection = ref(null); // { room, startMin, endMin }
 const tracks = ref([]); 
+const initialValue = ref(null); // Stores the initial modelValue to exclude own event from availability
+
+// Filter out the block matching the initial (existing) booking so the own event is not treated as occupied
+const filteredAvailability = computed(() => {
+  const iv = initialValue.value;
+  if (!iv) return availability.value;
+
+  const result = {};
+  for (const room in availability.value) {
+    if (room === iv.room) {
+      result[room] = availability.value[room].filter(b =>
+        !(b.startMin === iv.startMin && b.endMin === iv.endMin)
+      );
+    } else {
+      result[room] = availability.value[room];
+    }
+  }
+  return result;
+});
 
 const calendars = computed(() => Object.keys(availability.value));
 
@@ -186,11 +207,17 @@ watch(() => props.date, fetchAvailability, { immediate: true });
 // Sync modelValue => local selection
 watch(() => props.modelValue, (newVal) => {
   if (newVal && newVal.room && newVal.start && newVal.end) {
-    selection.value = {
+    const sel = {
       room: newVal.room,
       startMin: timeToMinutes(newVal.start.replace(':', '')),
       endMin: timeToMinutes(newVal.end.replace(':', ''))
     };
+    selection.value = sel;
+
+    // Store the first non-null value as the initial booking to exclude from availability
+    if (!initialValue.value) {
+      initialValue.value = { ...sel };
+    }
   } else {
     selection.value = null;
   }
@@ -210,11 +237,19 @@ const emitSelection = () => {
 
 // --- Interactions ---
 
-// Convert mouse X relative to track into Minutes
+// Unified helper: extract clientX/clientY from mouse or touch event
+const getClientXY = (e) => {
+  if (e.touches && e.touches.length > 0) return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+  if (e.changedTouches && e.changedTouches.length > 0) return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+  return { clientX: e.clientX, clientY: e.clientY };
+};
+
+// Convert mouse/touch X relative to track into Minutes
 const getMinutesFromMouseEvent = (e) => {
   const trackElement = e.currentTarget.classList.contains('timeline-track') ? e.currentTarget : e.currentTarget.closest('.timeline-track');
   const rect = trackElement.getBoundingClientRect();
-  const x = e.clientX - rect.left;
+  const { clientX } = getClientXY(e);
+  const x = clientX - rect.left;
   const percent = x / rect.width;
   let rawMins = MIN_START + (percent * TOTAL_MINUTES);
   
@@ -225,7 +260,7 @@ const getMinutesFromMouseEvent = (e) => {
 
 // Calculate next free block start
 const findClosestAllowedSlot = (room, targetStartMin, duration) => {
-  const blocks = availability.value[room] || [];
+  const blocks = filteredAvailability.value[room] || [];
   
   const isAvailable = (s) => {
     const e = s + duration;
@@ -279,6 +314,31 @@ const onTrackClick = (e, room) => {
   }
 };
 
+// Touch tap on track (uses changedTouches for position since touchend has no touches)
+const onTrackTap = (e, room) => {
+  if (e.target.closest('.selection')) return;
+  if (isDragging || isResizing) return; // Ignore if we just finished a drag/resize
+
+  const trackEl = e.currentTarget;
+  const rect = trackEl.getBoundingClientRect();
+  const { clientX } = getClientXY(e);
+  const x = clientX - rect.left;
+  const percent = x / rect.width;
+  let rawMins = MIN_START + (percent * TOTAL_MINUTES);
+  const snappedMins = Math.round(rawMins / SNAP_MINUTES) * SNAP_MINUTES;
+  const clickMins = Math.max(MIN_START, Math.min(MAX_END, snappedMins));
+
+  const slot = findClosestAllowedSlot(room, clickMins, DEFAULT_DURATION);
+  if (slot) {
+    selection.value = {
+      room,
+      startMin: slot.startMin,
+      endMin: slot.endMin
+    };
+    emitSelection();
+  }
+};
+
 // --- Drag and Drop (Custom JS) ---
 let isDragging = false;
 let dragOffsetMins = 0;
@@ -290,20 +350,25 @@ const startDrag = (e) => {
   isDragging = true;
   dragDuration = selection.value.endMin - selection.value.startMin;
   
+  const { clientX } = getClientXY(e);
   const trackRect = e.currentTarget.parentElement.getBoundingClientRect();
-  const clickPercent = (e.clientX - trackRect.left) / trackRect.width;
+  const clickPercent = (clientX - trackRect.left) / trackRect.width;
   const clickMins = MIN_START + (clickPercent * TOTAL_MINUTES);
   dragOffsetMins = clickMins - selection.value.startMin;
   
   document.addEventListener('mousemove', onDragMove);
   document.addEventListener('mouseup', onDragEndCustom);
-  document.body.style.userSelect = 'none'; // Prevent text selection
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('touchend', onDragEndCustom);
+  document.body.style.userSelect = 'none';
 };
 
 const onDragMove = (e) => {
   if (!isDragging || !selection.value) return;
+  if (e.cancelable) e.preventDefault(); // Prevent scrolling during drag
   
-  const elements = document.elementsFromPoint(e.clientX, e.clientY);
+  const { clientX, clientY } = getClientXY(e);
+  const elements = document.elementsFromPoint(clientX, clientY);
   const trackEl = elements.find(el => el.classList && el.classList.contains('timeline-track'));
   
   let targetRoom = selection.value.room;
@@ -313,13 +378,12 @@ const onDragMove = (e) => {
     targetRoom = trackEl.dataset.room;
     trackRect = trackEl.getBoundingClientRect();
   } else {
-    // Fallback to active room if dragged far outside
     const currentTrackEl = tracks.value.find(t => t.dataset && t.dataset.room === selection.value.room) || tracks.value[0];
     if (!currentTrackEl) return;
     trackRect = currentTrackEl.getBoundingClientRect();
   }
   
-  const x = e.clientX - trackRect.left;
+  const x = clientX - trackRect.left;
   const percent = x / trackRect.width;
   const rawMins = MIN_START + (percent * TOTAL_MINUTES);
   
@@ -335,11 +399,13 @@ const onDragMove = (e) => {
   }
 };
 
-const onDragEndCustom = (e) => {
+const onDragEndCustom = () => {
   if (isDragging) {
     isDragging = false;
     document.removeEventListener('mousemove', onDragMove);
     document.removeEventListener('mouseup', onDragEndCustom);
+    document.removeEventListener('touchmove', onDragMove);
+    document.removeEventListener('touchend', onDragEndCustom);
     document.body.style.userSelect = '';
     emitSelection();
   }
@@ -352,14 +418,18 @@ let initialEndMin = 0;
 
 const startResize = (e) => {
   isResizing = true;
-  startResizeX = e.clientX;
+  const { clientX } = getClientXY(e);
+  startResizeX = clientX;
   initialEndMin = selection.value.endMin;
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('mousemove', onResizeMove);
+  document.addEventListener('mouseup', onResizeEnd);
+  document.addEventListener('touchmove', onResizeMove, { passive: false });
+  document.addEventListener('touchend', onResizeEnd);
 };
 
-const onMouseMove = (e) => {
+const onResizeMove = (e) => {
   if (!isResizing || !selection.value) return;
+  if (e.cancelable) e.preventDefault(); // Prevent scrolling during resize
   
   // Find track width to convert pixels to minutes
   const trackElement = tracks.value[0]; // All tracks have same width
@@ -368,7 +438,8 @@ const onMouseMove = (e) => {
   const rect = trackElement.getBoundingClientRect();
   const pixelsPerMinute = rect.width / TOTAL_MINUTES;
   
-  const deltaX = e.clientX - startResizeX;
+  const { clientX } = getClientXY(e);
+  const deltaX = clientX - startResizeX;
   const deltaMins = deltaX / pixelsPerMinute;
   
   let intendedEndMin = initialEndMin + deltaMins;
@@ -380,7 +451,7 @@ const onMouseMove = (e) => {
 
   // Check conflicts
   const room = selection.value.room;
-  const blocks = availability.value[room] || [];
+  const blocks = filteredAvailability.value[room] || [];
   
   // Disallow resize over an occupied block. Max allowed end is the start of the next block.
   const nextBlock = blocks.filter(b => b.startMin >= selection.value.startMin)
@@ -393,11 +464,13 @@ const onMouseMove = (e) => {
   selection.value.endMin = intendedEndMin;
 };
 
-const onMouseUp = () => {
+const onResizeEnd = () => {
   if (isResizing) {
     isResizing = false;
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
+    document.removeEventListener('mousemove', onResizeMove);
+    document.removeEventListener('mouseup', onResizeEnd);
+    document.removeEventListener('touchmove', onResizeMove);
+    document.removeEventListener('touchend', onResizeEnd);
     emitSelection();
   }
 };
@@ -508,6 +581,7 @@ const onMouseUp = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none;
 }
 
 .timeline-block.selection:active {
@@ -536,6 +610,7 @@ const onMouseUp = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none;
 }
 .resize-handle::after {
   content: "";

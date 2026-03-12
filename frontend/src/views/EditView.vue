@@ -41,8 +41,8 @@
             />
         </div>
 
-        <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
-        <wa-button slot="footer-actions" variant="primary" @click="save" :loading="saving">Speichern</wa-button>
+        <wa-button slot="footer-actions" size="small" @click="goBack" appearance="plain">Abbrechen</wa-button>
+        <wa-button slot="footer-actions" size="small" variant="primary" @click="save" :loading="saving">Speichern</wa-button>
     </wa-card>
   </div>
 </template>

@@ -41,7 +41,7 @@
 
 
         
-        <wa-button slot="footer-actions" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
+        <wa-button slot="footer-actions" size="small"variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
     </wa-card>
   </div>
 </template>

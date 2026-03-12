@@ -53,7 +53,7 @@
         </div>
 
 
-            <wa-button slot="footer-actions" @click="goBack" appearance="filled">Abbrechen</wa-button>
+            <wa-button slot="footer-actions" size="small" @click="goBack" appearance="filled">Abbrechen</wa-button>
             <template v-if="currentFormDef && currentFormDef.actions">
                 <wa-divider slot="footer-actions" orientation="vertical"></wa-divider>
                 <wa-button-group slot="footer-actions">

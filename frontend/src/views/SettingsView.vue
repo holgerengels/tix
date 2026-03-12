@@ -21,7 +21,7 @@
         ></wa-input>
       </div>
       <div class="actions">
-        <wa-button variant="primary" @click="save" :loading="loading">Speichern</wa-button>
+        <wa-button variant="primary" size="small" @click="save" :loading="loading">Speichern</wa-button>
       </div>
       <h3 class="settings-header">Push-Benachrichtigungen</h3>
       <div v-if="pushSupported" class="form-group" style="display:flex; align-items:center; gap: 1rem;">
