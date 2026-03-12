@@ -181,7 +181,7 @@ const deleteSubscription = async (id) => {
 }
 
 .description {
-  color: var(--wa-color-neutral-600);
+  color: var(--wa-color-neutral-30);
   margin-bottom: 1rem;
 }
 
@@ -201,8 +201,8 @@ const deleteSubscription = async (id) => {
 .empty-state {
   padding: 2rem;
   text-align: center;
-  color: var(--wa-color-neutral-500);
-  background: var(--wa-color-neutral-50);
+  color: var(--wa-color-neutral-40);
+  background: var(--wa-color-neutral-90);
   border-radius: var(--wa-border-radius-medium);
   margin-bottom: 2rem;
 }

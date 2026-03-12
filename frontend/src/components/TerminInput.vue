@@ -414,22 +414,22 @@ const onMouseUp = () => {
 .termin-label {
   font-size: var(--wa-font-size-m);
   font-weight: 500;
-  color: var(--wa-color-neutral-700);
+  color: var(--wa-color-neutral-20);
 }
 
 .termin-empty, .termin-loading, .termin-readonly {
-  background: var(--wa-color-neutral-50);
-  border: 1px dashed var(--wa-color-neutral-300);
+  background: var(--wa-color-neutral-90);
+  border: 1px dashed var(--wa-color-neutral-60);
   padding: 1rem;
   border-radius: 4px;
   text-align: center;
-  color: var(--wa-color-neutral-500);
+  color: var(--wa-color-neutral-40);
   font-size: 0.875rem;
 }
 
 .termin-readonly {
-  border: 1px solid var(--wa-color-neutral-200);
-  background: var(--wa-color-neutral-100);
+  border: 1px solid var(--wa-color-neutral-70);
+  background: var(--wa-color-neutral-80);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -443,11 +443,11 @@ const onMouseUp = () => {
 
 .readonly-room {
   font-weight: 600;
-  color: var(--wa-color-neutral-800);
+  color: var(--wa-color-neutral-15);
 }
 
 .readonly-time {
-  color: var(--wa-color-neutral-600);
+  color: var(--wa-color-neutral-30);
   font-size: 0.9em;
 }
 
@@ -467,7 +467,7 @@ const onMouseUp = () => {
   width: 100px;
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--wa-color-neutral-700);
+  color: var(--wa-color-neutral-20);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -478,9 +478,9 @@ const onMouseUp = () => {
   position: relative;
   flex: 1;
   height: 28px;
-  background-color: var(--wa-color-neutral-100);
+  background-color: var(--wa-color-neutral-80);
   border-radius: 4px;
-  border: 1px solid var(--wa-color-neutral-200);
+  border: 1px solid var(--wa-color-neutral-70);
   cursor: pointer;
 }
 
@@ -570,7 +570,7 @@ const onMouseUp = () => {
 .timeline-label-item {
   position: absolute;
   font-size: 0.65rem;
-  color: var(--wa-color-neutral-500);
+  color: var(--wa-color-neutral-40);
   top: 0;
   white-space: nowrap;
 }

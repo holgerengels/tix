@@ -3,7 +3,6 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const { GridFSBucket, ObjectId } = require('mongodb');
 const { verifyToken } = require('./auth');
-const Ticket = require('./models/ticket');
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -12,12 +11,9 @@ mongoose.connection.on('open', () => {
     bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'attachments' });
 });
 
-// Upload: Raw body stream → GridFS
-router.post('/tickets/:id/attachments', verifyToken, async (req, res) => {
+// Upload: Raw body stream → GridFS (no ticket required)
+router.post('/attachments', verifyToken, async (req, res) => {
     try {
-        const ticket = await Ticket.findById(req.params.id);
-        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
-
         const filename = decodeURIComponent(req.headers['x-filename'] || 'unnamed');
         const contentType = req.headers['x-content-type'] || 'application/octet-stream';
         const contentLength = parseInt(req.headers['content-length'] || '0', 10);
@@ -28,28 +24,20 @@ router.post('/tickets/:id/attachments', verifyToken, async (req, res) => {
 
         const uploadStream = bucket.openUploadStream(filename, {
             contentType,
-            metadata: { ticketId: ticket._id.toString(), uploadedBy: req.user.username }
+            metadata: { uploadedBy: req.user.username }
         });
 
         req.pipe(uploadStream);
 
-        uploadStream.on('finish', async () => {
-            const meta = {
+        uploadStream.on('finish', () => {
+            res.status(201).json({
                 fileId: uploadStream.id.toString(),
                 filename,
                 contentType,
                 size: uploadStream.length,
                 uploadedBy: req.user.username,
                 uploadedAt: new Date()
-            };
-
-            const attachments = ticket.get('attachments') || [];
-            attachments.push(meta);
-            ticket.set('attachments', attachments);
-            ticket.markModified('attachments');
-            await ticket.save();
-
-            res.status(201).json(meta);
+            });
         });
 
         uploadStream.on('error', (err) => {
@@ -92,31 +80,40 @@ router.get('/attachments/:fileId', verifyToken, async (req, res) => {
     }
 });
 
-// Delete: GridFS + Ticket array
+// Delete: GridFS file
 router.delete('/attachments/:fileId', verifyToken, async (req, res) => {
     try {
         const fileId = req.params.fileId;
         const fileObjectId = new ObjectId(fileId);
 
-        // Find ticket containing this attachment
-        const ticket = await Ticket.findOne({ 'attachments.fileId': fileId });
-        if (!ticket) return res.status(404).json({ message: 'Attachment not found' });
+        // Check file exists
+        const files = await bucket.find({ _id: fileObjectId }).toArray();
+        if (!files || files.length === 0) {
+            return res.status(404).json({ message: 'File not found' });
+        }
 
         // Check permission: uploader or edit access
-        const attachment = (ticket.get('attachments') || []).find(a => a.fileId === fileId);
+        const file = files[0];
         const { canEdit } = require('./workflow');
-        if (attachment?.uploadedBy !== req.user.username && !canEdit(ticket.type, req.user.groups)) {
-            return res.status(403).json({ message: 'Not authorized to delete this attachment' });
+        const Ticket = require('./models/ticket');
+        const ticket = await Ticket.findOne({ 'attachments.fileId': fileId });
+
+        if (file.metadata?.uploadedBy !== req.user.username) {
+            if (!ticket || !canEdit(ticket.type, req.user.groups)) {
+                return res.status(403).json({ message: 'Not authorized to delete this attachment' });
+            }
         }
 
         // Remove from GridFS
         await bucket.delete(fileObjectId);
 
-        // Remove from ticket
-        const attachments = (ticket.get('attachments') || []).filter(a => a.fileId !== fileId);
-        ticket.set('attachments', attachments);
-        ticket.markModified('attachments');
-        await ticket.save();
+        // Remove from ticket if associated
+        if (ticket) {
+            const attachments = (ticket.get('attachments') || []).filter(a => a.fileId !== fileId);
+            ticket.set('attachments', attachments);
+            ticket.markModified('attachments');
+            await ticket.save();
+        }
 
         res.json({ message: 'Attachment deleted' });
     } catch (err) {

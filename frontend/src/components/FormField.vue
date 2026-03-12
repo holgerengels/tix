@@ -226,7 +226,6 @@
       <!-- Attachments -->
       <FileAttachments
         v-else-if="field.type === 'Attachments'"
-        :ticketId="context?._id"
         :readonly="field.readonly === true"
         :label="field.label"
         :modelValue="modelValue || []"
@@ -354,6 +353,6 @@ wa-slider {
 .weekday-label {
     font-size: 1rem;
     font-weight: 500;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
 }
 </style>

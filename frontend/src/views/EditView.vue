@@ -267,7 +267,7 @@ onMounted(fetchData);
     height: 100%;
     flex: 1;
     min-width: 300px;
-    border-left: 1px solid var(--wa-color-neutral-200);
+    border-left: 1px solid var(--wa-color-neutral-70);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
@@ -276,10 +276,10 @@ onMounted(fetchData);
 .loading, .error {
     text-align: center;
     padding: 3rem;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
 }
 .error {
-    color: var(--wa-color-danger-700);
+    color: var(--wa-color-danger-20);
 }
 .is-mobile {
     height: auto;

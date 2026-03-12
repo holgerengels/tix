@@ -108,7 +108,6 @@
                                 @wa-show="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = true }"
                                 @wa-hide="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = false }"
                             >
-                                <div class="popover-content">
                                     <wa-textarea 
                                         :value="popoverComments[ticket._id + '-' + action.name] || ''"
                                         @input="e => popoverComments[ticket._id + '-' + action.name] = e.target.value"
@@ -128,7 +127,6 @@
                                             {{ action.name }}
                                         </wa-button>
                                     </div>
-                                </div>
                             </wa-popover>
                         </template>
 
@@ -150,7 +148,6 @@
                                 @wa-show="e => { if (e.target.tagName === 'WA-POPOVER') openAssignPopover(ticket._id + '-' + action.name, ticket.assignee) }"
                                 @wa-hide="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = false }"
                             >
-                                <div class="popover-content">
                                     <wa-select 
                                         :value="popoverAssignees[ticket._id + '-' + action.name] || ''"
                                         @change="e => handleAssigneeSelect(ticket._id + '-' + action.name, e)"
@@ -173,7 +170,6 @@
                                             Zuweisen
                                         </wa-button>
                                     </div>
-                                </div>
                             </wa-popover>
                         </template>
 
@@ -781,20 +777,20 @@ onMounted(async () => {
     background: white;
     box-shadow: var(--wa-shadow-small);
     border-radius: var(--wa-border-radius-large);
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-80);
 }
 
 .ticket-table th, .ticket-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
+    border-bottom: 1px solid var(--wa-color-neutral-80);
     vertical-align: middle;
 }
 
 .ticket-table th {
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-95);
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     text-transform: uppercase;
     font-size: 0.8rem;
     position: sticky;
@@ -807,7 +803,7 @@ onMounted(async () => {
     cursor: pointer;
 }
 .ticket-table th.sortable:hover {
-    background-color: var(--wa-color-neutral-100);
+    background-color: var(--wa-color-neutral-80);
 }
 .sort-icon {
     font-size: 1em;
@@ -819,7 +815,7 @@ onMounted(async () => {
 }
 
 .ticket-table tr:hover {
-    background-color: var(--wa-color-primary-50);
+    background-color: var(--wa-color-brand-90);
 }
 
 .ticket-table tr:last-child td {
@@ -837,7 +833,7 @@ onMounted(async () => {
     padding: 0;
     white-space: nowrap;
     line-height: 1;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
 }
 .actions-cell wa-button {
     margin-right: 0;
@@ -847,10 +843,10 @@ onMounted(async () => {
 .empty-state {
     padding: 3rem;
     text-align: center;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     background: white;
     border-radius: var(--wa-border-radius-large);
-    border: 1px dashed var(--wa-color-neutral-300);
+    border: 1px dashed var(--wa-color-neutral-60);
 }
 
 .ticket-link {
@@ -920,7 +916,7 @@ onMounted(async () => {
 
 .saved-filters-label {
     font-size: 0.85rem;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     margin-right: 0.5rem;
 }
 
@@ -960,7 +956,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     background: white;
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-80);
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
     padding: 1rem;
@@ -980,7 +976,7 @@ onMounted(async () => {
 .is-mobile .ticket-table td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     margin-right: 1rem;
     flex-shrink: 0;
     font-size: 0.85rem;
@@ -990,7 +986,7 @@ onMounted(async () => {
 .is-mobile .ticket-table td.actions-cell {
     margin-top: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--wa-color-neutral-100);
+    border-top: 1px solid var(--wa-color-neutral-80);
     justify-items: end;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -1008,7 +1004,7 @@ onMounted(async () => {
 
 .popover-content {
     background: white;
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-80);
     border-radius: var(--wa-border-radius-medium);
     padding: 1rem;
     box-shadow: var(--wa-shadow-large);

@@ -26,7 +26,7 @@
             @reset="resetFilters"
         >
             <template #actions v-if="selectedTickets.length > 0">
-                <span style="font-weight: 500; color: var(--wa-color-primary-700);">{{ selectedTickets.length }} ausgewählt</span>
+                <span style="font-weight: 500; color: var(--wa-color-brand-20);">{{ selectedTickets.length }} ausgewählt</span>
             </template>
         </TicketFilter>
 
@@ -472,20 +472,20 @@ onMounted(async () => {
     background: white;
     box-shadow: var(--wa-shadow-small);
     border-radius: var(--wa-border-radius-large);
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-70);
 }
 
 .ticket-table th, .ticket-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
+    border-bottom: 1px solid var(--wa-color-neutral-80);
     vertical-align: middle;
 }
 
 .ticket-table th {
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     text-transform: uppercase;
     font-size: 0.8rem;
     position: sticky;
@@ -498,7 +498,7 @@ onMounted(async () => {
     cursor: pointer;
 }
 .ticket-table th.sortable:hover {
-    background-color: var(--wa-color-neutral-100);
+    background-color: var(--wa-color-neutral-80);
 }
 .sort-icon {
     font-size: 1em;
@@ -511,11 +511,11 @@ onMounted(async () => {
 }
 
 .ticket-table tr:hover {
-    background-color: var(--wa-color-primary-50);
+    background-color: var(--wa-color-brand-90);
 }
 
 .ticket-table tr.selected {
-    background-color: var(--wa-color-primary-100);
+    background-color: var(--wa-color-brand-80);
 }
 
 .ticket-table tr:last-child td {
@@ -533,7 +533,7 @@ onMounted(async () => {
     padding: 0;
     white-space: nowrap;
     line-height: 1;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
 }
 
 
@@ -610,7 +610,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     background: white;
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-70);
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
     padding: 1rem;
@@ -630,7 +630,7 @@ onMounted(async () => {
 .is-mobile .ticket-table td::before {
     content: attr(data-label);
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     margin-right: 1rem;
     flex-shrink: 0;
     font-size: 0.85rem;

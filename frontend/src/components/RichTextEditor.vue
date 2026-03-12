@@ -46,7 +46,6 @@ const emit = defineEmits(['update:modelValue']);
 }
 .label-required::after {
     content: "*";
-    color: var(--wa-color-danger-500);
     margin-left: 0.2rem; 
 }
 .quill-wrapper {
@@ -58,6 +57,7 @@ const emit = defineEmits(['update:modelValue']);
     min-height: 150px;
 }
 :deep(.ql-toolbar) {
+    background: var(--wa-color-neutral-95);
     border-top-left-radius: var(--wa-border-radius-medium);
     border-top-right-radius: var(--wa-border-radius-medium);
 }
@@ -67,14 +67,14 @@ const emit = defineEmits(['update:modelValue']);
     border-bottom-right-radius: var(--wa-border-radius-medium);
 }
 :deep(.ql-editor[contenteditable=false]) {
-    background-color: var(--wa-color-neutral-50);
+    background-color: white;
     border-bottom-left-radius: var(--wa-border-radius-medium);
     border-bottom-right-radius: var(--wa-border-radius-medium);
     border-bottom-right-radius: var(--wa-border-radius-medium);
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
 }
 .editor-hint {
     font-size: var(--wa-font-size-small);
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
 }
 </style>

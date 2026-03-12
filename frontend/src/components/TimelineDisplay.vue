@@ -173,7 +173,7 @@ const getTooltip = (block) => {
 .timeline-label {
   font-size: var(--wa-font-size-m);
   font-weight: 500;
-  color: var(--wa-color-neutral-700);
+  color: var(--wa-color-neutral-20);
 }
 
 .timeline-wrapper {
@@ -186,10 +186,10 @@ const getTooltip = (block) => {
 .timeline-track {
   display: flex;
   height: 24px;
-  background-color: var(--wa-color-neutral-100);
+  background-color: var(--wa-color-neutral-80);
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid var(--wa-color-neutral-200);
+  border: 1px solid var(--wa-color-neutral-70);
 }
 
 .timeline-empty {
@@ -197,11 +197,11 @@ const getTooltip = (block) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--wa-color-neutral-500);
+  color: var(--wa-color-neutral-40);
   font-size: 0.875rem;
-  background-color: var(--wa-color-neutral-100);
+  background-color: var(--wa-color-neutral-80);
   border-radius: 4px;
-  border: 1px dashed var(--wa-color-neutral-300);
+  border: 1px dashed var(--wa-color-neutral-60);
 }
 
 .timeline-block {
@@ -239,7 +239,7 @@ const getTooltip = (block) => {
   top: -2px;
   height: 28px;
   width: 2px;
-  background-color: var(--wa-color-primary-700, #1d4ed8);
+  background-color: var(--wa-color-brand-20, #1d4ed8);
   z-index: 10;
   transform: translateX(-50%);
   pointer-events: none;
@@ -265,7 +265,7 @@ const getTooltip = (block) => {
 .timeline-label-item {
   position: absolute;
   font-size: 0.65rem;
-  color: var(--wa-color-neutral-500);
+  color: var(--wa-color-neutral-40);
   top: 0;
   white-space: nowrap;
 }

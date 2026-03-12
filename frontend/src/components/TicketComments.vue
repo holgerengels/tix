@@ -126,7 +126,7 @@ onMounted(() => {
     padding: 0.75rem 1rem;
     font-weight: 600;
     background: transparent;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
@@ -145,7 +145,7 @@ onMounted(() => {
     border-radius: var(--wa-border-radius-medium);
     box-shadow: var(--wa-shadow-small);
     position: relative;
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
 }
 
 .comment-header {
@@ -153,19 +153,19 @@ onMounted(() => {
     justify-content: space-between;
     margin-bottom: 0.5rem;
     font-size: 0.85em;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
 }
 
 .author {
     font-weight: 600;
-    color: var(--wa-color-primary-700);
+    color: var(--wa-color-brand-20);
 }
 
 .comment-body {
     white-space: pre-wrap;
     font-size: 0.95em;
     line-height: 1.5;
-    color: var(--wa-color-neutral-900);
+    color: var(--wa-color-neutral-10);
 }
 
 .comment-input {
@@ -178,7 +178,7 @@ onMounted(() => {
 
 .loading, .empty {
     text-align: center;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     margin-top: 3rem;
     font-style: italic;
     font-size: 0.9rem;

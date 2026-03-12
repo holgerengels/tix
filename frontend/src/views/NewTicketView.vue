@@ -231,7 +231,7 @@ onMounted(fetchConfig);
     height: 100%;
     flex: 1;
     min-width: 300px;
-    border-left: 1px solid var(--wa-color-neutral-200);
+    border-left: 1px solid var(--wa-color-neutral-70);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
@@ -242,14 +242,14 @@ onMounted(fetchConfig);
 .markdown-body :deep(h3) {
     margin-top: 0;
     margin-bottom: 0.5rem;
-    color: var(--wa-color-neutral-800);
+    color: var(--wa-color-neutral-15);
 }
 .markdown-body :deep(p), 
 .markdown-body :deep(ul), 
 .markdown-body :deep(ol) {
     margin-bottom: 1rem;
     line-height: 1.5;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
 }
 .markdown-body :deep(li) {
     margin-bottom: 0.25rem;
@@ -257,10 +257,10 @@ onMounted(fetchConfig);
 .loading, .error {
     text-align: center;
     padding: 3rem;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
 }
 .error {
-    color: var(--wa-color-danger-700);
+    color: var(--wa-color-danger-20);
 }
 .is-narrow .ticket-content, .is-mobile .ticket-content {
     flex-direction: column;
@@ -280,7 +280,7 @@ onMounted(fetchConfig);
     height: auto;
     overflow: visible;
     border-left: none;
-    border-top: 1px solid var(--wa-color-neutral-200);
+    border-top: 1px solid var(--wa-color-neutral-70);
     padding-left: 0;
     margin-top: 2rem;
 }

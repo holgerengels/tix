@@ -53,7 +53,7 @@ onMounted(fetchLogs);
 <style scoped>
 .ticket-log {
     margin-top: 2rem;
-    border-top: 1px solid var(--wa-color-neutral-200);
+    border-top: 1px solid var(--wa-color-neutral-70);
     padding-top: 1rem;
 }
 .log-list {
@@ -63,28 +63,28 @@ onMounted(fetchLogs);
 }
 .log-entry {
     padding: 0.5rem;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
+    border-bottom: 1px solid var(--wa-color-neutral-80);
     font-size: 0.9rem;
 }
 .log-header {
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
 }
 .editor {
     font-weight: 600;
 }
 .action {
-    color: var(--wa-color-primary-700);
+    color: var(--wa-color-brand-20);
 }
 .date {
     margin-left: auto;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     font-size: 0.8rem;
 }
 .loading, .empty {
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     font-style: italic;
     padding: 1rem 0;
 }

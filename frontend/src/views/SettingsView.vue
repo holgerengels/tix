@@ -27,7 +27,7 @@
       <div v-if="pushSupported" class="form-group" style="display:flex; align-items:center; gap: 1rem;">
           <wa-switch :checked="pushEnabled" @wa-change="togglePush">Auf diesem Gerät empfangen</wa-switch>
       </div>
-      <div v-else class="form-group" style="color: var(--wa-color-danger-600)">
+      <div v-else class="form-group" style="color: var(--wa-color-danger-30)">
           Push-Benachrichtigungen werden von diesem Browser nicht unterstützt.
       </div>
 

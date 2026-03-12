@@ -189,7 +189,7 @@ const onDrop = (event, index) => {
     grid-column: 1 / -1; /* Make label span full width in grid */
     font-size: 1rem;
     font-weight: 500;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
     margin-bottom: 0.25rem;
 }
 
@@ -210,7 +210,7 @@ const onDrop = (event, index) => {
 }
 
 .array-row:hover {
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
 }
 
 .is-skeleton {
@@ -219,7 +219,7 @@ const onDrop = (event, index) => {
 
 .drag-handle {
     cursor: grab;
-    color: var(--wa-color-neutral-400);
+    color: var(--wa-color-neutral-50);
     display: flex;
     align-items: center;
     padding: 0;
@@ -249,10 +249,10 @@ const onDrop = (event, index) => {
 }
 
 .delete-btn {
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
 }
 
 .delete-btn:hover {
-    color: var(--wa-color-danger-600);
+    color: var(--wa-color-danger-30);
 }
 </style>

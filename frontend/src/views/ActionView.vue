@@ -365,7 +365,7 @@ onMounted(fetchData);
     height: 100%;
     flex: 1;
     min-width: 300px;
-    border-left: 1px solid var(--wa-color-neutral-200);
+    border-left: 1px solid var(--wa-color-neutral-70);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
@@ -375,15 +375,15 @@ onMounted(fetchData);
     padding: 2rem;
     font-size: 1.1rem;
     text-align: center;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
 }
 .loading, .error {
     text-align: center;
     padding: 3rem;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
 }
 .error {
-    color: var(--wa-color-danger-700);
+    color: var(--wa-color-danger-20);
 }
 
 /* Narrow/Mobile state */
@@ -405,7 +405,7 @@ onMounted(fetchData);
     height: auto;
     overflow: visible;
     border-left: none;
-    border-top: 1px solid var(--wa-color-neutral-200);
+    border-top: 1px solid var(--wa-color-neutral-70);
     padding-left: 0;
     margin-top: 2rem;
 }

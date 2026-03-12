@@ -179,7 +179,7 @@ const reloadConfig = async () => {
 <style>
 body {
     font-family: var(--wa-font-sans);
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
     margin: 0;
     height: 100vh;
     width: 100vw;
@@ -202,8 +202,8 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 200px;
-    background: linear-gradient(180deg, #ffffff 0%, var(--wa-color-neutral-50) 100%);
-    border-right: 1px solid var(--wa-color-neutral-200);
+    background-color: white;
+    border-right: 1px solid var(--wa-color-neutral-80);
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
@@ -219,7 +219,7 @@ body {
     line-height: 34px;
     font-weight: 800;
     margin-bottom: 2rem;
-    color: var(--wa-color-primary-700);
+    color: var(--wa-color-brand-20);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -230,7 +230,7 @@ body {
     align-items: center;
     gap: 0.875rem;
     padding: 0.875rem 1rem;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     text-decoration: none;
     border-radius: var(--wa-border-radius-medium);
     margin-bottom: 0.375rem;
@@ -239,14 +239,14 @@ body {
 }
 
 .nav-item:hover {
-    background: var(--wa-color-primary-50);
-    color: var(--wa-color-primary-700);
+    background: var(--wa-color-brand-90);
+    color: var(--wa-color-brand-20);
     transform: translateX(2px);
 }
 
 .nav-item.active {
-    background: var(--wa-color-primary-100);
-    color: var(--wa-color-primary-800);
+    background: var(--wa-color-brand-80);
+    color: var(--wa-color-brand-15);
     font-weight: 600;
 }
 
@@ -266,7 +266,7 @@ body {
 
 .user-info {
     margin-bottom: 1rem;
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     font-size: 0.875rem;
     padding-left: 0.5rem;
     font-weight: 500;
@@ -280,7 +280,7 @@ body {
 .main-content {
     flex: 1;
     padding: 0;
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-95);
     overflow: hidden; /* Ensure content doesn't spill over when sidebar is toggled */
     container-type: inline-size;
     container-name: main;
@@ -330,7 +330,7 @@ body {
         width: 200px; 
         padding-left: 1.5rem; /* Restore padding because default collapsed removes it */
         padding-right: 1.5rem;
-        border-right: 1px solid var(--wa-color-neutral-200); /* Restore border */
+        border-right: 1px solid var(--wa-color-neutral-70); /* Restore border */
         opacity: 1; 
         pointer-events: none;
     }
@@ -355,6 +355,6 @@ body {
     flex-direction: column;
     gap: 0.5rem;
     font-size: 0.9rem;
-    border: 1px solid var(--wa-color-primary-200);
+    border: 1px solid var(--wa-color-brand-70);
 }
 </style>

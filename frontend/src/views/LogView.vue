@@ -210,18 +210,18 @@ onMounted(async () => {
     background: white;
     box-shadow: var(--wa-shadow-small);
     border-radius: var(--wa-border-radius-large);
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-70);
 }
 .log-table th, .log-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-100);
+    border-bottom: 1px solid var(--wa-color-neutral-80);
     vertical-align: middle;
 }
 .log-table th {
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     text-transform: uppercase;
     font-size: 0.75rem;
     position: sticky;
@@ -232,7 +232,7 @@ onMounted(async () => {
     transition: background-color 0.2s;
 }
 .log-table tr:hover {
-    background-color: var(--wa-color-primary-50);
+    background-color: var(--wa-color-brand-90);
 }
 .log-table tr:last-child td {
     border-bottom: none;
@@ -241,14 +241,14 @@ onMounted(async () => {
     text-decoration: none;
     font-weight: 600;
     white-space: nowrap;
-    color: var(--wa-color-primary-600);
+    color: var(--wa-color-brand-30);
     cursor: pointer;
 }
 .ticket-link:hover {
     text-decoration: underline;
 }
 .text-muted {
-    color: var(--wa-color-neutral-500);
+    color: var(--wa-color-neutral-40);
     font-style: italic;
 }
 
@@ -256,7 +256,7 @@ onMounted(async () => {
     background: white;
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-70);
     flex-shrink: 0;
 }
 
@@ -264,7 +264,7 @@ onMounted(async () => {
     padding: 1rem;
     font-weight: 600;
     cursor: pointer;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
     list-style: none;
     display: flex;
     align-items: center;
@@ -279,8 +279,8 @@ onMounted(async () => {
     content: '';
     width: 0.5rem;
     height: 0.5rem;
-    border-right: 2px solid var(--wa-color-neutral-500);
-    border-bottom: 2px solid var(--wa-color-neutral-500);
+    border-right: 2px solid var(--wa-color-neutral-40);
+    border-bottom: 2px solid var(--wa-color-neutral-40);
     transform: rotate(45deg);
     margin-left: auto;
     transition: transform 0.2s;
@@ -311,26 +311,26 @@ onMounted(async () => {
 
 .filter-group label {
     font-weight: 500;
-    color: var(--wa-color-neutral-700);
+    color: var(--wa-color-neutral-20);
     font-size: 0.9rem;
 }
 
 .filter-group select,
 .filter-group input {
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--wa-color-neutral-300);
+    border: 1px solid var(--wa-color-neutral-60);
     border-radius: 6px;
     font-size: 0.9rem;
     min-width: 140px;
     transition: all 0.2s;
-    background-color: var(--wa-color-neutral-50);
+    background-color: var(--wa-color-neutral-90);
 }
 
 .filter-group select:focus,
 .filter-group input:focus {
     outline: none;
-    border-color: var(--wa-color-primary-500);
-    box-shadow: 0 0 0 2px var(--wa-color-primary-100);
+    border-color: var(--wa-color-brand-40);
+    box-shadow: 0 0 0 2px var(--wa-color-brand-80);
     background-color: white;
 }
 /* Mobile Styles using .is-mobile class */
@@ -359,7 +359,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     background: white;
-    border: 1px solid var(--wa-color-neutral-200);
+    border: 1px solid var(--wa-color-neutral-70);
     border-radius: var(--wa-border-radius-large);
     box-shadow: var(--wa-shadow-small);
     padding: 1rem;
@@ -379,7 +379,7 @@ onMounted(async () => {
 .is-mobile .log-table td::before {
     content: attr(data-label); 
     font-weight: 600;
-    color: var(--wa-color-neutral-600);
+    color: var(--wa-color-neutral-30);
     margin-right: 1rem;
     flex-shrink: 0;
     font-size: 0.85rem;

@@ -1,17 +1,17 @@
 <template>
   <div class="login-overlay">
     <wa-card class="login-card">
-      <h2 slot="header">Login Required</h2>
+      <h2 slot="header">Anmeldung erforderlich</h2>
       <form @submit.prevent="handleLogin">
         <wa-input 
-            label="Username" 
+            label="Anmeldename" 
             v-model="username" 
             required
             autofocus
         ></wa-input>
         <br />
         <wa-input 
-            label="Password" 
+            label="Passwort" 
             type="password" 
             v-model="password" 
             password-toggle 
