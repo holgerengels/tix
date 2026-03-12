@@ -4,6 +4,10 @@
     "template": "{{location}} {{ticket.category}}",
     "fields": [
         {
+            "name": "attachments",
+            "visible": true
+        },
+        {
             "name": "assignee",
             "groups": [
                 "Netzwerkteam"
@@ -168,7 +172,8 @@
         "description description description description",
         "location location category category",
         "raumbelegung raumbelegung raumbelegung raumbelegung",
-        "assignee assignee assignee assignee"
+        "assignee assignee assignee assignee",
+        "attachments attachments attachments attachments"
     ],
     "workflow": [
         {

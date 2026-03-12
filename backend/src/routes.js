@@ -940,4 +940,7 @@ router.post('/push/subscribe', verifyToken, async (req, res) => {
     }
 });
 
+// Attachments
+router.use(require('./attachments'));
+
 module.exports = router;

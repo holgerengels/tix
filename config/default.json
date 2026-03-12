@@ -34,6 +34,12 @@
                 "Lehrkräfte"
             ],
             "visible": false
+        },
+        {
+            "name": "attachments",
+            "type": "Attachments",
+            "label": "Anhänge",
+            "visible": false
         }
     ]
 }

@@ -4,6 +4,10 @@
     "template": "{{ticket.category}}",
     "fields": [
         {
+            "name": "attachments",
+            "visible": true
+        },
+        {
             "name": "category",
             "label": "Kategorie",
             "type": "Select",
@@ -21,7 +25,8 @@
         "title title title title",
         "badges badges badges badges",
         "description description description description",
-        "category category category category"
+        "category category category category",
+        "attachments attachments attachments attachments"
     ],
     "workflow": [
         {

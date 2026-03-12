@@ -223,6 +223,16 @@
         @update:modelValue="updateValue"
       />
 
+      <!-- Attachments -->
+      <FileAttachments
+        v-else-if="field.type === 'Attachments'"
+        :ticketId="context?._id"
+        :readonly="field.readonly === true"
+        :label="field.label"
+        :modelValue="modelValue || []"
+        @update:modelValue="updateValue"
+      />
+
        <!-- Standard Text -->
       <wa-input 
         v-else
@@ -245,6 +255,7 @@ import BadgeEditor from './BadgeEditor.vue';
 import ArrayFieldEditor from './ArrayFieldEditor.vue';
 import TimelineDisplay from './TimelineDisplay.vue';
 import TerminInput from './TerminInput.vue';
+import FileAttachments from './FileAttachments.vue';
 
 const props = defineProps({
   field: { type: Object, required: true },
