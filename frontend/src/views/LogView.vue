@@ -65,7 +65,7 @@
                     </td>
                     <td data-label="Typ">{{ log.ticket ? log.ticket.type : '-' }}</td>
                     <td data-label="Titel">{{ log.ticket ? log.ticket.title : 'Gelöschtes Ticket' }}</td>
-                    <td data-label="User">{{ log.editor }}</td>
+                    <td data-label="User">{{ usersStore.getDisplayName(log.editor) }}</td>
                     <td data-label="Aktion">{{ log.action }}</td>
                     </tr>
                 </tbody>
@@ -80,8 +80,10 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
+import { useUsersStore } from '../stores/users';
 
 const ui = useUiStore();
+const usersStore = useUsersStore();
 
 const logs = ref([]);
 const loading = ref(true);

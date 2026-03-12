@@ -36,7 +36,7 @@
         </h3>
         
         <div slot="header">
-            <strong>{{ ticket.creator }}</strong> {{ formatDate(ticket.created) }}
+            <strong>{{ usersStore.getDisplayName(ticket.creator) }}</strong> {{ formatDate(ticket.created) }}
         </div>
 
         <div class="ticket-content">
@@ -78,11 +78,13 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
+import { useUsersStore } from '../stores/users';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
+const usersStore = useUsersStore();
 
 const route = useRoute();
 const router = useRouter();

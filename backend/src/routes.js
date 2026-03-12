@@ -32,6 +32,13 @@ router.get('/users', verifyToken, async (req, res) => {
     res.json(await getUsers(groups));
 });
 
+router.get('/users/:username', verifyToken, async (req, res) => {
+    const { getUser } = require('./auth');
+    const user = await getUser(req.params.username);
+    // Only return username and displayName — no groups for security
+    res.json({ username: user.username, displayName: user.displayName });
+});
+
 // Config
 router.get('/config', verifyToken, (req, res) => {
     res.json(workflowEngine.getWorkflows());
