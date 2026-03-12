@@ -54,19 +54,17 @@
                 <TicketComments v-if="canComment" :ticket="ticket" />
             </aside>
         </div>
-            <div slot="footer-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                <wa-button @click="goBack" appearance="plain">Abbrechen</wa-button>
-                <wa-button 
+                <wa-button slot="footer-actions" @click="goBack" variant="neutral" appearance="filled">Abbrechen</wa-button>
+                <wa-divider slot="footer-actions" orientation="vertical"></wa-divider>
+                <wa-button slot="footer-actions" variant="neutral" appearance="plain" class="action"
                     v-for="action in getActions(ticket)" 
                     :key="action.name"
                     size="small"
-                    appearance="filled"
                     :loading="executingActionId === (ticket._id + '-' + action.name)"
                     @click="handleAction(ticket, action)"
                 >
                     {{ action.name }}
                 </wa-button>
-            </div>
     </wa-card>
   </div>
 </template>

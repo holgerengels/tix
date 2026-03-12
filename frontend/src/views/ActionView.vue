@@ -53,19 +53,21 @@
         </div>
 
 
-            <wa-button slot="footer-actions" @click="goBack" appearance="plain">Abbrechen</wa-button>
-            
+            <wa-button slot="footer-actions" @click="goBack" appearance="filled">Abbrechen</wa-button>
             <template v-if="currentFormDef && currentFormDef.actions">
-                 <wa-button slot="footer-actions"
+                <wa-divider slot="footer-actions" orientation="vertical"></wa-divider>
+                <wa-button-group slot="footer-actions">
+                 <wa-button
+                    variant="brand" appearance="filled-outlined" size="small"
                     v-for="btn in currentFormDef.actions" 
                     :key="btn.name" 
-                    variant="primary"
                     type="button"
                     :loading="executing"
                     @click="execute(btn.name)"
                  >
                     {{ btn.name }}
                  </wa-button>
+                 </wa-button-group>
             </template>
             <wa-button v-else slot="footer-actions" variant="primary" type="button" :loading="executing" @click="execute(null)">Ausführen</wa-button>
     </wa-card>

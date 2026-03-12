@@ -82,3 +82,8 @@ wa-card {
 wa-card:hover {
   box-shadow: var(--wa-shadow-medium);
 }
+
+wa-button.action::part(base) {
+  padding-left: 1ch;
+  padding-right: 1ch;
+}

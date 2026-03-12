@@ -94,7 +94,7 @@
                             <wa-button 
                                 :id="'trigger-' + ticket._id + '-' + action.name"
                                 size="small" 
-                                appearance="plain"
+                                appearance="plain" class="action"
                             >
                                 {{ action.name }}
                             </wa-button>
@@ -134,7 +134,7 @@
                             <wa-button 
                                 :id="'trigger-' + ticket._id + '-' + action.name"
                                 size="small" 
-                                appearance="plain"
+                                appearance="plain" class="action"
                             >
                                 {{ action.name }}
                             </wa-button>
@@ -160,7 +160,7 @@
                                     </wa-select>
                                     <div class="popover-actions">
                                         <wa-button appearance="plain" size="small" @click="(e) => e.target.closest('wa-popover').open = false">Abbrechen</wa-button>
-                                        <wa-button 
+                                        <wa-button
                                             size="small" 
                                             variant="primary" 
                                             :loading="executingActionId === (ticket._id + '-' + action.name)"
@@ -176,7 +176,7 @@
                         <wa-button 
                             v-else
                             size="small"
-                            appearance="plain"
+                            appearance="plain" class="action"
                             :loading="executingActionId === (ticket._id + '-' + action.name)"
                             @click="handleAction(ticket, action)"
                         >
@@ -835,7 +835,7 @@ onMounted(async () => {
 }
 .actions-cell wa-button {
     margin-right: 0;
-    margin-left: -1rem;
+    margin-left: -0.5rem;
 }
 
 .empty-state {
