@@ -40,7 +40,7 @@
 
         <div class="footer">
              <div class="user-info" v-if="auth.user">
-                <span class="nav-text">{{ auth.user.username }}</span>
+                <span class="nav-text">{{ usersStore.getDisplayName(auth.user.username) }}</span>
              </div>
              <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
                 <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
@@ -64,11 +64,13 @@ import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from './stores/auth';
 import { useUiStore } from './stores/ui';
+import { useUsersStore } from './stores/users';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 
 const auth = useAuthStore();
 const ui = useUiStore();
+const usersStore = useUsersStore();
 
 // PWA Update Logic
 const {

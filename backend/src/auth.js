@@ -16,14 +16,14 @@ try {
 console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 
 const MOCK_USERS = [
-    { username: 'admin', password: 'password', groups: ['Administration', 'Schulleitung', 'Stundenplanung'] },
-    { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'] },
-    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte', 'Mensateam'] },
-    { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'] },
-    { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'] },
-    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'] },
-    { username: 'hausmeister', password: 'password', groups: ['Hausmeister'] },
-    { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'] },
+    { username: 'admin', password: 'password', groups: ['Administration', 'Schulleitung', 'Stundenplanung'], displayName: 'Anna Becker' },
+    { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'], displayName: 'Max Mustermann' },
+    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte', 'Mensateam'], displayName: 'Sabine Keller' },
+    { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'], displayName: 'Thomas Braun' },
+    { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'], displayName: 'Claudia Richter' },
+    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'], displayName: 'Stefan Hoffmann' },
+    { username: 'hausmeister', password: 'password', groups: ['Hausmeister'], displayName: 'Max Grau' },
+    { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'], displayName: 'Jens Schreiber' },
 ];
 
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
@@ -218,7 +218,7 @@ const getUsers = async (filterGroups = []) => {
                 const opts = {
                     filter: ldapConfig.userfilter, // e.g. (&(objectclass=person))
                     scope: 'sub',
-                    attributes: ['sAMAccountName', 'memberOf']
+                    attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn']
                 };
 
                 client.search(ldapConfig.basedn, opts, (err, searchRes) => {
@@ -234,6 +234,7 @@ const getUsers = async (filterGroups = []) => {
                     searchRes.on('searchEntry', (entry) => {
                         let username = '';
                         let groups = [];
+                        let displayName = '';
 
                         // console.log('[Auth] LDAP Entry found:', entry.objectName.toString());
 
@@ -261,6 +262,13 @@ const getUsers = async (filterGroups = []) => {
                             if (Array.isArray(username)) username = username[0];
                             username = username.toLowerCase();
 
+                            // Build displayName from givenName + sn
+                            let givenName = userAttributes.givenName || userAttributes.givenname || '';
+                            let sn = userAttributes.sn || '';
+                            if (Array.isArray(givenName)) givenName = givenName[0];
+                            if (Array.isArray(sn)) sn = sn[0];
+                            displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+
                             // Normalize memberOf
                             let rawGroups = userAttributes.memberOf || userAttributes.memberof;
                             if (rawGroups) {
@@ -280,7 +288,7 @@ const getUsers = async (filterGroups = []) => {
                         }
 
                         if (username) {
-                            foundUsers.push({ username, groups });
+                            foundUsers.push({ username, groups, displayName });
                         }
                     });
 
@@ -315,6 +323,89 @@ const getUsers = async (filterGroups = []) => {
     }
 
     return users;
+};
+
+const getUser = async (username) => {
+    username = username.toLowerCase();
+
+    // 1. DevMode / Mock Check
+    if (settings.devmode || !settings.server || !settings.server.ldap) {
+        const user = MOCK_USERS.find(u => u.username === username);
+        if (user) {
+            return { username: user.username, displayName: user.displayName || user.username };
+        }
+        return { username, displayName: username };
+    }
+
+    // 2. LDAP
+    const ldapConfig = settings.server.ldap;
+
+    try {
+        return await new Promise((resolve, reject) => {
+            const client = ldap.createClient({ url: ldapConfig.url });
+
+            client.on('error', (err) => {
+                console.error('[Auth] LDAP Client Error (getUser):', err);
+                resolve({ username, displayName: username });
+            });
+
+            client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+                if (err) {
+                    client.unbind();
+                    console.error('[Auth] LDAP Bind Error (getUser):', err);
+                    return resolve({ username, displayName: username });
+                }
+
+                const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+                const opts = {
+                    filter: filter,
+                    scope: 'sub',
+                    attributes: ['sAMAccountName', 'givenName', 'sn']
+                };
+
+                client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                    if (err) {
+                        client.unbind();
+                        return resolve({ username, displayName: username });
+                    }
+
+                    let result = { username, displayName: username };
+
+                    searchRes.on('searchEntry', (entry) => {
+                        let userAttributes = entry.object;
+                        if (!userAttributes) {
+                            userAttributes = {};
+                            if (entry.attributes) {
+                                entry.attributes.forEach(attr => {
+                                    const values = attr.values;
+                                    userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
+                                });
+                            }
+                        }
+
+                        let givenName = userAttributes.givenName || userAttributes.givenname || '';
+                        let sn = userAttributes.sn || '';
+                        if (Array.isArray(givenName)) givenName = givenName[0];
+                        if (Array.isArray(sn)) sn = sn[0];
+                        result.displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+                    });
+
+                    searchRes.on('end', () => {
+                        client.unbind();
+                        resolve(result);
+                    });
+
+                    searchRes.on('error', () => {
+                        client.unbind();
+                        resolve(result);
+                    });
+                });
+            });
+        });
+    } catch (err) {
+        console.error('[Auth] General Error in getUser:', err);
+        return { username, displayName: username };
+    }
 };
 
 
@@ -467,4 +558,4 @@ const updateUserSettings = async (username, newSettings) => {
     });
 };
 
-module.exports = { login, verifyToken, getUsers, isDevMode, getUserSettings, updateUserSettings };
+module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings };

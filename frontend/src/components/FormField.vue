@@ -74,7 +74,7 @@
             :disabled="field.readonly === true"
             :modelValue="modelValue || ''"
             :hint="field.hint"
-            :options="displayUsers.map(u => u.username)"
+            :options="displayUsers.map(u => ({ value: u.username, label: u.displayName || u.username }))"
             @update:modelValue="updateValue"
         />
       </div>
@@ -238,13 +238,13 @@
 
 <script setup>
 import { defineProps, defineEmits, ref, watch, computed } from 'vue';
-import axios from 'axios';
 import RichTextEditor from './RichTextEditor.vue';
 import WAAutocomplete from './WAAutocomplete.vue';
 import BadgeEditor from './BadgeEditor.vue';
 import ArrayFieldEditor from './ArrayFieldEditor.vue';
 import TimelineDisplay from './TimelineDisplay.vue';
 import TerminInput from './TerminInput.vue';
+import { useUsersStore } from '../stores/users';
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -259,6 +259,7 @@ const updateValue = (val) => {
 };
 
 // User Handling
+const usersStore = useUsersStore();
 const users = ref([]);
 
 const fetchUsers = async () => {
@@ -266,13 +267,7 @@ const fetchUsers = async () => {
     
     try {
         const groups = props.field.groups || [];
-        const groupsParam = groups.join(',');
-
-        const res = await axios.get('/api/users', {
-            params: { groups: groupsParam },
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        users.value = res.data;
+        users.value = await usersStore.fetchUsersByGroup(groups);
     } catch (err) {
         console.error("Failed to fetch users", err);
     }

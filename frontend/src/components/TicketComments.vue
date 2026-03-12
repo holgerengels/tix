@@ -10,7 +10,7 @@
       
       <div v-for="comment in comments" :key="comment._id" class="comment-item">
         <div class="comment-header">
-            <span class="author">{{ comment.creator }}</span>
+            <span class="author">{{ usersStore.getDisplayName(comment.creator) }}</span>
             <span class="date">{{ formatDate(comment.created) }}</span>
         </div>
         <div class="comment-body">
@@ -39,6 +39,9 @@
 import { ref, onMounted, watch, nextTick, defineProps } from 'vue';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { useUsersStore } from '../stores/users';
+
+const usersStore = useUsersStore();
 
 const props = defineProps({
   ticket: { type: Object, required: true }

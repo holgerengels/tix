@@ -13,6 +13,15 @@ vi.mock('../stores/ui', () => ({
     })
 }));
 
+// Mock Users Store
+vi.mock('../stores/users', () => ({
+    useUsersStore: () => ({
+        getDisplayName: (username) => username,
+        fetchUsersByGroup: async () => [],
+        cache: {}
+    })
+}));
+
 // Mock Router and Route
 const mockRoute = { params: { id: 'TKT-1', action: 'bearbeiten' } };
 const mockRouter = { push: vi.fn(), back: vi.fn() };

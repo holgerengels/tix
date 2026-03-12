@@ -77,7 +77,7 @@
                         </span>
                 </span></td>
                 <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
-                <td data-label="Ersteller">{{ ticket.creator }}</td>
+                <td data-label="Ersteller">{{ usersStore.getDisplayName(ticket.creator) }}</td>
                 <td data-label="Daten">
                     <div class="dynamic-data">
                         <div v-if="hasTemplate(ticket)" class="template-data">
@@ -158,7 +158,7 @@
                                         hoist
                                     >
                                         <wa-option v-for="u in getAvailableAssignees(ticket)" :key="u.username" :value="u.username">
-                                            {{ u.username }}
+                                            {{ u.displayName || u.username }}
                                         </wa-option>
                                     </wa-select>
                                     <div class="popover-actions">
@@ -203,10 +203,12 @@ import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
+import { useUsersStore } from '../stores/users';
 import TicketFilter from '../components/TicketFilter.vue';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
+const usersStore = useUsersStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -641,11 +643,7 @@ const openAssignPopover = async (actionId, currentAssignee) => {
     }
     if (availableUsers.value.length === 0) {
         try {
-            const res = await axios.get('/api/users', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            // Basic users list fetched once
-            availableUsers.value = res.data;
+            availableUsers.value = await usersStore.fetchUsersByGroup([]);
         } catch (err) {
             console.error('Error fetching users:', err);
         }
