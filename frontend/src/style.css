@@ -88,6 +88,10 @@ wa-button.action::part(base) {
   padding-right: 1ch;
 }
 
+.dynamic-form {
+  padding: 3px;
+}
+
 wa-input::part(base),
 wa-select::part(combobox),
 wa-textarea::part(base) {
