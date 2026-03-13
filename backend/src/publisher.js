@@ -119,6 +119,13 @@ async function checkUnpublishedLogs() {
                 try {
                     // NEW: Dynamic Notification based on User Settings
                     const targetUser = log.ticket.creator;
+
+                    // Skip notification if the editor is the creator (don't notify about own changes)
+                    if (log.editor === targetUser) {
+                        console.log(`[Publisher] Skipping notification: editor ${log.editor} is the creator`);
+                        continue;
+                    }
+
                     const { getUserSettings } = require('./auth');
                     const userSettings = await getUserSettings(targetUser);
                     const notificationUri = userSettings.notificationUri;
