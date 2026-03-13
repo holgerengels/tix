@@ -55,8 +55,9 @@ self.addEventListener('notificationclick', function (event) {
                 if (!anyClient) anyClient = client; // Keep first available client as fallback
             }
 
-            // If we have an exact match, focus it
+            // If we have an exact match, focus it and tell it to refresh
             if (matchingClient) {
+                matchingClient.postMessage({ type: 'TICKET_UPDATE', url: event.notification.data.url });
                 return matchingClient.focus();
             }
             // If we have a window open but different URL, focus it and navigate

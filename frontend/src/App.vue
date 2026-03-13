@@ -95,6 +95,17 @@ const router = useRouter();
 const route = useRoute();
 const isDev = ref(false);
 
+// Listen for SW messages (e.g. push notification clicked on already-open tab)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'TICKET_UPDATE') {
+      // Force Vue to remount the current route component to trigger fetchData
+      const current = router.currentRoute.value.fullPath;
+      router.replace('/').then(() => router.replace(current));
+    }
+  });
+}
+
 const checkDevMode = async () => {
      if (auth.isAuthenticated) {
         try {
