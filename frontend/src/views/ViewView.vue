@@ -79,6 +79,7 @@ import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
+import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -150,7 +151,7 @@ const checkUndo = async () => {
 };
 
 const executeUndo = async () => {
-    if (!confirm('Möchten Sie die letzte Aktion wirklich rückgängig machen?')) return;
+    if (!await confirm('Möchten Sie die letzte Aktion wirklich rückgängig machen?')) return;
     
     try {
         await axios.post(`/api/tickets/${ticket.value._id}/undo`, {}, {
@@ -159,7 +160,7 @@ const executeUndo = async () => {
         // Reload data
         fetchData();
     } catch (err) {
-        alert('Undo fehlgeschlagen: ' + (err.response?.data?.message || err.message));
+        toast.error('Undo fehlgeschlagen: ' + (err.response?.data?.message || err.message));
     }
 };
 
@@ -168,7 +169,7 @@ const editTicket = () => {
 };
 
 const deleteTicket = async () => {
-    if (!confirm('Sind Sie sicher, dass Sie dieses Ticket löschen möchten?')) return;
+    if (!await confirm('Sind Sie sicher, dass Sie dieses Ticket löschen möchten?')) return;
     
     try {
         await axios.delete(`/api/tickets/${ticket.value._id}`, {
@@ -176,7 +177,7 @@ const deleteTicket = async () => {
         });
         router.push('/');
     } catch (err) {
-        alert('Löschen fehlgeschlagen: ' + (err.response?.data?.message || err.message));
+        toast.error('Löschen fehlgeschlagen: ' + (err.response?.data?.message || err.message));
     }
 };
 
@@ -327,7 +328,7 @@ const handleAction = async (ticket, action) => {
             fetchData();
         } catch (err) {
             console.error(err);
-            alert('Fehler: ' + (err.response?.data?.message || err.message));
+            toast.error('Fehler: ' + (err.response?.data?.message || err.message));
         } finally {
             executingActionId.value = null;
         }

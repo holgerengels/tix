@@ -98,6 +98,7 @@ import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import TicketFilter from '../components/TicketFilter.vue';
+import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -270,7 +271,7 @@ const sortedTickets = computed(() => {
 });
 
 const deleteSelected = async () => {
-    if (!confirm(`Sollen die ${selectedTickets.value.length} ausgewählten Tickets wirklich unwiderruflich gelöscht werden?`)) {
+    if (!await confirm(`Sollen die ${selectedTickets.value.length} ausgewählten Tickets wirklich unwiderruflich gelöscht werden?`)) {
         return;
     }
 
@@ -291,7 +292,7 @@ const deleteSelected = async () => {
         
     } catch (err) {
         console.error('Error deleting tickets:', err);
-        alert('Fehler beim Löschen einiger Tickets: ' + err.message);
+        toast.error('Fehler beim Löschen einiger Tickets: ' + err.message);
         // Refresh anyway to show what's left
         fetchTickets();
     } finally {
@@ -425,7 +426,7 @@ const getFormattedData = (ticket) => {
 onMounted(async () => {
     // Basic Access Control
     if (!(user.groups || []).includes('Administration')) {
-        alert('Kein Zugriff.');
+        toast.error('Kein Zugriff.');
         router.push('/');
         return;
     }

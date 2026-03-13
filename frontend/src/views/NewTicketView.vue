@@ -51,6 +51,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { useUiStore } from '../stores/ui';
+import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 import DynamicForm from '../components/DynamicForm.vue';
@@ -99,7 +100,7 @@ const fetchConfig = async () => {
         config.value = res.data;
     } catch (err) {
         console.error("Config fetch error", err);
-        alert("Fehler beim Laden der Konfiguration.");
+        toast.error("Fehler beim Laden der Konfiguration.");
     } finally {
         loadingConfig.value = false;
     }
@@ -153,20 +154,16 @@ const createTicket = async () => {
         isDirty.value = false;
         router.push('/');  
     } catch (err) {
-        alert('Fehler beim Erstellen: ' + (err.response?.data?.error || err.message));
+        toast.error('Fehler beim Erstellen: ' + (err.response?.data?.error || err.message));
     } finally {
         creating.value = false;
     }
 };
 
-onBeforeRouteLeave((to, from, next) => {
+onBeforeRouteLeave(async (to, from, next) => {
     if (isDirty.value) {
-        const answer = window.confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
-        if (answer) {
-            next();
-        } else {
-            next(false);
-        }
+        const answer = await confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
+        next(answer ? undefined : false);
     } else {
         next();
     }

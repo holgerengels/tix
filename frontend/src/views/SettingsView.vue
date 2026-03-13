@@ -42,6 +42,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useUiStore } from '../stores/ui';
+import { toast } from '../composables/useToast';
 
 const ui = useUiStore();
 import SubscriptionManager from '../components/SubscriptionManager.vue';
@@ -90,12 +91,11 @@ const save = async () => {
         }, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        // Success feedback?
-        alert('Einstellungen gespeichert');
+        toast.success('Einstellungen gespeichert');
         router.back();
     } catch (err) {
         console.error('Failed to save settings:', err);
-        alert('Fehler beim Speichern: ' + (err.response?.data?.error || err.message));
+        toast.error('Fehler beim Speichern: ' + (err.response?.data?.error || err.message));
     } finally {
         loading.value = false;
     }
@@ -137,7 +137,7 @@ const togglePush = async (e) => {
     try {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            alert('Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.');
+            toast.warning('Benachrichtigungen wurden blockiert. Bitte in den Browser-Einstellungen erlauben.');
             pushEnabled.value = false;
             return;
         }
@@ -160,7 +160,7 @@ const togglePush = async (e) => {
         pushEnabled.value = true;
     } catch (err) {
         console.error('Failed to subscribe:', err);
-        alert('Fehler beim Aktivieren der Push-Benachrichtigungen.');
+        toast.error('Fehler beim Aktivieren der Push-Benachrichtigungen.');
         pushEnabled.value = false;
     }
 };

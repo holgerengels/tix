@@ -201,6 +201,7 @@ import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
 import TicketFilter from '../components/TicketFilter.vue';
+import { toast, confirm, prompt } from '../composables/useToast';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -306,8 +307,8 @@ const loadSavedFilters = () => {
     }
 };
 
-const saveCurrentFilter = () => {
-    const name = prompt('Bitte geben Sie einen Namen für diesen Filter ein:');
+const saveCurrentFilter = async () => {
+    const name = await prompt('Bitte geben Sie einen Namen für diesen Filter ein:');
     if (!name) return;
 
     const newFilter = {
@@ -326,8 +327,8 @@ const saveCurrentFilter = () => {
     localStorage.setItem(key, JSON.stringify(savedFilters.value));
 };
 
-const deleteSavedFilter = (index) => {
-    if (confirm('Soll der Filter wirklich gelöscht werden?')) {
+const deleteSavedFilter = async (index) => {
+    if (await confirm('Soll der Filter wirklich gelöscht werden?')) {
         savedFilters.value.splice(index, 1);
         const key = `vin_saved_filters_${currentFilter.value}`;
         localStorage.setItem(key, JSON.stringify(savedFilters.value));
@@ -613,7 +614,7 @@ const executeAction = async (ticket, action) => {
         fetchTickets();
     } catch (err) {
         console.error(err);
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
+        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
     } finally {
         executingActionId.value = null;
     }
@@ -716,7 +717,7 @@ const confirmActionComment = async (ticket, action, comment) => {
 
     } catch (err) {
         console.error(err);
-        alert('Fehler: ' + (err.response?.data?.message || err.message));
+        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
         executingActionId.value = null; // Reset loading if error
     } 
     // If success, fetchTickets in executeAction will refresh list, 

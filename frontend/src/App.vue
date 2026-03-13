@@ -67,6 +67,7 @@ import { useUiStore } from './stores/ui';
 import { useUsersStore } from './stores/users';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
+import { toast } from './composables/useToast';
 
 const auth = useAuthStore();
 const ui = useUiStore();
@@ -172,7 +173,7 @@ const reloadConfig = async () => {
         });
         window.location.reload();
     } catch (err) {
-        alert('Reload failed: ' + err.message);
+        toast.error('Reload failed: ' + err.message);
     }
 };
 

@@ -40,6 +40,7 @@ import { ref, onMounted, watch, nextTick, defineProps } from 'vue';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
+import { toast } from '../composables/useToast';
 
 const usersStore = useUsersStore();
 
@@ -87,7 +88,7 @@ const sendComment = async (silent = false) => {
         newComment.value = '';
         await scrollToBottom();
     } catch (err) {
-        alert('Fehler beim Senden: ' + (err.response?.data?.message || err.message));
+        toast.error('Fehler beim Senden: ' + (err.response?.data?.message || err.message));
     } finally {
         sending.value = false;
     }

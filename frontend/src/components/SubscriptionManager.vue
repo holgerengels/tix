@@ -57,6 +57,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import { useWorkflowStore } from '../stores/workflow';
+import { toast, confirm } from '../composables/useToast';
 
 const subscriptions = ref([]);
 const loading = ref(false);
@@ -152,17 +153,17 @@ const createSubscription = async () => {
         await fetchSubscriptions();
         
         // Show success
-        alert('Abonnement erfolgreich angelegt!');
+        toast.success('Abonnement erfolgreich angelegt!');
     } catch (err) {
         console.error('Error creating sub:', err);
-        alert('Fehler beim Anlegen');
+        toast.error('Fehler beim Anlegen');
     } finally {
         loading.value = false;
     }
 };
 
 const deleteSubscription = async (id) => {
-    if (!confirm('Abonnement wirklich löschen?')) return;
+    if (!await confirm('Abonnement wirklich löschen?')) return;
     try {
         await axios.delete(`/api/settings/subscriptions/${id}`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -170,7 +171,7 @@ const deleteSubscription = async (id) => {
         await fetchSubscriptions();
     } catch (err) {
         console.error('Error deleting sub:', err);
-        alert('Fehler beim Löschen');
+        toast.error('Fehler beim Löschen');
     }
 };
 </script>

@@ -53,6 +53,7 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
+import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 import DynamicForm from '../components/DynamicForm.vue';
@@ -169,20 +170,16 @@ const save = async () => {
         }
 
     } catch (err) {
-        alert('Fehler beim Speichern: ' + (err.response?.data?.message || err.message));
+        toast.error('Fehler beim Speichern: ' + (err.response?.data?.message || err.message));
     } finally {
         saving.value = false;
     }
 };
 
-onBeforeRouteLeave((to, from, next) => {
+onBeforeRouteLeave(async (to, from, next) => {
     if (isDirty.value) {
-        const answer = window.confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
-        if (answer) {
-            next();
-        } else {
-            next(false);
-        }
+        const answer = await confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
+        next(answer ? undefined : false);
     } else {
         next();
     }

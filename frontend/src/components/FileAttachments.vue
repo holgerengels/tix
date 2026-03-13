@@ -61,6 +61,7 @@
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { toast, confirm } from '../composables/useToast';
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -189,7 +190,7 @@ const uploadFile = async (file) => {
     emit('update:modelValue', [...files.value, meta]);
   } catch (err) {
     console.error('Upload error:', err);
-    alert('Upload fehlgeschlagen: ' + err.message);
+    toast.error('Upload fehlgeschlagen: ' + err.message);
   } finally {
     activeUploads.value = activeUploads.value.filter(u => u.id !== uploadId);
   }
@@ -210,12 +211,12 @@ const downloadAttachment = async (file) => {
     URL.revokeObjectURL(url);
   } catch (err) {
     console.error('Download error:', err);
-    alert('Download fehlgeschlagen: ' + err.message);
+    toast.error('Download fehlgeschlagen: ' + err.message);
   }
 };
 
 const deleteAttachment = async (file) => {
-  if (!confirm(`"${file.filename}" wirklich löschen?`)) return;
+  if (!await confirm(`"${file.filename}" wirklich löschen?`)) return;
 
   try {
     const res = await fetch(`/api/attachments/${file.fileId}`, {
@@ -234,7 +235,7 @@ const deleteAttachment = async (file) => {
     emit('update:modelValue', files.value.filter(f => f.fileId !== file.fileId));
   } catch (err) {
     console.error('Delete error:', err);
-    alert('Löschen fehlgeschlagen: ' + err.message);
+    toast.error('Löschen fehlgeschlagen: ' + err.message);
   }
 };
 
