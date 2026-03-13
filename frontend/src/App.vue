@@ -73,11 +73,19 @@ const auth = useAuthStore();
 const ui = useUiStore();
 const usersStore = useUsersStore();
 
-// PWA Update Logic
+// PWA Update Logic — check for new SW when tab becomes visible
 const {
   needRefresh,
   updateServiceWorker,
-} = useRegisterSW();
+} = useRegisterSW({
+  onRegisteredSW(swUrl, registration) {
+    if (registration) {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) registration.update();
+      });
+    }
+  }
+});
 
 const handleSWUpdate = () => {
     updateServiceWorker(true);
