@@ -15,7 +15,7 @@
              <wa-icon slot="start" name="pencil"></wa-icon> Editieren
         </wa-button>
         <wa-button v-if="canDelete" variant="danger" size="small" appearance="filled" @click="deleteTicket">
-             <wa-icon slot="start" name="trash"></wa-icon> Löschen
+             <wa-icon slot="start" name="x-lg"></wa-icon> Löschen
         </wa-button>
     </div>
 

@@ -87,3 +87,21 @@ wa-button.action::part(base) {
   padding-left: 1ch;
   padding-right: 1ch;
 }
+
+wa-input::part(base),
+wa-select::part(combobox),
+wa-textarea::part(base) {
+  background-color: #fafafa;
+}
+
+wa-input:hover::part(base),
+wa-select:hover::part(combobox),
+wa-textarea:hover::part(base) {
+  background-color: #f5f5f5;
+}
+
+wa-input:focus-within::part(base),
+wa-select:focus-within::part(combobox),
+wa-textarea:focus-within::part(base) {
+  background-color: white;
+}

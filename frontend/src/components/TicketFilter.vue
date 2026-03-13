@@ -12,22 +12,22 @@
         </div>
         <div class="filter-group">
             <label>Status:</label>
-            <select v-model="status" @change="emit('apply')">
-                <option value=""></option>
-                <option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</option>
-            </select>
+            <wa-select clearable v-model="status" @change="emit('apply')" placeholder="Status" size="small">
+                <wa-option value=""></wa-option>
+                <wa-option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</wa-option>
+            </wa-select>
         </div>
         <div class="filter-group">
             <label>Ersteller:</label>
-            <input type="text" v-model="creator" @input="emit('apply-debounced')" placeholder="Name..." />
+            <wa-input type="text" v-model="creator" @input="emit('apply-debounced')" placeholder="Name..." size="small" clearable></wa-input>
         </div>
         <div class="filter-group">
-            <select v-model="dateRange" @change="handleDateRangeChange">
-                <option value="">Zeitraum wählen</option>
-                <option value="week">Letzte Woche</option>
-                <option value="month">Letzter Monat</option>
-                <option value="custom">Benutzerdefiniert</option>
-            </select>
+            <wa-select v-model="dateRange" @change="handleDateRangeChange" placeholder="Zeitraum" size="small" clearable>
+                <wa-option value="">Zeitraum wählen</wa-option>
+                <wa-option value="week">Letzte Woche</wa-option>
+                <wa-option value="month">Letzter Monat</wa-option>
+                <wa-option value="custom">Benutzerdefiniert</wa-option>
+            </wa-select>
         </div>
         <div class="filter-group">
             <label>Label:</label>
@@ -40,9 +40,9 @@
             </div>
         </div>
         <div class="filter-group" v-if="dateRange === 'custom'">
-            <input type="date" v-model="dateFrom" @change="emit('apply')" />
-            <span>-</span>
-            <input type="date" v-model="dateTo" @change="emit('apply')" />
+            <wa-input type="date" v-model="dateFrom" @change="emit('apply')" size="small"></wa-input>
+            <span>–</span>
+            <wa-input type="date" v-model="dateTo" @change="emit('apply')" size="small"></wa-input>
         </div>
         <div class="filter-group">
             <wa-button appearance="plain" @click="resetInternalFilters">Reset</wa-button>
@@ -228,23 +228,15 @@ const resetInternalFilters = () => {
     font-size: 0.9rem;
 }
 
-.filter-group select,
-.filter-group input {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--wa-color-neutral-60);
-    border-radius: 6px;
-    font-size: 0.9rem;
+
+
+
+.filter-group wa-select {
     min-width: 140px;
-    transition: all 0.2s;
-    background-color: var(--wa-color-neutral-90);
 }
 
-.filter-group select:focus,
-.filter-group input:focus {
-    outline: none;
-    border-color: var(--wa-color-brand-40);
-    box-shadow: 0 0 0 2px var(--wa-color-brand-80);
-    background-color: white;
+.filter-group wa-input {
+    min-width: 140px;
 }
 .filter-group wa-select::part(tag) {
     font-size: 0.75rem;

@@ -7,7 +7,7 @@
         <h2>Administration</h2>
         <div style="margin-left: auto;" v-if="selectedTickets.length > 0">
             <wa-button variant="danger" size="small" appearance="filled" @click="deleteSelected">
-                <wa-icon slot="start" name="trash"></wa-icon> {{ selectedTickets.length }} Löschen
+                <wa-icon slot="start" name="x-lg"></wa-icon> {{ selectedTickets.length }} Löschen
             </wa-button>
         </div>
     </div>

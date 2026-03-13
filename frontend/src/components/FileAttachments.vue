@@ -42,7 +42,7 @@
           size="small"
           class="delete-btn"
           @click="deleteAttachment(file)"
-        ><wa-icon name="trash"></wa-icon></wa-button>
+        ><wa-icon name="x-lg"></wa-icon></wa-button>
       </div>
     </div>
 
