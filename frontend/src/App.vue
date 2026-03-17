@@ -1,10 +1,6 @@
 <template>
   <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated, 'sidebar-collapsed': !ui.sidebarOpen && auth.isAuthenticated }">
-    
-    <div v-if="needRefresh" class="pwa-update-prompt">
-        <span>Eine neue Version von TIX ist verfügbar.</span>
-        <wa-button size="small" variant="primary" @click="handleSWUpdate">Jetzt aktualisieren</wa-button>
-    </div>
+
 
     <LoginOverlay v-if="auth.showLogin" />
     
@@ -68,18 +64,17 @@ import { useUsersStore } from './stores/users';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { toast } from './composables/useToast';
+import { resubscribePush } from './utils/pushResubscribe';
 
 const auth = useAuthStore();
 const ui = useUiStore();
 const usersStore = useUsersStore();
 
-// PWA Update Logic — check for new SW when tab becomes visible
-const {
-  needRefresh,
-  updateServiceWorker,
-} = useRegisterSW({
+// PWA Update Logic — auto-update + toast notification after update
+useRegisterSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
+      // Check for updates when tab becomes visible
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) registration.update();
       });
@@ -87,9 +82,12 @@ const {
   }
 });
 
-const handleSWUpdate = () => {
-    updateServiceWorker(true);
-};
+// Detect when a new service worker takes control (= update was installed)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    toast.info('TIX wurde aktualisiert.');
+  });
+}
 
 const router = useRouter();
 const route = useRoute();
@@ -118,6 +116,13 @@ const checkDevMode = async () => {
 }
 
 onMounted(checkDevMode);
+
+// Auto-re-subscribe push notifications if permission is granted but subscription was lost
+onMounted(() => {
+  if (auth.isAuthenticated) {
+    resubscribePush();
+  }
+});
 
 // Re-check dev mode on login, navigate home on logout
 watch(() => auth.isAuthenticated, (newVal, oldVal) => {
@@ -364,19 +369,5 @@ body {
     }
 }
 
-.pwa-update-prompt {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    padding: 1rem;
-    border-radius: var(--wa-border-radius-medium);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    border: 1px solid var(--wa-color-brand-70);
-}
+
 </style>
