@@ -46,9 +46,11 @@ const handleLogin = async () => {
     loading.value = true;
     error.value = '';
     try {
+        const isPwa = window.matchMedia('(display-mode: standalone)').matches;
         const res = await axios.post('/api/login', {
             username: username.value,
-            password: password.value
+            password: password.value,
+            isPwa
         });
         
         // Update global auth state

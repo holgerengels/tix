@@ -14,9 +14,9 @@ const { runBotsForTicket } = require('./bots');
 
 // Auth
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, isPwa } = req.body;
     try {
-        const result = await login(username, password);
+        const result = await login(username, password, isPwa);
         if (result) res.json(result);
         else res.status(401).json({ message: 'Invalid credentials' });
     } catch (err) {

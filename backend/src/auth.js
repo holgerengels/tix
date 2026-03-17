@@ -29,11 +29,11 @@ const MOCK_USERS = [
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
 const REFRESH_SECRET_KEY = 'supersecretrefreshkey'; // In prod, use .env
 const ACCESS_TOKEN_EXPIRY = '1h';
-const REFRESH_TOKEN_EXPIRY = '30d';
+const REFRESH_TOKEN_EXPIRY = (settings.server && settings.server.refreshTokenExpiry) || '30d';
 
-const login = async (username, password) => {
+const login = async (username, password, isPwa) => {
     username = username.toLowerCase();
-    console.log(`[Auth] Attempting login for user: ${username}`);
+    console.log(`[Auth] Attempting login for user: ${username} (PWA: ${!!isPwa})`);
 
     // 1. DevMode / Mock Check
     if (settings.devmode) {
@@ -41,8 +41,9 @@ const login = async (username, password) => {
         if (user) {
             console.log(`[Auth] Mock login successful for ${username}`);
             const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-            const refreshToken = generateRefreshToken(user.username, user.groups);
-            return { token, refreshToken, user: { username: user.username, groups: user.groups } };
+            const result = { token, user: { username: user.username, groups: user.groups } };
+            if (isPwa) result.refreshToken = generateRefreshToken(user.username, user.groups);
+            return result;
         }
     }
 
@@ -162,8 +163,9 @@ const login = async (username, password) => {
                         console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
 
                         const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-                        const refreshToken = generateRefreshToken(username, groups);
-                        resolve({ token, refreshToken, user: { username: username, groups: groups } });
+                        const result = { token, user: { username: username, groups: groups } };
+                        if (isPwa) result.refreshToken = generateRefreshToken(username, groups);
+                        resolve(result);
                     });
                 });
 
