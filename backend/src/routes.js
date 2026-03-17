@@ -25,6 +25,20 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.post('/refresh', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+
+    const { refreshAccessToken } = require('./auth');
+    const result = refreshAccessToken(refreshToken);
+    if (result) {
+        res.json(result);
+    } else {
+        res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+});
+
+
 router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
     // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin

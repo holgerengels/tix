@@ -27,6 +27,9 @@ const MOCK_USERS = [
 ];
 
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
+const REFRESH_SECRET_KEY = 'supersecretrefreshkey'; // In prod, use .env
+const ACCESS_TOKEN_EXPIRY = '1h';
+const REFRESH_TOKEN_EXPIRY = '30d';
 
 const login = async (username, password) => {
     username = username.toLowerCase();
@@ -37,8 +40,9 @@ const login = async (username, password) => {
         const user = MOCK_USERS.find(u => u.username === username && u.password === password);
         if (user) {
             console.log(`[Auth] Mock login successful for ${username}`);
-            const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: '8h' });
-            return { token, user: { username: user.username, groups: user.groups } };
+            const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+            const refreshToken = generateRefreshToken(user.username, user.groups);
+            return { token, refreshToken, user: { username: user.username, groups: user.groups } };
         }
     }
 
@@ -157,8 +161,9 @@ const login = async (username, password) => {
 
                         console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
 
-                        const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: '8h' });
-                        resolve({ token, user: { username: username, groups: groups } });
+                        const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                        const refreshToken = generateRefreshToken(username, groups);
+                        resolve({ token, refreshToken, user: { username: username, groups: groups } });
                     });
                 });
 
@@ -409,6 +414,29 @@ const getUser = async (username) => {
 };
 
 
+const generateRefreshToken = (username, groups) => {
+    return jwt.sign({ username, groups, type: 'refresh' }, REFRESH_SECRET_KEY, { expiresIn: REFRESH_TOKEN_EXPIRY });
+};
+
+const refreshAccessToken = (refreshToken) => {
+    try {
+        const decoded = jwt.verify(refreshToken, REFRESH_SECRET_KEY);
+        if (decoded.type !== 'refresh') {
+            console.log('[Auth] Token is not a refresh token');
+            return null;
+        }
+        const newAccessToken = jwt.sign(
+            { username: decoded.username, groups: decoded.groups },
+            SECRET_KEY,
+            { expiresIn: ACCESS_TOKEN_EXPIRY }
+        );
+        return { token: newAccessToken, user: { username: decoded.username, groups: decoded.groups } };
+    } catch (err) {
+        console.log('[Auth] Refresh token invalid or expired:', err.message);
+        return null;
+    }
+};
+
 const isDevMode = () => !!settings.devmode;
 
 
@@ -558,4 +586,4 @@ const updateUserSettings = async (username, newSettings) => {
     });
 };
 
-module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings };
+module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, refreshAccessToken };

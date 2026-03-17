@@ -52,7 +52,7 @@ const handleLogin = async () => {
         });
         
         // Update global auth state
-        auth.login(res.data.token, res.data.user);
+        auth.login(res.data.token, res.data.user, res.data.refreshToken);
         
         // Retry queued requests
         requestQueue.retryAll(res.data.token);
