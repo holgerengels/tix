@@ -36,12 +36,10 @@
 
         <div class="footer">
              <div class="user-info" v-if="auth.user">
+                <wa-avatar :initials="userInitials" shape="circle"></wa-avatar>
                 <span class="nav-text">{{ usersStore.getDisplayName(auth.user.username) }}</span>
+                <wa-icon-button name="box-arrow-right" label="Logout" @click="auth.logout()" style="margin-left: auto;"></wa-icon-button>
              </div>
-             <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
-                <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
-             </wa-button>
-             
              <wa-button v-if="isDev" variant="text" @click="reloadConfig" size="small" appearance="plain" title="Reload Config form Disk">
                 <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> <span class="nav-text">Reload</span>
              </wa-button>
@@ -74,10 +72,16 @@ const usersStore = useUsersStore();
 useRegisterSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
+      // Check for updates immediately on page load
+      registration.update();
+
       // Check for updates when tab becomes visible
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) registration.update();
       });
+
+      // Periodic check every 60 minutes
+      setInterval(() => registration.update(), 60 * 60 * 1000);
     }
   }
 });
@@ -107,6 +111,14 @@ const router = useRouter();
 const route = useRoute();
 const isDev = ref(false);
 
+const userInitials = computed(() => {
+    const name = usersStore.getDisplayName(auth.user?.username);
+    if (!name) return '?';
+    const parts = name.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+});
+
 // Listen for SW messages (e.g. push notification clicked on already-open tab)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
@@ -131,7 +143,7 @@ const checkDevMode = async () => {
 
 onMounted(checkDevMode);
 
-// Re-check dev mode on login, navigate home on logout
+// Re-check dev mode on login, re-subscribe push, navigate home on logout
 watch(() => auth.isAuthenticated, (newVal, oldVal) => {
     if (newVal) {
         checkDevMode();
@@ -141,7 +153,7 @@ watch(() => auth.isAuthenticated, (newVal, oldVal) => {
         // User logged out — leave detail views and go to list
         router.push('/');
     }
-});
+}, { immediate: true });
 
 const handleResize = (e) => {
     const mobile = e.matches;
@@ -246,8 +258,10 @@ body {
     flex-shrink: 0;
     box-shadow: 1px 0 10px rgba(0,0,0,0.02);
     transition: all 0.3s ease;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
 .logo {
@@ -297,20 +311,19 @@ body {
 .footer {
     margin-top: auto;
     padding-top: 1.5rem;
-    text-align: center;
 }
 
 .user-info {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     color: var(--wa-color-neutral-40);
     font-size: 0.875rem;
-    padding-left: 0.5rem;
     font-weight: 500;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
 }
+
+
 
 /* Main Content */
 .main-content {
@@ -359,6 +372,7 @@ body {
         box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         transform: translateX(0);
         transition: transform 0.3s ease;
+        overflow-y: auto;
     }
     
     .app-container.sidebar-collapsed .sidebar {
@@ -376,6 +390,7 @@ body {
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
     }
+
 }
 
 

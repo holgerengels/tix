@@ -8,7 +8,7 @@
  * @param {'primary'|'success'|'neutral'|'warning'|'danger'} variant
  * @param {number} duration - auto-close after ms (0 = manual close only)
  */
-export function toast(message, variant = 'primary', duration = 3000) {
+export async function toast(message, variant = 'primary', duration = 3000) {
   const alert = Object.assign(document.createElement('wa-alert'), {
     variant,
     closable: true,
@@ -16,6 +16,8 @@ export function toast(message, variant = 'primary', duration = 3000) {
     innerHTML: `<wa-icon slot="icon" name="${getIcon(variant)}"></wa-icon>${escapeHtml(message)}`
   });
   document.body.appendChild(alert);
+  // Wait for the custom element to be defined (may not be ready on early page load)
+  await customElements.whenDefined('wa-alert');
   alert.toast();
 }
 
