@@ -36,13 +36,15 @@
 
         <div class="footer">
              <div class="user-info" v-if="auth.user">
-                <wa-avatar :initials="userInitials" shape="circle"></wa-avatar>
+                <wa-avatar :initials="userInitials" shape="circle" size="small"></wa-avatar>
                 <span class="nav-text">{{ usersStore.getDisplayName(auth.user.username) }}</span>
-                <wa-icon-button name="box-arrow-right" label="Logout" @click="auth.logout()" style="margin-left: auto;"></wa-icon-button>
              </div>
              <wa-button v-if="isDev" variant="text" @click="reloadConfig" size="small" appearance="plain" title="Reload Config form Disk">
-                <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> <span class="nav-text">Reload</span>
+                <wa-icon name="arrow-clockwise"></wa-icon> <span class="nav-text">Reload</span>
              </wa-button>
+            <wa-button appearance="plain" @click="auth.logout()" style="margin-left: auto;">
+                <wa-icon name="box-arrow-right"></wa-icon>
+            </wa-button>
         </div>
     </aside>
 
@@ -250,11 +252,13 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 200px;
+    min-width: 200px;
+    height: 100%;
     background-color: white;
     border-right: 1px solid var(--wa-color-neutral-80);
     display: flex;
     flex-direction: column;
-    padding: 1.5rem;
+    padding: 1rem 0;
     flex-shrink: 0;
     box-shadow: 1px 0 10px rgba(0,0,0,0.02);
     transition: all 0.3s ease;
@@ -268,7 +272,8 @@ body {
     font-size: 32px;
     line-height: 34px;
     font-weight: 800;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
     color: var(--wa-color-brand-20);
     display: flex;
     align-items: center;
@@ -279,11 +284,11 @@ body {
     display: flex;
     align-items: center;
     gap: 0.875rem;
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1.25rem;
     color: var(--wa-color-neutral-30);
     text-decoration: none;
-    border-radius: var(--wa-border-radius-medium);
-    margin-bottom: 0.375rem;
+    border-radius: 0;
+    margin-bottom: 0;
     transition: all 0.2s ease;
     font-weight: 500;
 }
@@ -310,7 +315,7 @@ body {
 
 .footer {
     margin-top: auto;
-    padding-top: 1.5rem;
+    padding: 1rem 1rem 0;
 }
 
 .user-info {
@@ -323,8 +328,6 @@ body {
     gap: 0.5rem;
 }
 
-
-
 /* Main Content */
 .main-content {
     flex: 1;
@@ -335,10 +338,10 @@ body {
     container-name: main;
 }
 
-
 /* Sidebar Collapsed State */
 .app-container.sidebar-collapsed .sidebar {
     width: 0;
+    min-width: 0;
     padding-left: 0;
     padding-right: 0;
     opacity: 0;
@@ -390,7 +393,6 @@ body {
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
     }
-
 }
 
 
