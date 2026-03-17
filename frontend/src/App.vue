@@ -82,12 +82,26 @@ useRegisterSW({
   }
 });
 
-// Detect when a new service worker takes control (= update was installed)
+// Detect updates via two complementary mechanisms:
+// 1. controllerchange: fires when SW updates while the app is open
+// 2. Build timestamp: detects updates that happened while the app was closed
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     toast.info('TIX wurde aktualisiert.');
+    resubscribePush();
   });
 }
+
+// Cold-start update detection via build timestamp
+const BUILD_VERSION_KEY = 'tix_build_timestamp';
+const previousBuild = localStorage.getItem(BUILD_VERSION_KEY);
+// @ts-ignore — injected by vite.config.js define
+const currentBuild = __BUILD_TIMESTAMP__;
+if (previousBuild && previousBuild !== currentBuild) {
+  // Short delay so the toast system is ready
+  setTimeout(() => toast.info('TIX wurde aktualisiert.'), 500);
+}
+localStorage.setItem(BUILD_VERSION_KEY, currentBuild);
 
 const router = useRouter();
 const route = useRoute();
@@ -117,17 +131,12 @@ const checkDevMode = async () => {
 
 onMounted(checkDevMode);
 
-// Auto-re-subscribe push notifications if permission is granted but subscription was lost
-onMounted(() => {
-  if (auth.isAuthenticated) {
-    resubscribePush();
-  }
-});
-
 // Re-check dev mode on login, navigate home on logout
 watch(() => auth.isAuthenticated, (newVal, oldVal) => {
     if (newVal) {
         checkDevMode();
+        // Auto-re-subscribe push notifications if permission is granted but subscription was lost
+        resubscribePush();
     } else if (oldVal) {
         // User logged out — leave detail views and go to list
         router.push('/');

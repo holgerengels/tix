@@ -798,6 +798,12 @@ onMounted(async () => {
     user-select: none;
     white-space: nowrap;
 }
+.ticket-table th:first-child {
+    border-top-left-radius: var(--wa-border-radius-large);
+}
+.ticket-table th:last-child {
+    border-top-right-radius: var(--wa-border-radius-large);
+}
 .ticket-table th.sortable {
     cursor: pointer;
 }
