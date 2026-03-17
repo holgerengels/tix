@@ -11,21 +11,66 @@ axios.interceptors.request.use(config => {
     return config;
 });
 
-// Response interceptor to handle 401
+// Refresh state to prevent concurrent refresh requests
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const onRefreshed = (token) => {
+    refreshSubscribers.forEach(cb => cb(token));
+    refreshSubscribers = [];
+};
+
+const onRefreshFailed = () => {
+    refreshSubscribers = [];
+};
+
+const addRefreshSubscriber = (callback) => {
+    refreshSubscribers.push(callback);
+};
+
+// Response interceptor to handle 401 — try silent refresh first
 axios.interceptors.response.use(
     response => response,
-    error => {
-        if (error.response && error.response.status === 401 && !error.config.url.endsWith('/login')) {
+    async error => {
+        if (error.response && error.response.status === 401 && !error.config.url.endsWith('/login') && !error.config.url.endsWith('/refresh')) {
             const auth = useAuthStore();
             const requestQueue = useRequestQueueStore();
+            const originalRequest = error.config;
 
-            // Trigger Login Overlay
+            // If we have a refresh token, try silent refresh
+            if (auth.refreshToken) {
+                if (isRefreshing) {
+                    // Another refresh is already in progress — wait for it
+                    return new Promise((resolve, reject) => {
+                        addRefreshSubscriber((newToken) => {
+                            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                            axios(originalRequest).then(resolve).catch(reject);
+                        });
+                    });
+                }
+
+                isRefreshing = true;
+                try {
+                    const res = await axios.post('/api/refresh', { refreshToken: auth.refreshToken });
+                    const { token, user } = res.data;
+                    auth.login(token, user);
+                    isRefreshing = false;
+                    onRefreshed(token);
+
+                    // Retry the original request
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return axios(originalRequest);
+                } catch (refreshError) {
+                    isRefreshing = false;
+                    onRefreshFailed();
+                    // Refresh token is also invalid — fall through to login overlay
+                }
+            }
+
+            // No refresh token or refresh failed — show login overlay
             auth.triggerLogin();
-
-            // Create a promise that resolves when the request is retried
             return new Promise((resolve, reject) => {
                 requestQueue.add((token) => {
-                    const originalRequest = error.config;
                     originalRequest.headers.Authorization = `Bearer ${token}`;
                     axios(originalRequest).then(resolve).catch(reject);
                 });
@@ -34,3 +79,4 @@ axios.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+

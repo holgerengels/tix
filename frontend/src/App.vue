@@ -1,10 +1,6 @@
 <template>
   <div class="app-container" :class="{ 'with-sidebar': auth.isAuthenticated, 'sidebar-collapsed': !ui.sidebarOpen && auth.isAuthenticated }">
-    
-    <div v-if="needRefresh" class="pwa-update-prompt">
-        <span>Eine neue Version von TIX ist verfügbar.</span>
-        <wa-button size="small" variant="primary" @click="handleSWUpdate">Jetzt aktualisieren</wa-button>
-    </div>
+
 
     <LoginOverlay v-if="auth.showLogin" />
     
@@ -40,12 +36,10 @@
 
         <div class="footer">
              <div class="user-info" v-if="auth.user">
+                <wa-avatar :initials="userInitials" shape="circle"></wa-avatar>
                 <span class="nav-text">{{ usersStore.getDisplayName(auth.user.username) }}</span>
+                <wa-icon-button name="box-arrow-right" label="Logout" @click="auth.logout()" style="margin-left: auto;"></wa-icon-button>
              </div>
-             <wa-button variant="text" @click="auth.logout()" size="small" appearance="plain">
-                <wa-icon slot="prefix" name="box-arrow-right"></wa-icon> <span class="nav-text">Logout</span>
-             </wa-button>
-             
              <wa-button v-if="isDev" variant="text" @click="reloadConfig" size="small" appearance="plain" title="Reload Config form Disk">
                 <wa-icon slot="prefix" name="arrow-clockwise"></wa-icon> <span class="nav-text">Reload</span>
              </wa-button>
@@ -68,32 +62,62 @@ import { useUsersStore } from './stores/users';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { toast } from './composables/useToast';
+import { resubscribePush } from './utils/pushResubscribe';
 
 const auth = useAuthStore();
 const ui = useUiStore();
 const usersStore = useUsersStore();
 
-// PWA Update Logic — check for new SW when tab becomes visible
-const {
-  needRefresh,
-  updateServiceWorker,
-} = useRegisterSW({
+// PWA Update Logic — auto-update + toast notification after update
+useRegisterSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
+      // Check for updates immediately on page load
+      registration.update();
+
+      // Check for updates when tab becomes visible
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) registration.update();
       });
+
+      // Periodic check every 60 minutes
+      setInterval(() => registration.update(), 60 * 60 * 1000);
     }
   }
 });
 
-const handleSWUpdate = () => {
-    updateServiceWorker(true);
-};
+// Detect updates via two complementary mechanisms:
+// 1. controllerchange: fires when SW updates while the app is open
+// 2. Build timestamp: detects updates that happened while the app was closed
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    toast.info('TIX wurde aktualisiert.');
+    resubscribePush();
+  });
+}
+
+// Cold-start update detection via build timestamp
+const BUILD_VERSION_KEY = 'tix_build_timestamp';
+const previousBuild = localStorage.getItem(BUILD_VERSION_KEY);
+// @ts-ignore — injected by vite.config.js define
+const currentBuild = __BUILD_TIMESTAMP__;
+if (previousBuild && previousBuild !== currentBuild) {
+  // Short delay so the toast system is ready
+  setTimeout(() => toast.info('TIX wurde aktualisiert.'), 500);
+}
+localStorage.setItem(BUILD_VERSION_KEY, currentBuild);
 
 const router = useRouter();
 const route = useRoute();
 const isDev = ref(false);
+
+const userInitials = computed(() => {
+    const name = usersStore.getDisplayName(auth.user?.username);
+    if (!name) return '?';
+    const parts = name.split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+});
 
 // Listen for SW messages (e.g. push notification clicked on already-open tab)
 if ('serviceWorker' in navigator) {
@@ -119,15 +143,17 @@ const checkDevMode = async () => {
 
 onMounted(checkDevMode);
 
-// Re-check dev mode on login, navigate home on logout
+// Re-check dev mode on login, re-subscribe push, navigate home on logout
 watch(() => auth.isAuthenticated, (newVal, oldVal) => {
     if (newVal) {
         checkDevMode();
+        // Auto-re-subscribe push notifications if permission is granted but subscription was lost
+        resubscribePush();
     } else if (oldVal) {
         // User logged out — leave detail views and go to list
         router.push('/');
     }
-});
+}, { immediate: true });
 
 const handleResize = (e) => {
     const mobile = e.matches;
@@ -232,8 +258,10 @@ body {
     flex-shrink: 0;
     box-shadow: 1px 0 10px rgba(0,0,0,0.02);
     transition: all 0.3s ease;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     white-space: nowrap;
+    box-sizing: border-box;
 }
 
 .logo {
@@ -283,20 +311,19 @@ body {
 .footer {
     margin-top: auto;
     padding-top: 1.5rem;
-    text-align: center;
 }
 
 .user-info {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     color: var(--wa-color-neutral-40);
     font-size: 0.875rem;
-    padding-left: 0.5rem;
     font-weight: 500;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
 }
+
+
 
 /* Main Content */
 .main-content {
@@ -345,6 +372,7 @@ body {
         box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         transform: translateX(0);
         transition: transform 0.3s ease;
+        overflow-y: auto;
     }
     
     .app-container.sidebar-collapsed .sidebar {
@@ -362,21 +390,8 @@ body {
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
     }
+
 }
 
-.pwa-update-prompt {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    padding: 1rem;
-    border-radius: var(--wa-border-radius-medium);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    border: 1px solid var(--wa-color-brand-70);
-}
+
 </style>

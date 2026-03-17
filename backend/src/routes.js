@@ -14,9 +14,9 @@ const { runBotsForTicket } = require('./bots');
 
 // Auth
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, isPwa } = req.body;
     try {
-        const result = await login(username, password);
+        const result = await login(username, password, isPwa);
         if (result) res.json(result);
         else res.status(401).json({ message: 'Invalid credentials' });
     } catch (err) {
@@ -24,6 +24,20 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+router.post('/refresh', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+
+    const { refreshAccessToken } = require('./auth');
+    const result = refreshAccessToken(refreshToken);
+    if (result) {
+        res.json(result);
+    } else {
+        res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+});
+
 
 router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
