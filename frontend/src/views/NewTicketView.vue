@@ -162,7 +162,7 @@ const createTicket = async () => {
 
 onBeforeRouteLeave(async (to, from, next) => {
     if (isDirty.value) {
-        const answer = await confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
+        const answer = await confirm('Änderungen gehen verloren. Willst du die Seite wirklich verlassen?');
         next(answer ? undefined : false);
     } else {
         next();
@@ -232,7 +232,7 @@ onMounted(fetchConfig);
     padding-left: 2rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
 }
 .markdown-body :deep(h1), 
 .markdown-body :deep(h2), 

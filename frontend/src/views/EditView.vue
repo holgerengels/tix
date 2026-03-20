@@ -178,7 +178,7 @@ const save = async () => {
 
 onBeforeRouteLeave(async (to, from, next) => {
     if (isDirty.value) {
-        const answer = await confirm('Änderungen gehen verloren. Wollen Sie die Seite wirklich verlassen?');
+        const answer = await confirm('Änderungen gehen verloren. Willst du die Seite wirklich verlassen?');
         next(answer ? undefined : false);
     } else {
         next();

@@ -96,16 +96,22 @@ wa-input::part(base),
 wa-select::part(combobox),
 wa-textarea::part(base) {
   background-color: #fafafa;
+  border-color: var(--wa-color-neutral-80);
 }
 
 wa-input:hover::part(base),
 wa-select:hover::part(combobox),
 wa-textarea:hover::part(base) {
   background-color: #f5f5f5;
+  border-color: var(--wa-color-neutral-70);
 }
 
 wa-input:focus-within::part(base),
 wa-select:focus-within::part(combobox),
 wa-textarea:focus-within::part(base) {
   background-color: white;
+}
+
+wa-avatar {
+  --size: 2rem;
 }

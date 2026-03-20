@@ -90,7 +90,7 @@
                 </td>
                 <td class="actions-cell">
                     <template v-for="action in getActions(ticket)" :key="action.name">
-                        <template v-if="action.inline === 'comment' || action.inlineComment">
+                        <template v-if="action.inline === 'comment'">
                             <wa-button 
                                 :id="'trigger-' + ticket._id + '-' + action.name"
                                 size="small" 
@@ -308,7 +308,7 @@ const loadSavedFilters = () => {
 };
 
 const saveCurrentFilter = async () => {
-    const name = await prompt('Bitte geben Sie einen Namen für diesen Filter ein:');
+    const name = await prompt('Bitte gib einen Namen für diesen Filter ein:');
     if (!name) return;
 
     const newFilter = {
@@ -774,15 +774,15 @@ onMounted(async () => {
     border-collapse: separate;
     border-spacing: 0;
     background: white;
-    box-shadow: var(--wa-shadow-small);
+    box-shadow: var(--wa-shadow-x-small);
     border-radius: var(--wa-border-radius-large);
-    border: 1px solid var(--wa-color-neutral-80);
+    border: 1px solid var(--wa-color-neutral-90);
 }
 
 .ticket-table th, .ticket-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-80);
+    border-bottom: 1px solid var(--wa-color-neutral-90);
     vertical-align: middle;
 }
 
@@ -797,10 +797,13 @@ onMounted(async () => {
     z-index: 10;
     user-select: none;
     white-space: nowrap;
+    border-bottom: 1px solid var(--wa-color-neutral-80);
 }
+
 .ticket-table th:first-child {
     border-top-left-radius: var(--wa-border-radius-large);
 }
+
 .ticket-table th:last-child {
     border-top-right-radius: var(--wa-border-radius-large);
 }

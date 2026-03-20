@@ -14,7 +14,7 @@
 
     <template v-else>
       <div v-if="!date" class="termin-empty">
-        Bitte wählen Sie zuerst ein Datum aus.
+        Bitte wähle zuerst ein Datum aus.
       </div>
       
       <div v-else-if="loading" class="termin-loading">

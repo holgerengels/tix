@@ -151,7 +151,7 @@ const checkUndo = async () => {
 };
 
 const executeUndo = async () => {
-    if (!await confirm('Möchten Sie die letzte Aktion wirklich rückgängig machen?')) return;
+    if (!await confirm('Willst du die letzte Aktion wirklich rückgängig machen?')) return;
     
     try {
         await axios.post(`/api/tickets/${ticket.value._id}/undo`, {}, {
@@ -169,7 +169,7 @@ const editTicket = () => {
 };
 
 const deleteTicket = async () => {
-    if (!await confirm('Sind Sie sicher, dass Sie dieses Ticket löschen möchten?')) return;
+    if (!await confirm('Bist Du sicher, dass Du dieses Ticket löschen möchtest?')) return;
     
     try {
         await axios.delete(`/api/tickets/${ticket.value._id}`, {
@@ -284,6 +284,8 @@ const getActions = (ticket) => {
     // The filter that previously hid 'bearbeiten' actions has been removed.
     // All actions are now considered for authorization based on groups.
     const authorizedActions = allActions.filter(action => {
+        if (action.inline) return false;
+
         const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
         const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
         const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));

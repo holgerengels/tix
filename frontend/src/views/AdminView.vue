@@ -471,20 +471,20 @@ onMounted(async () => {
     border-collapse: separate;
     border-spacing: 0;
     background: white;
-    box-shadow: var(--wa-shadow-small);
+    box-shadow: var(--wa-shadow-x-small);
     border-radius: var(--wa-border-radius-large);
-    border: 1px solid var(--wa-color-neutral-70);
+    border: 1px solid var(--wa-color-neutral-90);
 }
 
 .ticket-table th, .ticket-table td {
     padding: 0.5rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--wa-color-neutral-80);
+    border-bottom: 1px solid var(--wa-color-neutral-90);
     vertical-align: middle;
 }
 
 .ticket-table th {
-    background-color: var(--wa-color-neutral-90);
+    background-color: var(--wa-color-neutral-95);
     font-weight: 600;
     color: var(--wa-color-neutral-30);
     text-transform: uppercase;
@@ -494,6 +494,15 @@ onMounted(async () => {
     z-index: 10;
     user-select: none;
     white-space: nowrap;
+    border-bottom: 1px solid var(--wa-color-neutral-80);
+}
+
+.ticket-table th:first-child {
+    border-top-left-radius: var(--wa-border-radius-large);
+}
+
+.ticket-table th:last-child {
+    border-top-right-radius: var(--wa-border-radius-large);
 }
 .ticket-table th.sortable {
     cursor: pointer;
