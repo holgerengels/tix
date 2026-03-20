@@ -635,7 +635,7 @@ onMounted(async () => {
     padding: 0.25rem 0;
     border: none;
     text-align: left;
-    word-break: break-word;
+    white-space: normal;
     overflow-wrap: anywhere;
 }
 

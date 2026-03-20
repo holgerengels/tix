@@ -88,7 +88,7 @@
                         </span>
                     </div>
                 </td>
-                <td class="actions-cell">
+                <td class="actions-cell" :class="{ 'has-actions': getActions(ticket).length > 0 }">
                     <template v-for="action in getActions(ticket)" :key="action.name">
                         <template v-if="action.inline === 'comment'">
                             <wa-button 
@@ -973,14 +973,12 @@ onMounted(async () => {
 
 .is-mobile .ticket-table td {
     display: grid;
-    grid-template-columns: 100px minmax(0, 1fr);
+    grid-template-columns: 100px 1fr;
     align-items: flex-start;
     justify-items: start;
     padding: 0.25rem 0;
     border: none;
     text-align: left;
-    white-space: normal;
-    overflow-wrap: anywhere;
 }
 
 .is-mobile .ticket-table td::before {
@@ -994,12 +992,21 @@ onMounted(async () => {
 }
 
 .is-mobile .ticket-table td.actions-cell {
+    display: none;
+}
+
+.is-mobile .ticket-table td.actions-cell.has-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-top: 0.5rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--wa-color-neutral-80);
-    justify-items: end;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.is-mobile .ticket-table td.actions-cell::before {
+    content: none;
 }
 
 /* Actions content wrapper to align buttons */
