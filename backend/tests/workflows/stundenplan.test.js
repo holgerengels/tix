@@ -31,6 +31,7 @@ describe('Workflow: Stundenplan-Ticket', () => {
         title: 'Raumtausch Physik/Chemie',
         description: 'Freitags Raum 322 statt 321',
         day: 'Freitag',
+        dateFrom: new Date().toISOString().split('T')[0],
         lessons: { min: 3, max: 4 }
     };
 

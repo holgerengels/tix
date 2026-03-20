@@ -177,7 +177,8 @@ describe('Workflow: Abwesenheit', () => {
         await Log.updateMany({}, { timestamp: new Date(Date.now() - 60000) });
         await checkUnpublishedLogs();
         notifs = getTestNotifications();
-        expect(notifs.filter(n => n.targetUser === 'lehrer1').length).toBe(1); // 1 log for cancellation
+        // Self-notifications are skipped, so lehrer1 should not be notified of their own cancellation.
+        expect(notifs.filter(n => n.targetUser === 'lehrer1').length).toBe(0); 
         clearTestNotifications();
 
         await runSubscriptionCheck();

@@ -280,8 +280,24 @@ router.post('/tickets', verifyToken, async (req, res) => {
     try {
         const type = req.body.typ || req.body.type;
 
-        // Validation
         const wf = workflowEngine.getWorkflowForType(type);
+        
+        // Access Control
+        if (wf && wf.access) {
+            const createAccess = wf.access.find(a => a.name === 'create');
+            if (createAccess && createAccess.groups) {
+                const userGroups = req.user.groups || [];
+                // Anyone can create if no specific groups required, else must match
+                if (createAccess.groups.length > 0) {
+                    const hasAccess = createAccess.groups.some(g => userGroups.includes(g));
+                    if (!hasAccess) {
+                        return res.status(403).json({ message: 'Not authorized to create tickets of this type' });
+                    }
+                }
+            }
+        }
+
+        // Validation
         if (wf) {
             const { validateTicket } = require('./validation');
             const validationResult = validateTicket(req.body, wf);
@@ -347,9 +363,10 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         const { actionName, formData, formButtonName } = req.body;
 
         const ticket = await Ticket.findById(req.params.id);
-        const dataBefore = ticket.toObject();
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        
+        const dataBefore = ticket.toObject();
 
         const wf = workflowEngine.getWorkflowForType(ticket.type);
         // Robustness fix: Handle if ticket.state doesn't match any workflow state (e.g. old data)

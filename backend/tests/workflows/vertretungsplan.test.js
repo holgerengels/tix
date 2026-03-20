@@ -27,7 +27,7 @@ afterAll(async () => {
 
 describe('Workflow: Vertretungsplan-Ticket', () => {
 
-    const futureDate = format(addDays(new Date(), 14), 'yyyy-MM-dd');
+    const futureDate = format(addDays(new Date(), 1), 'yyyy-MM-dd');
 
     const ticketPayload = {
         type: 'Vertretungsplan-Ticket',

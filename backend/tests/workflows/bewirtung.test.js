@@ -47,14 +47,15 @@ describe('Workflow: Bewirtungsauftrag', () => {
     const ticketPayload = {
         type: 'Bewirtungsauftrag',
         title: 'Lehrerkonferenz',
-        typeSelection: 'intern', // config mapping expects 'type' but request payload conflicts with doc 'type'. Let's rename in payload or handle it correctly.
+        typeSelection: 'intern',
+        eventType: 'intern',
         date: '2026-10-15',
         numberOfPersons: 20,
         room: 'Raum 101',
         description: 'Testticket für Konferenzbewirtung',
         breakfast: true,
-        bfDrinksKaffee: true,
-        bfFoodBrezeln: true
+        bfDrinksAndFood: ['Kaffee', 'Brezeln'],
+        breakfastTime: '08:00'
     };
 
     it('should auto-approve Bewirtungsauftrag if creator is in Schulleitung', async () => {
