@@ -973,12 +973,14 @@ onMounted(async () => {
 
 .is-mobile .ticket-table td {
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: 100px minmax(0, 1fr);
     align-items: flex-start;
     justify-items: start;
     padding: 0.25rem 0;
     border: none;
     text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .is-mobile .ticket-table td::before {
