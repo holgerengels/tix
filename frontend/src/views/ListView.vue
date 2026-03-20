@@ -979,6 +979,7 @@ onMounted(async () => {
     padding: 0.25rem 0;
     border: none;
     text-align: left;
+    white-space: normal;
 }
 
 .is-mobile .ticket-table td::before {
