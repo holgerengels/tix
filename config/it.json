@@ -1,6 +1,13 @@
 {
     "type": "IT-Ticket",
     "abbreviation": "ITT",
+    "subTickets": {
+        "allowedTypes": [
+            "IT-Ticket",
+            "Hausmeisterauftrag"
+        ],
+        "logStatusToParent": true
+    },
     "template": "{{location}} {{ticket.category}}",
     "fields": [
         {
@@ -206,6 +213,17 @@
                         "Netzwerkteam"
                     ],
                     "inline": "assign"
+                },
+                {
+                    "name": "Subticket erstellen",
+                    "groups": [
+                        "Netzwerkteam",
+                        "@assignee"
+                    ],
+                    "subTickets": [
+                        "IT-Ticket",
+                        "Hausmeisterauftrag"
+                    ]
                 }
             ]
         },

@@ -125,6 +125,24 @@ const mockTickets = [
             { editor: 'netzwerker', text: 'Erledigt', edited: new Date('2024-05-29T11:00:00') }
         ]
     },
+    {
+        id: 'ITT-4',
+        title: 'Access Point im Raum 201 neu starten',
+        description: 'Zum Beheben der WLAN Abbrüche muss der AP neu gestartet werden.',
+        type: 'IT-Ticket',
+        state: 'offen.inArbeit',
+        creator: 'lehrer1',
+        assignee: 'netzwerker',
+        parentTicket: 'ITT-1',
+        category: 'Netzwerk',
+        location: 'Raum 201',
+        badges: [],
+        created: new Date('2024-06-02T09:00:00'),
+        log: [
+            { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-02T09:00:00') },
+            { editor: 'netzwerker', text: 'In Arbeit', edited: new Date('2024-06-02T09:30:00') }
+        ]
+    },
 
     // Hausmeisterauftrag
     {
@@ -197,7 +215,7 @@ const seedTickets = async () => {
         await Counter.insertMany([
             { _id: 'ABW', seq: 2 },
             { _id: 'KRM', seq: 2 },
-            { _id: 'ITT', seq: 3 },
+            { _id: 'ITT', seq: 4 },
             { _id: 'HMA', seq: 2 }
         ]);
         console.log('Counters initialized');

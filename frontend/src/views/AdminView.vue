@@ -99,6 +99,7 @@ import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import TicketFilter from '../components/TicketFilter.vue';
 import { toast, confirm } from '../composables/useToast';
+import { useTicketAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -109,6 +110,9 @@ const config = computed(() => workflow.config);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const tickets = ref([]);
 const loading = ref(false);
+
+const dummyTicket = ref(null);
+const { getStatusColor, getStatusLabel } = useTicketAccess(dummyTicket, config, user);
 
 const filterType = ref([]);
 const filterStatus = ref('');
@@ -181,14 +185,6 @@ const resetFilters = () => {
     filterDateTo.value = '';
     filterBadges.value = [];
     applyFilters();
-};
-
-const getStatusLabel = (ticket) => {
-    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
-        return ticket.state;
-    }
-    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
-    return stateDef ? stateDef.label : ticket.state;
 };
 
 // Selection Logic
@@ -334,20 +330,6 @@ const getBadgeVariant = (badge) => {
             return 'neutral';
     }
 };
-
-const getStatusColor = (ticket) => {
-    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
-    const colorMap = {
-        'blue': 'brand',
-        'green': 'success',
-        'yellow': 'warning',
-        'red': 'danger',
-        'gray': 'neutral'
-    };
-    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
-};
-
-
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 

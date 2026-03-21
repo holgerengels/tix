@@ -202,6 +202,7 @@ import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
 import TicketFilter from '../components/TicketFilter.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
+import { useTicketAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -213,6 +214,9 @@ const config = computed(() => workflow.config);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const tickets = ref([]);
 const loading = ref(false);
+
+const dummyTicket = ref(null);
+const { getStatusColor, getStatusLabel, getActions: _getRawActions } = useTicketAccess(dummyTicket, config, user);
 
 const filterType = ref([]);
 const filterStatus = ref('');
@@ -455,26 +459,6 @@ const getBadgeVariant = (badge) => {
     }
 };
 
-const getStatusColor = (ticket) => {
-    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
-    const colorMap = {
-        'blue': 'brand',
-        'green': 'success',
-        'yellow': 'warning',
-        'red': 'danger',
-        'gray': 'neutral'
-    };
-    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
-};
-
-const getStatusLabel = (ticket) => {
-    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
-        return ticket.state;
-    }
-    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
-    return stateDef ? stateDef.label : ticket.state;
-};
-
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const getDynamicFields = (ticket) => {
@@ -550,21 +534,7 @@ const getFormattedData = (ticket) => {
 };
 
 const getActions = (ticket) => {
-    if (!config.value || !config.value[ticket.type]) return [];
-    
-    const workflow = config.value[ticket.type].workflow;
-    const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
-    
-    if (matchingBlocks.length === 0) return [];
-    
-    const allActions = matchingBlocks.flatMap(block => block.actions);
-
-    const authorizedActions = allActions.filter(action => {
-        const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
-        const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
-        const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
-        return allowedByCreator || allowedByAssignee || allowedByGroup;
-    });
+    const authorizedActions = _getRawActions(ticket);
 
     if (currentFilter.value === 'assigned') {
         const actions = authorizedActions.filter(a => !a.optional);
@@ -574,10 +544,7 @@ const getActions = (ticket) => {
         return actions.map(processAction);
     }
     
-    const wf = config.value[ticket.type];
-    const actions = [...authorizedActions];
-    
-    return actions.map(processAction);
+    return authorizedActions.map(processAction);
 };
 
 const processAction = (action) => {

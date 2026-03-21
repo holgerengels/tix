@@ -4,7 +4,10 @@
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
         </wa-button>
-        <h2>Neues Ticket</h2>
+        <h2 style="display: flex; align-items: center; gap: 1ch;">
+            Neues Ticket
+            <wa-tag v-if="parentTicket" variant="brand" size="small">⮤ {{ parentTicket }}</wa-tag>
+        </h2>
     </div>
 
     <div v-if="loadingConfig" class="loading">
@@ -77,6 +80,15 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 const workflowDocHtml = ref('');
 const loadingDoc = ref(false);
 
+const route = useRoute();
+const parentTicket = computed(() => route.query.parent);
+
+onMounted(() => {
+    if (route.query.type) {
+        newTicketType.value = route.query.type;
+    }
+});
+
 watch(newTicketData, () => {
     if (Object.keys(newTicketData.value).length > 0) {
         isDirty.value = true;
@@ -146,6 +158,9 @@ const createTicket = async () => {
             type: newTicketType.value,
             ...newTicketData.value
         };
+        if (parentTicket.value) {
+            payload.parentTicket = parentTicket.value;
+        }
         
         await axios.post('/api/tickets', payload, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }

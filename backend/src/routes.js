@@ -269,7 +269,27 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
 
     try {
-        const tickets = await Ticket.find(finalQuery).sort({ created: -1 });
+        const docTickets = await Ticket.find(finalQuery).sort({ created: -1 });
+        const tickets = docTickets.map(t => t.toObject());
+
+        // Load subtickets efficiently
+        const ticketIds = tickets.map(t => t.id).filter(id => id);
+        if (ticketIds.length > 0) {
+            const allSubTickets = await Ticket.find({ parentTicket: { $in: ticketIds } }).lean();
+            if (allSubTickets.length > 0) {
+                const subTicketsByParent = {};
+                allSubTickets.forEach(sub => {
+                    if (!subTicketsByParent[sub.parentTicket]) subTicketsByParent[sub.parentTicket] = [];
+                    subTicketsByParent[sub.parentTicket].push(sub);
+                });
+                tickets.forEach(t => {
+                    if (subTicketsByParent[t.id]) {
+                        t.subTickets = subTicketsByParent[t.id];
+                    }
+                });
+            }
+        }
+
         res.json(tickets);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -281,7 +301,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         const type = req.body.typ || req.body.type;
 
         const wf = workflowEngine.getWorkflowForType(type);
-        
+
         // Access Control
         if (wf && wf.access) {
             const createAccess = wf.access.find(a => a.name === 'create');
@@ -305,6 +325,43 @@ router.post('/tickets', verifyToken, async (req, res) => {
                 return res.status(400).json({
                     message: `Validation failed: ${validationResult.errors.join(', ')}`
                 });
+            }
+        }
+
+        if (req.body.parentTicket) {
+            const parent = await Ticket.findOne({ id: req.body.parentTicket });
+            if (!parent) {
+                return res.status(400).json({ message: 'Parent ticket not found' });
+            }
+            const parentWf = workflowEngine.getWorkflowForType(parent.type);
+            const parentMatchingBlocks = parentWf?.workflow?.filter(w => w.states.includes(parent.state)) || [];
+            
+            let allowed = false;
+            for (const block of parentMatchingBlocks) {
+                const subActions = (block.actions || []).filter(a => a.subTickets && a.subTickets.includes(type));
+                for (const action of subActions) {
+                    const groups = action.groups || [];
+                    const isCreator = parent.creator === req.user.username;
+                    const isAssignee = parent.assignee === req.user.username;
+                    const userGroups = req.user.groups || [];
+                    
+                    const allowedGroup = groups.some(g => {
+                        if (g === '@creator' && isCreator) return true;
+                        if (g === '@assignee' && isAssignee) return true;
+                        if (userGroups.includes(g)) return true;
+                        return false;
+                    });
+                    
+                    if (allowedGroup || groups.length === 0) {
+                        allowed = true;
+                        break;
+                    }
+                }
+                if (allowed) break;
+            }
+            
+            if (!allowed) {
+                return res.status(400).json({ message: 'This ticket type is not allowed as a subticket for the given parent in its current state or you do not have permission' });
             }
         }
 
@@ -365,7 +422,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         const ticket = await Ticket.findById(req.params.id);
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
-        
+
         const dataBefore = ticket.toObject();
 
         const wf = workflowEngine.getWorkflowForType(ticket.type);
@@ -497,6 +554,29 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         if (ticket.isModified()) {
             await ticket.save();
+        }
+
+        // Subticket -> Parent Logging
+        if (ticket.parentTicket && dataBefore.state !== ticket.state) {
+            const parent = await Ticket.findOne({ id: ticket.parentTicket });
+            if (parent) {
+                const workflowEngine = require('./workflow');
+                const parentWf = workflowEngine.getWorkflowForType(parent.type);
+                if (parentWf && parentWf.subTickets && parentWf.subTickets.logStatusToParent) {
+                    const Log = require('./models/log');
+                    await new Log({
+                        ticket: parent._id,
+                        editor: 'System',
+                        action: `Subticket ${ticket.id} ist nun im Status: ${ticket.state}`,
+                        timestamp: new Date(),
+                        dataAfter: parent.toObject()
+                    }).save();
+
+                    // Asynchronously trigger bots for the parent
+                    const { runBotsForTicket } = require('./bots');
+                    runBotsForTicket(parent).catch(e => console.error("Error running bots for parent:", e));
+                }
+            }
         }
 
         // Run bots immediately

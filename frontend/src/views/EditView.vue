@@ -19,15 +19,40 @@
     </div>
 
     <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer>
-        <h3 slot="header">
-            <wa-tag :variant="getStatusColor(ticket)" size="small" style="margin-right: 1ch; vertical-align: middle;">
-                {{ getStatusLabel(ticket) }}
-            </wa-tag>
-            {{ ticket.id }} {{ ticket.title }}
-        </h3>
-        
-        <div slot="header">
-            <strong>{{ ticket.creator }}</strong> {{ formatDate(ticket.created) }}
+        <div slot="header" style="display: flex; flex-direction: column; width: 100%; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1ch;">
+                    <wa-tag v-if="ticket.parentTicket" variant="brand" size="small" style="cursor: pointer;" @click="router.push(`/tickets/${ticket.parentTicket}/view`)">
+                        ⮤ {{ ticket.parentTicket }}
+                    </wa-tag>
+                    
+                    <h3 style="margin: 0; display: inline-flex; align-items: center; gap: 1ch;">
+                        <wa-tag :variant="getStatusColor(ticket)" size="small">
+                            {{ getStatusLabel(ticket) }}
+                        </wa-tag>
+                        <span>{{ ticket.id }} {{ ticket.title }}</span>
+                    </h3>
+                    
+                    <template v-if="ticket.subTickets && ticket.subTickets.length > 0">
+                        <wa-tag v-for="sub in ticket.subTickets" :key="sub.id" variant="brand" size="small" style="cursor: pointer;" @click="router.push(`/tickets/${sub.id}/view`)">
+                            ⮡ {{ sub.id }} ({{ getStatusLabel(sub) }})
+                        </wa-tag>
+                    </template>
+                </div>
+
+                <wa-dropdown v-if="allowedSubticketTypes.length > 0">
+                    <wa-button slot="trigger" size="small" variant="neutral" appearance="outlined">
+                        Subticket erstellen <wa-icon name="chevron-down" style="margin-left: 0.5rem;"></wa-icon>
+                    </wa-button>
+                    <wa-dropdown-item v-for="type in allowedSubticketTypes" :key="type" @click="createSubticket(type)">
+                        {{ type }}
+                    </wa-dropdown-item>
+                </wa-dropdown>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div><strong>{{ usersStore.getDisplayName(ticket.creator) }}</strong> {{ formatDate(ticket.created) }}</div>
+            </div>
         </div>
         
         <div class="ticket-body">
@@ -53,9 +78,12 @@ import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
+import { useUsersStore } from '../stores/users';
 import { toast, confirm } from '../composables/useToast';
+import { useTicketAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
+const usersStore = useUsersStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import { validateTicket } from '../utils/evaluation';
 
@@ -68,13 +96,23 @@ const saving = ref(false);
 const error = ref(null);
 const isDirty = ref(false);
 const formRef = ref(null);
+const user = JSON.parse(localStorage.getItem('user') || '{}');
 
 const ticketData = ref({});
 const formFields = ref([]);
 const formGrid = ref([]);
 
+const {
+    allowedSubticketTypes,
+    getStatusColor, getStatusLabel
+} = useTicketAccess(ticket, config, user);
+
 const goBack = () => {
     router.back();
+};
+
+const createSubticket = (type) => {
+    router.push({ path: '/tickets/new', query: { type: type, parent: ticket.value.id } });
 };
 
 const fetchData = async () => {
@@ -186,27 +224,6 @@ onBeforeRouteLeave(async (to, from, next) => {
 });
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
-
-const getStatusColor = (ticket) => {
-    if (!config.value || !config.value[ticket.type]) return 'neutral';
-    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
-    const colorMap = {
-        'blue': 'brand',
-        'green': 'success',
-        'yellow': 'warning',
-        'red': 'danger',
-        'gray': 'neutral'
-    };
-    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
-};
-
-const getStatusLabel = (ticket) => {
-    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
-        return ticket.state;
-    }
-    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
-    return stateDef ? stateDef.label : ticket.state;
-};
 
 onMounted(fetchData);
 </script>

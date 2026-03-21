@@ -28,15 +28,40 @@
     </div>
 
     <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer>
-        <h3 slot="header">
-            <wa-tag :variant="getStatusColor(ticket)" size="small" style="margin-right: 1ch; vertical-align: middle;">
-                {{ getStatusLabel(ticket) }}
-            </wa-tag>
-            {{ ticket.id }} {{ ticket.title }}
-        </h3>
-        
-        <div slot="header">
-            <strong>{{ usersStore.getDisplayName(ticket.creator) }}</strong> {{ formatDate(ticket.created) }}
+        <div slot="header" style="display: flex; flex-direction: column; width: 100%; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1ch;">
+                    <wa-tag v-if="ticket.parentTicket" variant="brand" size="small" style="cursor: pointer;" @click="router.push(`/tickets/${ticket.parentTicket}/view`)">
+                        ⮤ {{ ticket.parentTicket }}
+                    </wa-tag>
+                    
+                    <h3 style="margin: 0; display: inline-flex; align-items: center; gap: 1ch;">
+                        <wa-tag :variant="getStatusColor(ticket)" size="small">
+                            {{ getStatusLabel(ticket) }}
+                        </wa-tag>
+                        <span>{{ ticket.id }} {{ ticket.title }}</span>
+                    </h3>
+                    
+                    <template v-if="ticket.subTickets && ticket.subTickets.length > 0">
+                        <wa-tag v-for="sub in ticket.subTickets" :key="sub.id" variant="brand" size="small" style="cursor: pointer;" @click="router.push(`/tickets/${sub.id}/view`)">
+                            ⮡ {{ sub.id }} ({{ getStatusLabel(sub) }})
+                        </wa-tag>
+                    </template>
+                </div>
+
+                <wa-dropdown v-if="allowedSubticketTypes.length > 0">
+                    <wa-button slot="trigger" size="small" variant="neutral" appearance="outlined">
+                        Subticket erstellen <wa-icon name="chevron-down" style="margin-left: 0.5rem;"></wa-icon>
+                    </wa-button>
+                    <wa-dropdown-item v-for="type in allowedSubticketTypes" :key="type" @click="createSubticket(type)">
+                        {{ type }}
+                    </wa-dropdown-item>
+                </wa-dropdown>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div><strong>{{ usersStore.getDisplayName(ticket.creator) }}</strong> {{ formatDate(ticket.created) }}</div>
+            </div>
         </div>
 
         <div class="ticket-content">
@@ -70,13 +95,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
+import { useTicketAccess } from '../composables/useTicketAccess';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import { toast, confirm } from '../composables/useToast';
@@ -108,6 +134,19 @@ const goBack = () => {
         // If no internal history (Deep Link -> Login -> Here), go to Home
         router.push('/');
     }
+};
+
+watch(() => route.params.id, (newId) => {
+    if (newId) fetchData();
+});
+
+const {
+    canEdit, canDelete, canComment, allowedSubticketTypes,
+    getStatusColor, getStatusLabel, getActions
+} = useTicketAccess(ticket, config, user);
+
+const createSubticket = (type) => {
+    router.push({ path: '/tickets/new', query: { type: type, parent: ticket.value.id } });
 };
 
 const fetchData = async () => {
@@ -205,95 +244,7 @@ const prepareForm = () => {
     };
 };
 
-const canComment = computed(() => {
-    if (!ticket.value || !config.value[ticket.value.type]) return false;
-    
-    if (ticket.value.creator === user.username) return true;
-    if (ticket.value.assignee === user.username) return true;
-
-    const access = config.value[ticket.value.type].access;
-    if (!access) return false;
-    
-    const rule = access.find(r => r.name === 'comment');
-    if (!rule) return false;
-    
-    return rule.groups.some(g => (user.groups || []).includes(g));
-});
-
-const canEdit = computed(() => {
-    if ((user.groups || []).includes('Administration')) return true;
-
-    if (!ticket.value || !config.value[ticket.value.type]) return false;
-    
-    const access = config.value[ticket.value.type].access;
-    if (!access) return false;
-
-    const rule = access.find(r => r.name === 'edit');
-    if (!rule) return false;
-
-    return rule.groups.some(g => (user.groups || []).includes(g));
-});
-
-const canDelete = computed(() => {
-    if ((user.groups || []).includes('Administration')) return true;
-    
-    if (!ticket.value || !config.value[ticket.value.type]) return false;
-    
-    const access = config.value[ticket.value.type].access;
-    if (!access) return false;
-    
-    const rule = access.find(r => r.name === 'delete');
-    if (!rule) return false;
-    
-    return rule.groups.some(g => (user.groups || []).includes(g));
-});
-
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
-
-const getStatusColor = (ticket) => {
-    if (!config.value || !config.value[ticket.type]) return 'neutral';
-    const stateDef = config.value[ticket.type]?.states?.find(s => s.name === ticket.state);
-    const colorMap = {
-        'blue': 'brand',
-        'green': 'success',
-        'yellow': 'warning',
-        'red': 'danger',
-        'gray': 'neutral'
-    };
-    return stateDef ? (colorMap[stateDef.color] || 'neutral') : 'neutral';
-};
-
-const getStatusLabel = (ticket) => {
-    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].states) {
-        return ticket.state;
-    }
-    const stateDef = config.value[ticket.type].states.find(s => s.name === ticket.state);
-    return stateDef ? stateDef.label : ticket.state;
-};
-
-const getActions = (ticket) => {
-    if (!config.value || !config.value[ticket.type]) return [];
-    
-    const workflow = config.value[ticket.type].workflow;
-    const matchingBlocks = workflow.filter(s => s.states.includes(ticket.state));
-    
-    if (matchingBlocks.length === 0) return [];
-    
-    const allActions = matchingBlocks.flatMap(block => block.actions);
-
-    // The filter that previously hid 'bearbeiten' actions has been removed.
-    // All actions are now considered for authorization based on groups.
-    const authorizedActions = allActions.filter(action => {
-        if (action.inline) return false;
-
-        const allowedByCreator = action.groups.includes('@creator') && ticket.creator === user.username;
-        const allowedByAssignee = action.groups.includes('@assignee') && ticket.assignee === user.username;
-        const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
-        return allowedByCreator || allowedByAssignee || allowedByGroup;
-    });
-
-    return authorizedActions;
-};
 
 const handleAction = async (ticket, action) => {
     if (action.form === 'read') {
