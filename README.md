@@ -4,7 +4,7 @@ Tix is a highly flexible, JSON-driven ticket and workflow management system buil
 
 Instead of hardcoding workflows or forms, Tix relies on an intelligent **JSON Schema Engine**. This allows administrators to dynamically design ticket types, complex forms, user permissions, and custom state machines without writing frontend or backend code.
 
-![Tix Overview](docs/images/tix_logo.png) <!-- Ergänze hier gerne ein Logo oder Screenshot -->
+![Tix Overview](docs/frontend/public/vu.svg) <!-- Ergänze hier gerne ein Logo oder Screenshot -->
 
 ## 🚀 Key Features
 - **Dynamic Forms**: Vue 3 powered interface interpreting JSON grids with conditional field visibility via Vue proxy reactivity.
@@ -18,6 +18,7 @@ Die Dokumentation des Systems wurde in detaillierte Module im `docs/` Ordner auf
 | Bereich | Beschreibung | Link |
 | :--- | :--- | :--- |
 | **Architektur** | High-Level Überblick über Systemkomponenten, "Sparsity" und das Sandbox-Konzept. | [architecture_overview.md](docs/architecture_overview.md) |
+| **Workflow Konfiguration**| Zusammenhängende Beschreibung: Ticket Typen, States, Actions (inkl. Forms), Bots, Accesses. | [workflow_configuration.md](docs/workflow_configuration.md) |
 | **Frontend & UI** | Vue 3 Dynamic Forms, Grid-Layouts, Conditional Readonly und Sibling Dependencies. | [frontend_forms.md](docs/frontend_forms.md) |
 | **Backend & Bots** | JS Sandbox Module, Synchronous vs. Asynchronous Bots, Mongoose Dynamic Fields. | [backend_und_bots.md](docs/backend_und_bots.md) |
 | **Integrationen** | LDAP Auth-Flow, CalDAV Raumbuchung & Zeitzonen, WebUntis, und Axios Proxies. | [integrations_caldav_ldap.md](docs/integrations_caldav_ldap.md) |
