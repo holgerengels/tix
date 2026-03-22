@@ -1,12 +1,12 @@
 # Subtickets in Tix
 
-Subtickets ermöglichen das Erzeugen von gekoppelten "Kind-Tickets" direkt aus einem bestehenden Ticket (Parent) heraus. Dies ist ideal, um Aufgaben, die einem Hauptticket zugeordnet sind, an andere Abteilungen (z. B. IT oder Hausmeister) zu delegieren.
+Subtickets allow the creation of linked "child tickets" directly from an existing ticket (parent). This is ideal for delegating tasks assigned to a main ticket to other departments (e.g., IT or janitor).
 
-## 1. Konfiguration im Workflow (`actions`)
+## 1. Configuration in the Workflow (`actions`)
 
-Subtickets werden organisch als "Aktionen" in den Workflow-Block des jeweiligen Parent-Tickets eingebettet. Das bedeutet, dass die Berechtigung zur Erstellung von Subtickets durch denselben Mechanismus gesteuert wird wie reguläre Status-Buttons (Rollenbasiert und Statusabhängig).
+Subtickets are seamlessly embedded as "actions" into the workflow block of the respective parent ticket. This means that the permission to create subtickets is controlled by the same mechanism as regular status buttons (role-based and state-dependent).
 
-**Beispiel in `config/it.json`:**
+**Example in `config/it.json`:**
 ```json
 "workflow": [
     {
@@ -21,11 +21,11 @@ Subtickets werden organisch als "Aktionen" in den Workflow-Block des jeweiligen 
     }
 ]
 ```
-Diese Konfiguration blendet im Frontend einen Subticket-Dropdown für autorisierte Nutzer (`@assignee` oder `Netzwerkteam`) ein, wenn das Ticket im Status `neu` oder `inArbeit` ist. Erlaubt ist die Erstellung von `IT-Ticket` Subtickets.
+This configuration shows a subticket dropdown in the frontend for authorized users (`@assignee` or `Netzwerkteam`) when the ticket is in the `neu` or `inArbeit` state. It allows the creation of `IT-Ticket` subtickets.
 
-## 2. Log-Schatten-Kopien (Parent Logging)
+## 2. Log Shadow Copies (Parent Logging)
 
-Oft soll das Hauptticket den globalen Überblick behalten. Tix bietet die Eigenschaft `logStatusToParent`, die im Hauptblock der Workflow-Config eines Typs aktiviert wird.
+Often, the main ticket should keep a global overview. Tix offers the `logStatusToParent` property, which is activated in the main block of the workflow configuration of a type.
 
 ```json
 {
@@ -37,15 +37,15 @@ Oft soll das Hauptticket den globalen Überblick behalten. Tix bietet die Eigens
 }
 ```
 
-Ist dies `true`, überwacht die Backend-Route für Ticket-Aktionen (`POST /api/tickets/:id/action`) jeden Statuswechsel eines *Subtickets*. Ändert sich der Status, schreibt der System-Bot automatisch einen Kommentar im verbundenen Parent-Ticket (z. B. "Subticket ITT-5 ist nun im Status offen.inArbeit"). So bleibt das Mutterticket jederzeit auf dem neuesten Stand, ohne dass die Akteure manuell Report erstatten müssen.
+If this is `true`, the backend route for ticket actions (`POST /api/tickets/:id/action`) monitors every state change of a *subticket*. If the state changes, the system bot automatically writes a comment in the linked parent ticket (e.g., "Subticket ITT-5 is now in state offen.inArbeit"). This keeps the parent ticket up to date at all times without the actors having to report manually.
 
-## 3. Datenmodell
+## 3. Data Model
 
-Subtickets speichern einen direkten Verweis auf ihr Parent-Ticket über das Feld `parentTicket`. 
+Subtickets store a direct reference to their parent ticket via the `parentTicket` field. 
 
 ```javascript
 parentTicket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' }
 ```
-Um Inkonsistenzen zu vermeiden (Single Source of Truth), speichert das Parent-Ticket *kein* Array seiner Kinder. Die Zuweisung wird bei Bedarf per `Ticket.find({ parentTicket: req.query.id })` zusammengesucht und an die Frontend-Response angehängt.
+To avoid inconsistencies (Single Source of Truth), the parent ticket does *not* store an array of its children. The assignment is gathered on demand via `Ticket.find({ parentTicket: req.query.id })` and attached to the frontend response.
 
-Im Frontend (`TicketView.vue`) werden Subtickets und Parent-Tickets klar per Hierarchie-Badge (`⮡` für Subtickets, `⮤` für Parent-Link) gekennzeichnet.
+In the frontend (`TicketView.vue`), subtickets and parent tickets are clearly marked with a hierarchy badge (`⮡` for subtickets, `⮤` for parent link).

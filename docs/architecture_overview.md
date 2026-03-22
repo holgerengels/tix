@@ -27,11 +27,11 @@ The backend is designed for high-security environments, featuring:
 -   **Sequential Request Processing**: Prevents socket hangs caused by concurrent connection limits on internal Nginx or Mailcow servers.
 -   **Manual Cookie and Proxy Interceptors**: Overcomes conflicts between standard cookie jars and HTTPS proxy agents in Axios.
 
-## 3. Dokumentations-Verzeichnis
+## 3. Documentation Directory
 
-Das System ist in folgende tiefergehenden Dateien dokumentiert:
+The system is documented in the following in-depth files:
 - **Frontend & UI**: [`frontend_forms.md`](frontend_forms.md)
-- **Backend & Bots**: [`backend_und_bots.md`](backend_und_bots.md)
+- **Backend & Bots**: [`backend_and_bots.md`](backend_and_bots.md)
 - **Integrations**: [`integrations_caldav_ldap.md`](integrations_caldav_ldap.md)
 - **Testing**: [`testing_and_verification.md`](testing_and_verification.md)
 - **Subtickets**: [`subtickets.md`](subtickets.md)

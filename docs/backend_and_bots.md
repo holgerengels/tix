@@ -1,4 +1,4 @@
-# Tix Backend, Bots und Workflows
+# Tix Backend, Bots and Workflows
 
 The Tix backend operates in potentially restricted environments (e.g., school Docker containers with internal proxies) and uses sandboxed execution for flexible workflow logic.
 

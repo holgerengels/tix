@@ -142,8 +142,8 @@ const visualBlocks = computed(() => {
 const markerConfig = [
   { time: '09:20', align: 'right' },
   { time: '09:40', align: 'left' },
-  { time: '11:20', align: 'right' },
-  { time: '11:40', align: 'left' },
+  { time: '11:10', align: 'right' },
+  { time: '11:20', align: 'left' },
   { time: '12:50', align: 'right' },
   { time: '13:35', align: 'left' }
 ];
