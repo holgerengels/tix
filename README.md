@@ -4,7 +4,7 @@ Tix is a highly flexible, JSON-driven ticket and workflow management system buil
 
 Instead of hardcoding workflows or forms, Tix relies on an intelligent **JSON Schema Engine**. This allows administrators to dynamically design ticket types, complex forms, user permissions, and custom state machines without writing frontend or backend code.
 
-![Tix Overview](docs/frontend/public/vu.svg) <!-- Ergänze hier gerne ein Logo oder Screenshot -->
+![Tix Overview](frontend/public/vu.svg) <!-- Ergänze hier gerne ein Logo oder Screenshot -->
 
 ## 🚀 Key Features
 - **Dynamic Forms**: Vue 3 powered interface interpreting JSON grids with conditional field visibility via Vue proxy reactivity.

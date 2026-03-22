@@ -9,9 +9,12 @@ const handler = createHandlerBoundToURL('/index.html')
 const navigationRoute = new NavigationRoute(handler)
 registerRoute(navigationRoute)
 
+import { clientsClaim } from 'workbox-core'
+
 // Activate new SW immediately — don't wait for old clients to send SKIP_WAITING.
 // This ensures updates are applied even when the old cached JS doesn't trigger it.
 self.addEventListener('install', () => self.skipWaiting())
+clientsClaim()
 
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {

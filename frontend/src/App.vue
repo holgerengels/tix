@@ -91,10 +91,19 @@ useRegisterSW({
 // Detect updates via two complementary mechanisms:
 // 1. controllerchange: fires when SW updates while the app is open
 // 2. Build timestamp: detects updates that happened while the app was closed
+let refreshing = false;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    toast.info('TIX wurde aktualisiert.');
+    if (refreshing) return;
+    refreshing = true;
+    
+    toast.info('TIX wurde aktualisiert. Seite lädt in Kürze neu...');
     resubscribePush();
+
+    // Reload the page so the new cached assets and frontend logic are actually executed
+    setTimeout(() => {
+      window.location.reload();
+    }, 2500);
   });
 }
 
