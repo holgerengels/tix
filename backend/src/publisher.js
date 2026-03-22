@@ -32,15 +32,7 @@ if (!BASE_URL || !NEXTCLOUD_URL || !NEXTCLOUD_AUTH.username || !NEXTCLOUD_AUTH.p
 
 const nodemailer = require('nodemailer');
 
-const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
-let HttpsProxyAgent;
-if (proxyUrl) {
-    try {
-        HttpsProxyAgent = require('https-proxy-agent').HttpsProxyAgent;
-    } catch (e) {
-        console.warn('[Publisher] https-proxy-agent not installed, web-push proxy will be ignored');
-    }
-}
+
 
 // Mail Transporter Setup
 let transporter = null;
@@ -73,6 +65,10 @@ async function sendMail(to, subject, text) {
 const testNotifications = [];
 function getTestNotifications() { return testNotifications; }
 function clearTestNotifications() { testNotifications.length = 0; }
+function sendTest(targetUser, address, message) {
+    testNotifications.push({ targetUser, address, message });
+    console.log(`[Publisher] Test notification stored for ${targetUser}`);
+}
 
 async function checkUnpublishedLogs() {
     try {
@@ -131,71 +127,46 @@ async function checkUnpublishedLogs() {
                     const notificationUri = userSettings.notificationUri;
 
                     if (notificationUri) {
-                        const [protocol, address] = notificationUri.split(':');
+                        const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
+                        
+                        for (const targetUri of uris) {
+                            const [protocol, address] = targetUri.split(':');
 
-                        // Handle nctalk
-                        if (protocol === 'nctalk') {
-                            if (address) {
-                                await nextcloud(address, message);
-                            } else {
-                                console.warn(`[Publisher] Invalid nctalk URI: ${notificationUri}`);
+                            // Handle nctalk
+                            if (protocol === 'nctalk') {
+                                if (address) {
+                                    await nextcloud(address, message);
+                                } else {
+                                    console.warn(`[Publisher] Invalid nctalk URI: ${targetUri}`);
+                                }
                             }
-                        }
-                        // Handle mailto
-                        else if (protocol === 'mailto') {
-                            if (address) {
-                                await sendMail(address, `Ticket Update: ${log.ticket.title}`, message);
-                            } else {
-                                console.warn(`[Publisher] Invalid mailto URI: ${notificationUri}`);
+                            // Handle mailto
+                            else if (protocol === 'mailto') {
+                                if (address) {
+                                    await sendMail(address, `Ticket Update: ${log.ticket.title}`, message);
+                                } else {
+                                    console.warn(`[Publisher] Invalid mailto URI: ${targetUri}`);
+                                }
                             }
-                        }
-                        // Handle test
-                        else if (protocol === 'test') {
-                            testNotifications.push({ targetUser, address, message });
-                            console.log(`[Publisher] Test notification stored for ${targetUser}`);
-                        }
-                        // Unknown
-                        else {
-                            console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
+                            // Handle test
+                            else if (protocol === 'test') {
+                                sendTest(targetUser, address, message);
+                            }
+                            // Unknown
+                            else {
+                                console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
+                            }
                         }
                     } else {
                         console.log(`[Publisher] No notification URI configured for ${targetUser}`);
                     }
 
                     // NEW: Web Push Notifications
-                    try {
-                        const { webpush } = require('./utils/push');
-                        const PushSubscription = require('./models/pushSubscription');
-                        const subs = await PushSubscription.find({ userId: targetUser });
-
-                        // Payload contains title (to display), message (body), and url (where to navigate on click)
-                        const payload = JSON.stringify({
-                            title: `Ticket Update: ${log.ticket.title}`,
-                            body: message,
-                            url: `/tickets/${log.ticket.id}/view`
-                        });
-
-                        for (const sub of subs) {
-                            try {
-                                const pushOptions = {};
-                                // web-push expects 'proxy' as a string, it instantiates HttpsProxyAgent internally
-                                if (proxyUrl) {
-                                    pushOptions.proxy = proxyUrl;
-                                }
-                                await webpush.sendNotification(sub.subscription, payload, pushOptions);
-                            } catch (error) {
-                                if (error.statusCode === 410 || error.statusCode === 404) {
-                                    // Subscription has expired or is no longer valid
-                                    console.log(`[Publisher] Subscription for ${targetUser} expired. Removing.`);
-                                    await PushSubscription.deleteOne({ _id: sub._id });
-                                } else {
-                                    console.error(`[Publisher] Error sending push notification:`, error);
-                                }
-                            }
-                        }
-                    } catch (pushErr) {
-                        console.error('[Publisher] Web Push notification failed:', pushErr.message);
-                    }
+                    await sendPush(targetUser, {
+                        title: `Ticket Update: ${log.ticket.title}`,
+                        body: message,
+                        url: `/tickets/${log.ticket.id}/view`
+                    });
 
                 } catch (notifyErr) {
                     console.error('[Publisher] Notification failed:', notifyErr.message);
@@ -288,9 +259,49 @@ async function nextcloud(targetUserId, message) {
         }
     }
 }
+async function sendPush(userId, payloadObj) {
+    try {
+        const { webpush } = require('./utils/push');
+        const PushSubscription = require('./models/pushSubscription');
+        const pushSubs = await PushSubscription.find({ userId });
+
+        if (pushSubs.length > 0) {
+            console.log(`[Publisher] Found ${pushSubs.length} push subscriptions for user ${userId}. Sending push notifications...`);
+        } else {
+            return;
+        }
+
+        const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+        let pushOptions = {};
+        if (proxyUrl) {
+            // web-push handles the internal instantiation. 
+            // Passing the agent explicitly fails the instanceof https.Agent validation inside web-push.
+            pushOptions.proxy = proxyUrl;
+        }
+
+        const payload = JSON.stringify(payloadObj);
+
+        for (const pushSub of pushSubs) {
+            try {
+                const response = await webpush.sendNotification(pushSub.subscription, payload, pushOptions);
+                console.log(`[Publisher] Push notification sent successfully to ${userId} (Endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...). Status: ${response.statusCode}`);
+            } catch (error) {
+                if (error.statusCode === 410 || error.statusCode === 404) {
+                    console.log(`[Publisher] Push subscription for ${userId} expired (Status ${error.statusCode}). Removing endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...`);
+                    await PushSubscription.deleteOne({ _id: pushSub._id });
+                } else {
+                    console.error(`[Publisher] Error sending push notification to ${userId} (Endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...):`, error.message, error.body ? error.body : '');
+                }
+            }
+        }
+    } catch (pushErr) {
+        console.error('[Publisher] Web Push notification setup failed:', pushErr.message);
+    }
+}
+
 function startPublisher() {
     console.log('[Publisher] Starting background publisher service...');
     processLogs();
 }
 
-module.exports = { startPublisher, sendMail, nextcloud, checkUnpublishedLogs, getTestNotifications, clearTestNotifications };
+module.exports = { startPublisher, sendMail, nextcloud, checkUnpublishedLogs, getTestNotifications, clearTestNotifications, sendPush, sendTest };

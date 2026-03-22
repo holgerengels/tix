@@ -1,6 +1,6 @@
 const Subscription = require('./models/subscription');
 const Ticket = require('./models/ticket');
-const { sendMail, nextcloud, getTestNotifications } = require('./publisher');
+const { sendMail, nextcloud, getTestNotifications, sendPush, sendTest } = require('./publisher');
 const { getUserSettings, getUsers } = require('./auth');
 const workflowEngine = require('./workflow');
 const mongoose = require('mongoose');
@@ -139,58 +139,39 @@ async function runSubscriptionCheck() {
                 const notificationUri = userSettings ? userSettings.notificationUri : null;
 
                 if (notificationUri) {
-                    const [protocol, address] = notificationUri.split(':');
                     const message = `Hallo!\nDein Ticket-Abo "${sub.name}" hat Änderungen!\nEs gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`;
+                    const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
 
-                    try {
-                        if (protocol === 'mailto' && address) {
-                            await sendMail(address, `Ticket Update: ${sub.name}`, message);
-                        } else if (protocol === 'nctalk' && address) {
-                            await nextcloud(address, message);
-                        } else if (protocol === 'test' && address) {
-                            getTestNotifications().push({ targetUser: sub.userId, address, message });
-                            console.log(`[SubscriptionWorker] Test notification stored for ${sub.userId}`);
-                        } else {
-                            console.warn(`[SubscriptionWorker] Unsupported protocol or missing address: ${notificationUri}`);
+                    for (const targetUri of uris) {
+                        const [protocol, address] = targetUri.split(':');
+                        try {
+                            if (protocol === 'mailto' && address) {
+                                await sendMail(address, `Ticket Update: ${sub.name}`, message);
+                            } else if (protocol === 'nctalk' && address) {
+                                await nextcloud(address, message);
+                            } else if (protocol === 'test') {
+                                sendTest(sub.userId, address, message);
+                            } else {
+                                console.warn(`[SubscriptionWorker] Unsupported protocol or missing address: ${targetUri}`);
+                            }
+                        } catch (notifyErr) {
+                            console.error(`[SubscriptionWorker] Failed to send notification via ${protocol}:`, notifyErr.message);
                         }
-                    } catch (notifyErr) {
-                        console.error('[SubscriptionWorker] Failed to send notification:', notifyErr.message);
                     }
                 } else {
                     console.log(`[SubscriptionWorker] No notification URI for user ${sub.userId}`);
                 }
 
                 // NEW: Web Push Notifications
-                try {
-                    const { webpush } = require('./utils/push');
-                    const PushSubscription = require('./models/pushSubscription');
-                    const pushSubs = await PushSubscription.find({ userId: sub.userId });
-
-                    const payload = JSON.stringify({
-                        title: `Ticket-Abo: ${sub.name}`,
-                        body: `Es gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`,
-                        // In Frontend router, we use ?filter=... depending on the subscription logic, 
-                        // but a generic link to the home page or specific sub-filter is fine.
-                        // Ideally we could pass the actual JSON filter, but that's complex to stringify in a URL reliably.
-                        // Let's bring them to the root so they see their tickets.
-                        url: `/?filter=all`
-                    });
-
-                    for (const pushSub of pushSubs) {
-                        try {
-                            await webpush.sendNotification(pushSub.subscription, payload);
-                        } catch (error) {
-                            if (error.statusCode === 410 || error.statusCode === 404) {
-                                console.log(`[SubscriptionWorker] Subscription for ${sub.userId} expired. Removing.`);
-                                await PushSubscription.deleteOne({ _id: pushSub._id });
-                            } else {
-                                console.error(`[SubscriptionWorker] Error sending push notification:`, error);
-                            }
-                        }
-                    }
-                } catch (pushErr) {
-                    console.error('[SubscriptionWorker] Web Push notification failed:', pushErr.message);
-                }
+                await sendPush(sub.userId, {
+                    title: `Ticket-Abo: ${sub.name}`,
+                    body: `Es gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`,
+                    // In Frontend router, we use ?filter=... depending on the subscription logic, 
+                    // but a generic link to the home page or specific sub-filter is fine.
+                    // Ideally we could pass the actual JSON filter, but that's complex to stringify in a URL reliably.
+                    // Let's bring them to the root so they see their tickets.
+                    url: `/?filter=all`
+                });
 
                 // Update the state so we don't notify next time if it stays the same
                 sub.lastMatchingTickets = currentTickets.map(t => ({ id: t.id, state: t.state }));
