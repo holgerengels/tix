@@ -27,6 +27,20 @@ function isUrgent(dateInput) {
   return diff < 2;
 }
 
+const { getUsers } = require('./auth');
+
+async function acrossDepartments(ticket) {
+  if (ticket.acrossDepartments) {
+    const slUsers = await getUsers(['Schulleitung']);
+    if (slUsers && slUsers.length > 0) {
+      ticket.assignee = slUsers[0].username;
+    } else {
+      console.warn("No user found in Schulleitung group for ticket assignment");
+    }
+  }
+}
+
 module.exports = {
-  dringend
+  dringend,
+  acrossDepartments
 };

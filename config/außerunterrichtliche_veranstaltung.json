@@ -56,7 +56,10 @@
             "name": "colleaguesAgree",
             "label": "Kolleg*innen sind einverstanden",
             "type": "Boolean",
-            "required": true
+            "validation": {
+                "expression": "ticket.colleaguesAgree",
+                "message": "Das Einverständnis ist zwingend erforderlich"
+            }
         },
         {
             "name": "acrossDepartments",
@@ -71,7 +74,7 @@
                 "Abteilungsleitung"
             ],
             "required": "{{!ticket.acrossDepartments}}",
-            "visible": "{{!ticket.acrossDepartments}}"
+            "readonly": "{{ticket.acrossDepartments}}"
         },
         {
             "name": "description",
@@ -92,8 +95,8 @@
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
         "companions companions companions companions",
-        "acrossDepartments acrossDepartments colleaguesAgree colleaguesAgree",
-        "assignee assignee assignee assignee",
+        "colleaguesAgree colleaguesAgree colleaguesAgree colleaguesAgree",
+        "assignee assignee acrossDepartments acrossDepartments",
         "description description description description"
     ],
     "workflow": [
@@ -229,6 +232,14 @@
             "onChange": "insync",
             "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
+        },
+        {
+            "name": "acrossDepartments",
+            "states": [
+                "offen.neu"
+            ],
+            "onChange": "insync",
+            "script": "acrossDepartments(ticket)"
         }
     ],
     "forms": [
