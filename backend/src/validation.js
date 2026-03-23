@@ -31,18 +31,15 @@ const createSafeEvaluator = (expr, ticketData) => {
 function evaluateTemplate(templateStr, ticketData) {
     if (typeof templateStr !== 'string') return templateStr;
 
-    // Check if the string perfectly matches a boolean expression
-    const boolMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
-    if (boolMatch) {
-        const expr = boolMatch[1];
+    const singleMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
+    if (singleMatch) {
+        const expr = singleMatch[1];
         try {
             const evaluate = createSafeEvaluator(expr, ticketData);
-            const result = evaluate();
-            if (typeof result === 'boolean') {
-                return result;
-            }
+            return evaluate();
         } catch (e) {
-            // Fall through
+            console.warn(`Failed to evaluate expression: ${expr}`, e);
+            return templateStr;
         }
     }
 
@@ -66,7 +63,11 @@ function evaluateFields(fields, ticketData) {
 
         for (const [key, value] of Object.entries(evaluatedField)) {
             if (typeof value === 'string' && value.includes('{{')) {
-                evaluatedField[key] = evaluateTemplate(value, ticketData);
+                let val = evaluateTemplate(value, ticketData);
+                if (['visible', 'readonly', 'required', 'optional'].includes(key)) {
+                    val = !!val;
+                }
+                evaluatedField[key] = val;
             }
         }
 

@@ -37,8 +37,8 @@ describe('evaluation.js', () => {
             ];
             const ticketData = {};
             const result = evaluateFields(fields, ticketData);
-            // It should keep the original string or fail gracefully depending on implementation
-            expect(typeof result[0].visible).toBe('string');
+            // It should keep the original string and coerce to boolean because it's the visible property!
+            expect(typeof result[0].visible).toBe('boolean');
         });
     });
 

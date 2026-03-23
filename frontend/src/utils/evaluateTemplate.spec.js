@@ -12,12 +12,12 @@ describe('evaluateTemplate', () => {
             expect(evaluateTemplate('{{ ticket.type === "IT" }}', { type: 'HM' })).toBe(false);
         });
 
-        it('should coerce undefined properties to false', () => {
-            expect(evaluateTemplate('{{ ticket.missing }}', {})).toBe(false);
+        it('should return undefined for missing properties', () => {
+            expect(evaluateTemplate('{{ ticket.missing }}', {})).toBe(undefined);
         });
 
-        it('should coerce null to false', () => {
-            expect(evaluateTemplate('{{ ticket.val }}', { val: null })).toBe(false);
+        it('should return null for null properties', () => {
+            expect(evaluateTemplate('{{ ticket.val }}', { val: null })).toBe(null);
         });
 
         it('should evaluate complex boolean with && and ||', () => {
@@ -46,9 +46,7 @@ describe('evaluateTemplate', () => {
         });
 
         it('should evaluate ternary expressions as string interpolation', () => {
-            // Single {{ ternary }} is coerced to boolean via !! by the boolean path.
-            // For actual string output, use surrounding text to force interpolation path.
-            expect(evaluateTemplate('{{ ticket.n > 1 ? "viele" : "eins" }}', { n: 5 })).toBe(true); // !!"viele" = true
+            expect(evaluateTemplate('{{ ticket.n > 1 ? "viele" : "eins" }}', { n: 5 })).toBe('viele');
             expect(evaluateTemplate('Ergebnis: {{ ticket.n > 1 ? "viele" : "eins" }}', { n: 5 })).toBe('Ergebnis: viele');
             expect(evaluateTemplate('Ergebnis: {{ ticket.n > 1 ? "viele" : "eins" }}', { n: 0 })).toBe('Ergebnis: eins');
         });
@@ -83,8 +81,8 @@ describe('evaluateTemplate', () => {
 
     describe('helper functions', () => {
         it('should use format helper', () => {
-            // Single {{ format() }} is coerced via !! boolean path → true for non-empty strings
-            expect(evaluateTemplate('{{ format(ticket.d, "yyyy") }}', { d: '2026-06-15' })).toBe(true);
+            // Single {{ format() }} returns the string
+            expect(evaluateTemplate('{{ format(ticket.d, "yyyy") }}', { d: '2026-06-15' })).toBe('2026');
             // Use surrounding text for actual string interpolation
             expect(evaluateTemplate('Jahr: {{ format(ticket.d, "yyyy") }}', { d: '2026-06-15' })).toBe('Jahr: 2026');
         });
@@ -96,8 +94,8 @@ describe('evaluateTemplate', () => {
         });
 
         it('should handle format with null date gracefully', () => {
-            // format(null, ...) returns '' → !!'' = false via boolean path
-            expect(evaluateTemplate('{{ format(ticket.d, "yyyy-MM-dd") }}', { d: null })).toBe(false);
+            // format(null, ...) returns ''
+            expect(evaluateTemplate('{{ format(ticket.d, "yyyy-MM-dd") }}', { d: null })).toBe('');
             // With surrounding text, it interpolates as empty string
             expect(evaluateTemplate('Datum: {{ format(ticket.d, "yyyy-MM-dd") }}', { d: null })).toBe('Datum: ');
         });

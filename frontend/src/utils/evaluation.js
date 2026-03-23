@@ -39,15 +39,15 @@ const createSafeEvaluator = (expr, ticketData) => {
 export function evaluateTemplate(templateStr, ticketData) {
     if (typeof templateStr !== 'string') return templateStr;
 
-    // Check if the string perfectly matches a boolean expression
-    const boolMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
-    if (boolMatch) {
-        const expr = boolMatch[1];
+    // Check if the string perfectly matches a single expression
+    const singleMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
+    if (singleMatch) {
+        const expr = singleMatch[1];
         try {
             const evaluate = createSafeEvaluator(expr, ticketData);
-            return !!evaluate(); // Coerce undefined/null to actual false for visibility checks
+            return evaluate(); // Return actual evaluated value instead of coercing to boolean
         } catch (e) {
-            console.warn(`Failed to evaluate boolean expression: ${expr}`, e);
+            console.warn(`Failed to evaluate expression: ${expr}`, e);
             return templateStr;
         }
     }
@@ -73,7 +73,12 @@ export function evaluateFields(fields, ticketData) {
         // Evaluate all string properties of the field
         for (const [key, value] of Object.entries(evaluatedField)) {
             if (typeof value === 'string' && value.includes('{{')) {
-                evaluatedField[key] = evaluateTemplate(value, ticketData);
+                let val = evaluateTemplate(value, ticketData);
+                // Coerce boolean properties to handle undefined properly (e.g., v-if="undefined !== false" shows field)
+                if (['visible', 'readonly', 'required', 'optional'].includes(key)) {
+                    val = !!val;
+                }
+                evaluatedField[key] = val;
             }
         }
 
