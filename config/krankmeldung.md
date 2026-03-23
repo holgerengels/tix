@@ -1,7 +1,5 @@
 ## Krankmeldung
 
-Besser gar nicht erst krank werden!
-
 ### Prozess
 
 [neu] → [in Arbeit] → [erledigt] → [ok]

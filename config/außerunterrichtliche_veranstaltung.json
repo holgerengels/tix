@@ -1,5 +1,6 @@
 {
     "type": "Außerunterrichtliche Veranstaltung",
+    "typeVerbose": "Außerunterrichtliche Veranstaltung (mit Schüler*innen)",
     "abbreviation": "AUV",
     "template": "{{ticket.dateFrom}} [{{ticket.lessonFrom}}] - {{ticket.dateUntil}} [{{ticket.lessonUntil}}] {{ticket.location}}",
     "fields": [
@@ -52,14 +53,19 @@
             "required": false
         },
         {
+            "name": "acrossDepartments",
+            "label": "Abteilungsübergreifend",
+            "type": "Boolean"
+        },
+        {
             "name": "assignee",
             "label": "Zuständige Abteilungsleitung",
             "type": "User",
             "groups": [
                 "Abteilungsleitung"
             ],
-            "required": true,
-            "visible": true
+            "required": "{{!ticket.acrossDepartments}}",
+            "visible": "{{!ticket.acrossDepartments}}"
         },
         {
             "name": "description",
@@ -80,7 +86,7 @@
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
         "companions companions companions companions",
-        "assignee assignee assignee assignee",
+        "acrossDepartments acrossDepartments assignee assignee",
         "description description description description"
     ],
     "workflow": [

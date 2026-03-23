@@ -1,5 +1,6 @@
 {
     "type": "Abwesenheitsantrag",
+    "typeVerbose": "Abwesenheitsantrag (Lehrkräfte)",
     "abbreviation": "ABW",
     "template": "{{ticket.dateFrom}} [{{ticket.lessonFrom}}] - {{ticket.dateUntil}} [{{ticket.lessonUntil}}] {{ticket.reason}}",
     "fields": [
@@ -40,7 +41,9 @@
             "required": true,
             "options": [
                 "Dienstgeschäft",
-                "Fortbildung"
+                "Fortbildung",
+                "Korrekturtag",
+                "Beurlaubung"
             ]
         },
         {
