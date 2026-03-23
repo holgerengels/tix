@@ -17,13 +17,14 @@
         <wa-input 
           label="Benachrichtigungskanal" 
           v-model="notificationUri"
+          @change="save"
+          :disabled="loading"
           hint="Z.B. nctalk:h.engels oder mailto:h.engels@valckenburgschule.de"
-        ></wa-input>
+        >
+          <wa-icon v-if="loading" name="arrow-clockwise" slot="suffix" class="spin"></wa-icon>
+        </wa-input>
       </div>
-      <div class="actions">
-        <wa-button variant="primary" size="small" @click="save" :loading="loading">Speichern</wa-button>
-      </div>
-      <h3 class="settings-header">Push-Benachrichtigungen</h3>
+      <h5 class="settings-header">Push-Benachrichtigungen</h5>
       <div v-if="pushSupported" class="form-group" style="display:flex; align-items:center; gap: 1rem;">
           <wa-switch :checked="pushEnabled" @change="togglePush">Auf diesem Gerät empfangen</wa-switch>
       </div>
@@ -92,7 +93,6 @@ const save = async () => {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         toast.success('Einstellungen gespeichert');
-        router.back();
     } catch (err) {
         console.error('Failed to save settings:', err);
         toast.error('Fehler beim Speichern: ' + (err.response?.data?.error || err.message));
@@ -210,5 +210,11 @@ const togglePush = async (e) => {
 }
 .is-mobile .header {
     margin: 1rem;
+}
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    100% { transform: rotate(360deg); }
 }
 </style>

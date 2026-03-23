@@ -46,7 +46,7 @@
       
       <div class="actions">
         <wa-button variant="primary" @click="createSubscription" :disabled="!newSub.name || loading">
-          Abo speichern
+          Abo hinzufügen
         </wa-button>
       </div>
     </div>
