@@ -96,8 +96,8 @@
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
         "companions companions companions companions",
-        "colleaguesAgree colleaguesAgree colleaguesAgree colleaguesAgree",
-        "assignee assignee acrossDepartments acrossDepartments",
+        "colleaguesAgree colleaguesAgree acrossDepartments acrossDepartments",
+        "assignee assignee assignee assignee",
         "description description description description"
     ],
     "workflow": [
