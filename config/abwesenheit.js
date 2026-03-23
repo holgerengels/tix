@@ -27,6 +27,19 @@ function isUrgent(dateInput) {
   return diff < 2;
 }
 
+async function korrekturtag(ticket) {
+  if (ticket.type === 'Korrekturtag') {
+    const slUsers = await getUsers(['Stellvertretende_Schulleitung']);
+    if (slUsers && slUsers.length > 0) {
+      ticket.assignee = slUsers[0].username;
+    } else {
+      console.warn("No user found in Stellvertretende_Schulleitung group for ticket assignment");
+    }
+  }
+}
+
+
 module.exports = {
-  dringend
+  dringend,
+  korrekturtag
 };

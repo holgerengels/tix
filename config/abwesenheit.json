@@ -189,6 +189,14 @@
             "onChange": "insync",
             "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
+        },
+        {
+            "name": "korrekturtag",
+            "states": [
+                "offen.neu"
+            ],
+            "onChange": "insync",
+            "script": "korrekturtag(ticket)"
         }
     ],
     "forms": [
