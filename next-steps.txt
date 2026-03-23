@@ -1,7 +1,7 @@
-typeVerbose
 filter: persönlich vs gruppe
 vorübergehendes mandat .. z.b. vertretung der abteilungsleitung im krankheitsfall
 stundenplan vertretungsplan wird noch geklärt
+
 außerunterrichtliche veranstaltung
 x abteilungsübergreifend
 * mehr als ein tag
@@ -10,11 +10,15 @@ x jede abteilungsleitung sieht nur die ihr zugewiesenen tickets
 x ablehnen?
 x assignee ändern
 x betroffene lehrer*innen sind einverstanden (pflicht)
+
 abwesenheit
-* korrekturtag geht an michael (bot)
+x korrekturtag geht an michael (bot)
+
 it-ticket
 * assignee soll nicht vom ersteller eingetragen werden können
+
 it- und hausmeister-ticket
 * ähnliche tickets anzeigen
+
 fahrtenbuch
 mahnungsverfahren
