@@ -49,6 +49,8 @@ describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
         lessonUntil: '6',
         location: 'Stadtmuseum',
         assignee: 'abteilungsleiter',
+        colleaguesAgree: true,
+        acrossDepartments: false,
         description: 'Testticket für Exkursion'
     };
 

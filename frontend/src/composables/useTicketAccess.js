@@ -123,7 +123,6 @@ export function useTicketAccess(ticket, config, user) {
         const allActions = matchingBlocks.flatMap(block => block.actions);
 
         const authorizedActions = allActions.filter(action => {
-            if (action.inline) return false;
             if (action.subTickets) return false;
 
             const allowedByCreator = action.groups.includes('@creator') && t.creator === user.username;

@@ -90,89 +90,13 @@
                 </td>
                 <td class="actions-cell" :class="{ 'has-actions': getActions(ticket).length > 0 }">
                     <template v-for="action in getActions(ticket)" :key="action.name">
-                        <template v-if="action.inline === 'comment'">
-                            <wa-button 
-                                :id="'trigger-' + ticket._id + '-' + action.name"
-                                size="small" 
-                                appearance="plain" class="action"
-                            >
-                                {{ action.name }}
-                            </wa-button>
-                            
-                            <wa-popover 
-                                :id="'popover-' + ticket._id + '-' + action.name"
-                                :for="'trigger-' + ticket._id + '-' + action.name"
-                                placement="left" 
-                                distance="5" 
-                                skidding="0"
-                                @wa-show="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = true }"
-                                @wa-hide="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = false }"
-                            >
-                                    <wa-textarea 
-                                        :value="popoverComments[ticket._id + '-' + action.name] || ''"
-                                        @input="e => popoverComments[ticket._id + '-' + action.name] = e.target.value"
-                                        placeholder="Kommentar..."
-                                        resize="auto"
-                                        rows="2"
-                                        autofocus
-                                    ></wa-textarea>
-                                    <div class="popover-actions">
-                                        <wa-button appearance="plain" size="small" @click="(e) => e.target.closest('wa-popover').open = false">Abbrechen</wa-button>
-                                        <wa-button 
-                                            size="small" 
-                                            variant="primary" 
-                                            :loading="executingActionId === (ticket._id + '-' + action.name)"
-                                            @click="confirmActionComment(ticket, action, popoverComments[ticket._id + '-' + action.name])"
-                                        >
-                                            {{ action.name }}
-                                        </wa-button>
-                                    </div>
-                            </wa-popover>
-                        </template>
-
-                        <template v-else-if="action.inline === 'assign'">
-                            <wa-button 
-                                :id="'trigger-' + ticket._id + '-' + action.name"
-                                size="small" 
-                                appearance="plain" class="action"
-                            >
-                                {{ action.name }}
-                            </wa-button>
-                            
-                            <wa-popover 
-                                :id="'popover-' + ticket._id + '-' + action.name"
-                                :for="'trigger-' + ticket._id + '-' + action.name"
-                                placement="left" 
-                                distance="5" 
-                                skidding="0"
-                                @wa-show="e => { if (e.target.tagName === 'WA-POPOVER') openAssignPopover(ticket._id + '-' + action.name, ticket.assignee) }"
-                                @wa-hide="e => { if (e.target.tagName === 'WA-POPOVER') popoverStates[ticket._id + '-' + action.name] = false }"
-                            >
-                                    <wa-select 
-                                        :value="popoverAssignees[ticket._id + '-' + action.name] || ''"
-                                        @change="e => handleAssigneeSelect(ticket._id + '-' + action.name, e)"
-                                        placeholder="Benutzer auswählen..."
-                                        hoist
-                                    >
-                                        <wa-option v-for="u in getAvailableAssignees(ticket)" :key="u.username" :value="u.username">
-                                            {{ u.displayName || u.username }}
-                                        </wa-option>
-                                    </wa-select>
-                                    <div class="popover-actions">
-                                        <wa-button appearance="plain" size="small" @click="(e) => e.target.closest('wa-popover').open = false">Abbrechen</wa-button>
-                                        <wa-button
-                                            size="small" 
-                                            variant="primary" 
-                                            :loading="executingActionId === (ticket._id + '-' + action.name)"
-                                            :disabled="!popoverAssignees[ticket._id + '-' + action.name]"
-                                            @click="confirmActionAssign(ticket, action, popoverAssignees[ticket._id + '-' + action.name])"
-                                        >
-                                            Zuweisen
-                                        </wa-button>
-                                    </div>
-                            </wa-popover>
-                        </template>
-
+                        <InlineActionPopover 
+                            v-if="action.inline"
+                            :ticket="ticket"
+                            :action="action"
+                            placement="left"
+                            @done="fetchTickets"
+                        />
                         <wa-button 
                             v-else
                             size="small"
@@ -201,6 +125,7 @@ import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
 import TicketFilter from '../components/TicketFilter.vue';
+import InlineActionPopover from '../components/InlineActionPopover.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
 
@@ -228,12 +153,6 @@ const filterBadges = ref([]);
 
 const savedFilters = ref([]);
 const executingActionId = ref(null);
-
-const popoverComments = ref({});
-const popoverAssignees = ref({});
-const popoverStates = ref({});
-const executingActionComment = ref(false);
-const availableUsers = ref([]);
 
 const sortColumn = ref(null);
 const sortDirection = ref(1);
@@ -598,99 +517,6 @@ const handleAction = async (ticket, action) => {
         // Direct execution
         executeAction(ticket, action);
     }
-};
-
-const openAssignPopover = async (actionId, currentAssignee) => {
-    popoverStates.value[actionId] = true;
-    if (!popoverAssignees.value[actionId]) {
-        popoverAssignees.value[actionId] = currentAssignee || '';
-    }
-    if (availableUsers.value.length === 0) {
-        try {
-            availableUsers.value = await usersStore.fetchUsersByGroup([]);
-        } catch (err) {
-            console.error('Error fetching users:', err);
-        }
-    }
-};
-
-const handleAssigneeSelect = (actionId, e) => {
-    popoverAssignees.value[actionId] = e.target.value;
-};
-
-const getAvailableAssignees = (ticket) => {
-    let users = availableUsers.value;
-    if (!config.value || !config.value[ticket.type] || !config.value[ticket.type].fields) {
-        return users;
-    }
-    const assigneeField = config.value[ticket.type].fields.find(f => f.name === 'assignee');
-    if (assigneeField && assigneeField.groups && assigneeField.groups.length > 0) {
-        users = users.filter(u => {
-            if (!u.groups) return false;
-            return u.groups.some(g => assigneeField.groups.includes(g));
-        });
-    }
-    return users;
-};
-
-
-const confirmActionAssign = async (ticket, action, assignee) => {
-    const actionId = ticket._id + '-' + action.name;
-    executingActionId.value = actionId;
-    
-    try {
-        if (assignee) {
-            ticket.assignee = assignee; // optimistic local update for action payload
-            await executeAction(ticket, action);
-        }
-        
-        const popoverEl = document.getElementById('popover-' + actionId);
-        if (popoverEl) popoverEl.open = false;
-
-        if (popoverAssignees.value[actionId]) {
-            delete popoverAssignees.value[actionId];
-        }
-    } catch (err) {
-        console.error(err);
-        executingActionId.value = null;
-    }
-};
-
-const confirmActionComment = async (ticket, action, comment) => {
-    const actionId = ticket._id + '-' + action.name;
-    
-    // Set loading state on the button via executingActionId
-    executingActionId.value = actionId;
-    
-    try {
-        if (comment && comment.trim()) {
-            await axios.post(`/api/tickets/${ticket._id}/comments`, {
-                text: comment, 
-                silent: true
-            }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        }
-        
-        await executeAction(ticket, action);
-        
-        const popoverEl = document.getElementById('popover-' + actionId);
-        if (popoverEl) popoverEl.open = false;
-
-        // Clear comment
-        if (popoverComments.value[actionId]) {
-            delete popoverComments.value[actionId];
-        }
-
-    } catch (err) {
-        console.error(err);
-        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
-        executingActionId.value = null; // Reset loading if error
-    } 
-    // If success, fetchTickets in executeAction will refresh list, 
-    // and ideally the popover is gone because the ticket row is re-rendered? 
-    // Or we need to manually close it? 
-    // Re-rendering list should reset popover state if it's not persistent.
 };
 
 watch(currentFilter, () => {

@@ -1,4 +1,4 @@
-x typeVerbose
+typeVerbose
 filter: persönlich vs gruppe
 vorübergehendes mandat .. z.b. vertretung der abteilungsleitung im krankheitsfall
 stundenplan vertretungsplan wird noch geklärt
@@ -7,8 +7,8 @@ außerunterrichtliche veranstaltung: rechtliche frage .. wer genehmigt?
 * der bentragende steht vorausgewählt als begleitperson drin .. feld umbenennen: beteiligte lehrkräfte
 * jede abteilungsleitung sieht nur die ihr zugewiesenen tickets
 * sl sieht alle?
-x ablehnen?
-x assignee ändern
+* ablehnen?
+* assignee ändern
 * betroffene lehrer*innen sind einverstanden (pflicht)
 abwesenheit
 * korrekturtag geht an michael (bot)

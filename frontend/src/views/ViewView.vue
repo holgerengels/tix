@@ -81,15 +81,27 @@
         </div>
                 <wa-button slot="footer-actions" size="small" @click="goBack" variant="neutral" appearance="filled">Abbrechen</wa-button>
                 <wa-divider slot="footer-actions" orientation="vertical"></wa-divider>
-                <wa-button slot="footer-actions" variant="neutral" appearance="plain" class="action"
-                    v-for="action in getActions(ticket)" 
-                    :key="action.name"
-                    size="small"
-                    :loading="executingActionId === (ticket._id + '-' + action.name)"
-                    @click="handleAction(ticket, action)"
-                >
-                    {{ action.name }}
-                </wa-button>
+                
+                <template v-for="action in getActions(ticket)" :key="action.name">
+                    <InlineActionPopover 
+                        v-if="action.inline"
+                        :ticket="ticket"
+                        :action="action"
+                        placement="top"
+                        @done="fetchData"
+                        slot="footer-actions"
+                    />
+                    <wa-button 
+                        v-else
+                        slot="footer-actions" 
+                        variant="neutral" appearance="plain" class="action"
+                        size="small"
+                        :loading="executingActionId === (ticket._id + '-' + action.name)"
+                        @click="handleAction(ticket, action)"
+                    >
+                        {{ action.name }}
+                    </wa-button>
+                </template>
     </wa-card>
   </div>
 </template>
@@ -105,7 +117,8 @@ import { useUsersStore } from '../stores/users';
 import { useTicketAccess } from '../composables/useTicketAccess';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
-import { toast, confirm } from '../composables/useToast';
+import InlineActionPopover from '../components/InlineActionPopover.vue';
+import { toast, confirm, prompt } from '../composables/useToast';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -248,43 +261,45 @@ const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const handleAction = async (ticket, action) => {
     if (action.form === 'read') {
-        // We are already reading, maybe just refresh?
         fetchData();
     } else if (action.form === 'edit') {
         router.push(`/tickets/${ticket.id}/edit`);
     } else if (action.form) {
         router.push(`/tickets/${ticket.id}/action/${action.name}`);
     } else {
-        // Direct execution
-        if (executingActionId.value) return; 
-        
-        const actionId = ticket._id + '-' + action.name;
-        executingActionId.value = actionId;
-        
-        try {
-             const { _id, __v, type, state, creator, created, updated, log, ...rest } = ticket;
-            const payload = {
-                actionName: action.name,
-                formData: { 
-                    title: ticket.title,
-                    description: ticket.description,
-                    assignee: ticket.assignee,
-                    ...rest 
-                }
-            };
+        executeActionDirect(ticket, action);
+    }
+};
 
-            await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
-                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            
-            // Refresh data
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            toast.error('Fehler: ' + (err.response?.data?.message || err.message));
-        } finally {
-            executingActionId.value = null;
-        }
+const executeActionDirect = async (ticketObj, action) => {
+    if (executingActionId.value) return; 
+    
+    const actionId = ticketObj._id + '-' + action.name;
+    executingActionId.value = actionId;
+    
+    try {
+         const { _id, __v, type, state, creator, created, updated, log, badges, ...rest } = ticketObj;
+        const payload = {
+            actionName: action.name,
+            formData: { 
+                title: ticketObj.title,
+                description: ticketObj.description,
+                assignee: ticketObj.assignee,
+                ...rest 
+            }
+        };
+
+        await axios.post(`/api/tickets/${ticketObj._id}/action`, payload, {
+             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        // Refresh data
+        fetchData();
+    } catch (err) {
+        console.error(err);
+        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
+    } finally {
+        executingActionId.value = null;
     }
 };
 

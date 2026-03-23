@@ -53,6 +53,12 @@
             "required": false
         },
         {
+            "name": "colleaguesAgree",
+            "label": "Kolleg*innen sind einverstanden",
+            "type": "Boolean",
+            "required": true
+        },
+        {
             "name": "acrossDepartments",
             "label": "Abteilungsübergreifend",
             "type": "Boolean"
@@ -86,7 +92,8 @@
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
         "companions companions companions companions",
-        "acrossDepartments acrossDepartments assignee assignee",
+        "acrossDepartments acrossDepartments colleaguesAgree colleaguesAgree",
+        "assignee assignee assignee assignee",
         "description description description description"
     ],
     "workflow": [
@@ -98,7 +105,7 @@
                 {
                     "name": "genehmigen",
                     "groups": [
-                        "Abteilungsleitung"
+                        "@assignee"
                     ],
                     "script": "ticket.state = 'offen.genehmigt'"
                 },
@@ -106,9 +113,16 @@
                     "name": "ablehnen",
                     "inline": "comment",
                     "groups": [
-                        "Abteilungsleitung"
+                        "@assignee"
                     ],
                     "script": "ticket.state = 'offen.abgelehnt'"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "@assignee"
+                    ],
+                    "inline": "assign"
                 }
             ]
         },
