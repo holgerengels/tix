@@ -28,7 +28,7 @@ function isUrgent(dateInput) {
 }
 
 async function korrekturtag(ticket) {
-  if (ticket.type === 'Korrekturtag') {
+  if (ticket.reason === 'Korrekturtag') {
     const slUsers = await getUsers(['Stellvertretende_Schulleitung']);
     if (slUsers && slUsers.length > 0) {
       ticket.assignee = slUsers[0].username;

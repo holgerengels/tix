@@ -68,7 +68,7 @@
         },
         {
             "name": "assignee",
-            "label": "Zuständige Abteilungsleitung",
+            "label": "{{!ticket.acrossDepartments ? 'Zuständige Abteilungsleitung' : 'Schulleitung'}}",
             "type": "User",
             "groups": [
                 "Abteilungsleitung"
