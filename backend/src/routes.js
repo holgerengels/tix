@@ -130,7 +130,7 @@ router.get('/config/:type/doc', verifyToken, async (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter, type, status, creator, dateFrom, dateTo, badge } = req.query; // 'my', 'assigned', 'all' AND granular filters
+    const { filter, type, status, creator, dateFrom, dateTo, badge, assignmentType } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     let baseQuery = {};
@@ -225,6 +225,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
     if (creator) sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } }); // Fuzzy search
     if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.e. ABW-1)
+    if (assignmentType === 'personal') sensitiveFilters.push({ assignee: user.username }); // Filter for purely personal assignment
 
     if (dateFrom || dateTo) {
         let dateQuery = {};

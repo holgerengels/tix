@@ -17,6 +17,13 @@
                 <wa-option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</wa-option>
             </wa-select>
         </div>
+        <div class="filter-group" v-if="$route.query.filter === 'assigned' || $route.query.filter === 'all'">
+            <label>Zuweisung:</label>
+            <wa-select clearable v-model="assignmentType" @change="emit('apply')" size="small" placeholder="Alle">
+                <wa-option value="personal">Nur persönlich</wa-option>
+                <wa-option value="group">Persönlich oder Gruppe</wa-option>
+            </wa-select>
+        </div>
         <div class="filter-group">
             <label>Ersteller:</label>
             <wa-input type="text" v-model="creator" @input="emit('apply-debounced')" placeholder="Name..." size="small" clearable></wa-input>
@@ -64,6 +71,7 @@ const workflow = useWorkflowStore();
 const type = defineModel('type', { type: Array, default: () => [] });
 const status = defineModel('status', { type: String, default: '' });
 const creator = defineModel('creator', { type: String, default: '' });
+const assignmentType = defineModel('assignmentType', { type: String, default: '' });
 const dateRange = defineModel('dateRange', { type: String, default: '' });
 const dateFrom = defineModel('dateFrom', { type: String, default: '' });
 const dateTo = defineModel('dateTo', { type: String, default: '' });
@@ -156,6 +164,7 @@ const resetInternalFilters = () => {
     type.value = [];
     status.value = '';
     creator.value = '';
+    assignmentType.value = '';
     dateRange.value = '';
     dateFrom.value = '';
     dateTo.value = '';

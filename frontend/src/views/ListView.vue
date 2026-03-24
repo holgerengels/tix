@@ -12,6 +12,7 @@
             v-model:type="filterType"
             v-model:status="filterStatus"
             v-model:creator="filterCreator"
+            v-model:assignmentType="filterAssignmentType"
             v-model:dateRange="filterDateRange"
             v-model:dateFrom="filterDateFrom"
             v-model:dateTo="filterDateTo"
@@ -146,6 +147,7 @@ const { getStatusColor, getStatusLabel, getActions: _getRawActions } = useTicket
 const filterType = ref([]);
 const filterStatus = ref('');
 const filterCreator = ref('');
+const filterAssignmentType = ref('');
 const filterDateRange = ref('');
 const filterDateFrom = ref('');
 const filterDateTo = ref('');
@@ -239,6 +241,7 @@ const saveCurrentFilter = async () => {
         type: filterType.value,
         status: filterStatus.value,
         creator: filterCreator.value,
+        assignmentType: filterAssignmentType.value,
         dateRange: filterDateRange.value,
         dateFrom: filterDateFrom.value,
         dateTo: filterDateTo.value,
@@ -262,6 +265,7 @@ const applySavedFilter = (filter) => {
     filterType.value = filter.type || [];
     filterStatus.value = filter.status || '';
     filterCreator.value = filter.creator || '';
+    filterAssignmentType.value = filter.assignmentType || '';
     filterDateRange.value = filter.dateRange || '';
     filterDateFrom.value = filter.dateFrom || '';
     filterDateTo.value = filter.dateTo || '';
@@ -300,6 +304,7 @@ const fetchTickets = async () => {
                 type: filterType.value,
                 status: filterStatus.value,
                 creator: filterCreator.value,
+                assignmentType: filterAssignmentType.value,
                 dateFrom: filterDateFrom.value,
                 dateTo: filterDateTo.value,
                 badge: filterBadges.value
@@ -337,6 +342,7 @@ const resetFilters = () => {
     filterType.value = [];
     filterStatus.value = '';
     filterCreator.value = '';
+    filterAssignmentType.value = '';
     filterDateRange.value = '';
     filterDateFrom.value = '';
     filterDateTo.value = '';
