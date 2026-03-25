@@ -104,7 +104,6 @@
         :disabled="field.readonly === true"
         :required="field.required === true"
         :hint="field.hint"
-        @wa-change="updateValue($event.target.checked)"
         @change="updateValue($event.target.checked)"
       >{{ field.label }}</wa-checkbox>
 

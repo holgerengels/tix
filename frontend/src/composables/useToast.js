@@ -166,3 +166,66 @@ export function prompt(message, title = 'Eingabe', defaultValue = '') {
     requestAnimationFrame(() => { dialog.open = true; });
   });
 }
+
+/**
+ * Show a prominent error dialog using wa-dialog
+ * @param {string} message
+ * @param {string} title
+ * @returns {Promise<void>}
+ */
+const activeErrorMessages = new Set();
+
+export function showErrorDialog(message, title = 'Fehler') {
+  if (!message) return Promise.resolve();
+  if (activeErrorMessages.has(message)) return Promise.resolve();
+  activeErrorMessages.add(message);
+
+  return new Promise((resolve) => {
+    const dialog = document.createElement('wa-dialog');
+    dialog.label = title;
+
+    const content = document.createElement('div');
+    content.style.cssText = 'display:flex; align-items:flex-start; gap:1rem;';
+    
+    const icon = document.createElement('wa-icon');
+    icon.name = 'exclamation-circle';
+    icon.style.cssText = 'color: var(--wa-color-danger-50); font-size: 2rem; flex-shrink: 0;';
+    content.appendChild(icon);
+
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0; line-height:1.5; color: var(--wa-color-neutral-10); max-width: 400px;';
+    p.textContent = message.replace(/^Validation failed:\s*/i, '');
+    content.appendChild(p);
+
+    dialog.appendChild(content);
+
+    const footer = document.createElement('div');
+    footer.slot = 'footer';
+    footer.style.cssText = 'display:flex; justify-content:flex-end';
+
+    const confirmBtn = document.createElement('wa-button');
+    confirmBtn.size = 'small';
+    confirmBtn.setAttribute('variant', 'primary');
+    confirmBtn.textContent = 'Verstanden';
+
+    footer.append(confirmBtn);
+    dialog.appendChild(footer);
+    document.body.appendChild(dialog);
+
+    const cleanup = () => {
+      activeErrorMessages.delete(message);
+      dialog.removeEventListener('wa-after-hide', onHide);
+      dialog.remove();
+      resolve();
+    };
+
+    const onHide = () => cleanup();
+    dialog.addEventListener('wa-after-hide', onHide);
+
+    confirmBtn.addEventListener('click', () => {
+      dialog.open = false;
+    });
+
+    requestAnimationFrame(() => { dialog.open = true; });
+  });
+}

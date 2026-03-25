@@ -208,7 +208,7 @@ const save = async () => {
         }
 
     } catch (err) {
-        toast.error('Fehler beim Speichern: ' + (err.response?.data?.message || err.message));
+        console.error(err);
     } finally {
         saving.value = false;
     }

@@ -297,7 +297,6 @@ const executeActionDirect = async (ticketObj, action) => {
         fetchData();
     } catch (err) {
         console.error(err);
-        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
     } finally {
         executingActionId.value = null;
     }

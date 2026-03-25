@@ -1,7 +1,7 @@
 const { format, formatDistance, addDays, subDays } = require('date-fns');
 const { de } = require('date-fns/locale');
 
-const createSafeEvaluator = (expr, ticketData) => {
+const createSafeEvaluator = (expr, ticketData, user = null) => {
     const keys = Object.keys(ticketData || {});
     const values = Object.values(ticketData || {});
     const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
@@ -16,7 +16,9 @@ const createSafeEvaluator = (expr, ticketData) => {
         formatDistance: (d1, d2) => d1 && d2 ? formatDistance(new Date(d1), new Date(d2), { locale: de }) : '',
         addDays: (date, amount) => date ? addDays(new Date(date), amount) : null,
         subDays: (date, amount) => date ? subDays(new Date(date), amount) : null,
-        now: new Date()
+        now: new Date(),
+        context: { user: user ? user.username : null },
+        currentUser: () => user || {}
     };
 
     for (const [key, val] of Object.entries(helpers)) {
@@ -28,14 +30,14 @@ const createSafeEvaluator = (expr, ticketData) => {
     return () => func(...validValues);
 };
 
-function evaluateTemplate(templateStr, ticketData) {
+function evaluateTemplate(templateStr, ticketData, user = null) {
     if (typeof templateStr !== 'string') return templateStr;
 
     const singleMatch = templateStr.match(/^\{\{((?:[^}]|\}(?!\}))+)\}\}$/);
     if (singleMatch) {
         const expr = singleMatch[1];
         try {
-            const evaluate = createSafeEvaluator(expr, ticketData);
+            const evaluate = createSafeEvaluator(expr, ticketData, user);
             return evaluate();
         } catch (e) {
             console.warn(`Failed to evaluate expression: ${expr}`, e);
@@ -45,7 +47,7 @@ function evaluateTemplate(templateStr, ticketData) {
 
     return templateStr.replace(/\{\{(.+?)\}\}/g, (match, expr) => {
         try {
-            const evaluate = createSafeEvaluator(expr, ticketData);
+            const evaluate = createSafeEvaluator(expr, ticketData, user);
             const result = evaluate();
             return result === undefined || result === null ? '' : result;
         } catch (e) {
@@ -55,7 +57,7 @@ function evaluateTemplate(templateStr, ticketData) {
     });
 }
 
-function evaluateFields(fields, ticketData) {
+function evaluateFields(fields, ticketData, user = null) {
     if (!fields) return [];
 
     return fields.map(field => {
@@ -63,7 +65,7 @@ function evaluateFields(fields, ticketData) {
 
         for (const [key, value] of Object.entries(evaluatedField)) {
             if (typeof value === 'string' && value.includes('{{')) {
-                let val = evaluateTemplate(value, ticketData);
+                let val = evaluateTemplate(value, ticketData, user);
                 if (['visible', 'readonly', 'required', 'optional'].includes(key)) {
                     val = !!val;
                 }
@@ -75,11 +77,11 @@ function evaluateFields(fields, ticketData) {
     });
 }
 
-function validateTicket(ticketData, workflow, formFields = null) {
+function validateTicket(ticketData, workflow, formFields = null, user = null) {
     const errors = [];
 
     const fieldsToValidate = formFields || workflow.fields || [];
-    const evaluatedFields = evaluateFields(fieldsToValidate, ticketData);
+    const evaluatedFields = evaluateFields(fieldsToValidate, ticketData, user);
 
     evaluatedFields.forEach(field => {
         if (field.required && field.visible !== false) {
@@ -91,7 +93,7 @@ function validateTicket(ticketData, workflow, formFields = null) {
 
         if (field.validation && field.visible !== false) {
             try {
-                const evaluate = createSafeEvaluator(field.validation.expression, ticketData);
+                const evaluate = createSafeEvaluator(field.validation.expression, ticketData, user);
                 const passed = evaluate();
                 if (!passed) {
                     errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
@@ -106,7 +108,7 @@ function validateTicket(ticketData, workflow, formFields = null) {
     if (workflow.validations && Array.isArray(workflow.validations)) {
         workflow.validations.forEach(validation => {
             try {
-                const evaluate = createSafeEvaluator(validation.expression, ticketData);
+                const evaluate = createSafeEvaluator(validation.expression, ticketData, user);
                 const passed = evaluate();
                 if (!passed) {
                     errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);

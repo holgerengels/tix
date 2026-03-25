@@ -153,6 +153,7 @@ const mockTickets = [
         state: 'offen.neu',
         creator: 'lehrer2',
         location: 'Raum 105',
+        category: 'Reparatur',
         badges: [],
         created: new Date('2024-06-02T11:00:00'),
         log: [{ editor: 'lehrer2', text: 'Ticket erstellt', edited: new Date('2024-06-02T11:00:00') }]
@@ -166,12 +167,25 @@ const mockTickets = [
         creator: 'lehrer1',
         assignee: 'hausmeister',
         location: 'Raum 210',
+        category: 'Reparatur',
         badges: ['wichtig'],
         created: new Date('2024-06-01T12:00:00'),
         log: [
             { editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-01T12:00:00') },
             { editor: 'hausmeister', text: 'In Arbeit', edited: new Date('2024-06-01T13:00:00') }
         ]
+    },
+    {
+        id: 'HMA-3',
+        title: 'Test-Ticket: Fehlerhafter Hausmeisterauftrag',
+        description: 'Dieses Ticket hat absichtlich keine Kategorie, um den globalen Fehler-Dialog zu testen.',
+        type: 'Hausmeisterauftrag',
+        state: 'offen.neu',
+        creator: 'lehrer1',
+        location: 'Raum 301',
+        badges: ['wichtig'],
+        created: new Date('2024-06-03T08:00:00'),
+        log: [{ editor: 'lehrer1', text: 'Ticket erstellt', edited: new Date('2024-06-03T08:00:00') }]
     }
 ];
 
@@ -216,7 +230,7 @@ const seedTickets = async () => {
             { _id: 'ABW', seq: 2 },
             { _id: 'KRM', seq: 2 },
             { _id: 'ITT', seq: 4 },
-            { _id: 'HMA', seq: 2 }
+            { _id: 'HMA', seq: 3 }
         ]);
         console.log('Counters initialized');
 

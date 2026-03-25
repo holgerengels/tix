@@ -16,8 +16,8 @@
       <div class="form-group">
         <wa-input 
           label="Benachrichtigungskanal" 
-          v-model="notificationUri"
-          @change="save"
+          :value.prop="notificationUri"
+          @change="notificationUri = $event.target.value; save()"
           :disabled="loading"
           hint="Z.B. nctalk:h.engels oder mailto:h.engels@valckenburgschule.de"
         >
@@ -26,7 +26,7 @@
       </div>
       <h5 class="settings-header">Push-Benachrichtigungen</h5>
       <div v-if="pushSupported" class="form-group" style="display:flex; align-items:center; gap: 1rem;">
-          <wa-switch :checked="pushEnabled" @change="togglePush">Auf diesem Gerät empfangen</wa-switch>
+          <wa-switch :checked.prop="pushEnabled" @change="togglePush">Auf diesem Gerät empfangen</wa-switch>
       </div>
       <div v-else class="form-group" style="color: var(--wa-color-danger-30)">
           Push-Benachrichtigungen werden von diesem Browser nicht unterstützt.

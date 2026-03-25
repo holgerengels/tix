@@ -548,7 +548,6 @@ const executeAction = async (ticket, action) => {
         fetchTickets();
     } catch (err) {
         console.error(err);
-        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
     } finally {
         executingActionId.value = null;
     }

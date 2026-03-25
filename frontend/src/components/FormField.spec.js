@@ -17,8 +17,8 @@ const globalStubs = {
         methods: { emitChange(val) { this.$emit('change', { target: { value: val }, stopPropagation: () => {} }); } }
     },
     'wa-checkbox': { 
-        template: '<div class="wa-checkbox-stub" @wa-change="emitChange"></div>',
-        methods: { emitChange(val) { this.$emit('wa-change', { target: { checked: val }, stopPropagation: () => {} }); } }
+        template: '<div class="wa-checkbox-stub" @change="emitChange"></div>',
+        methods: { emitChange(val) { this.$emit('change', { target: { checked: val }, stopPropagation: () => {} }); } }
     },
     'wa-option': true,
 };

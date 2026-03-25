@@ -39,7 +39,7 @@
             <thead>
                 <tr>
                 <th style="width: 40px;">
-                    <wa-checkbox :checked="allSelected" @change="toggleSelectAll"></wa-checkbox>
+                    <wa-checkbox :checked.prop="allSelected" @change="toggleSelectAll"></wa-checkbox>
                 </th>
                 <th>ID</th>
                 <th class="sortable" @click="toggleSort('type')">Typ <span class="sort-icon">{{ getSortIcon('type') }}</span></th>
@@ -52,7 +52,7 @@
             <tbody>
                 <tr v-for="ticket in sortedTickets" :key="ticket._id" :class="{ 'selected': selectedTickets.includes(ticket._id) }" @click="toggleSelection(ticket._id)">
                 <td @click.stop>
-                    <wa-checkbox :checked="selectedTickets.includes(ticket._id)" @change="toggleSelection(ticket._id)"></wa-checkbox>
+                    <wa-checkbox :checked.prop="selectedTickets.includes(ticket._id)" @change="toggleSelection(ticket._id)"></wa-checkbox>
                 </td>
                 <td data-label="ID">
                     <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>

@@ -290,7 +290,7 @@ const execute = async (btnName = null) => {
              router.push('/');
         } 
     } catch (err) {
-        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
+        console.error(err);
     } finally {
         executing.value = false;
     }

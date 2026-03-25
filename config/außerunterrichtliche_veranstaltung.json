@@ -50,7 +50,7 @@
                     "Lehrkräfte"
                 ]
             },
-            "default": "{{ context.user ? [context.user] : [] }}",
+            "default": "{{ currentUser().username ? [currentUser().username] : [] }}",
             "required": false
         },
         {

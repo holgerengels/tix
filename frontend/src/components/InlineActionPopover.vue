@@ -47,7 +47,7 @@
                 <wa-select 
                     v-else
                     :value.prop="assignee"
-                    @wa-change="assignee = $event.target.value"
+                    @change="assignee = $event.target.value"
                     placeholder="Benutzer auswählen..."
                     hoist
                 >
@@ -166,7 +166,6 @@ const executeActionDirect = async (ticketObj, actionDef) => {
         emit('done');
     } catch (err) {
         console.error(err);
-        toast.error('Fehler: ' + (err.response?.data?.message || err.message));
     } finally {
         loading.value = false;
     }

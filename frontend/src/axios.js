@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from './stores/auth';
 import { useRequestQueueStore } from './stores/requestQueue';
+import { showErrorDialog } from './composables/useToast';
 
 // Request interceptor to add token
 axios.interceptors.request.use(config => {
@@ -76,6 +77,19 @@ axios.interceptors.response.use(
                 });
             });
         }
+        
+        // Centralized Error Handling for all other API errors
+        // Skip if explicitly marked as silent in config
+        if (!error.config?.silent) {
+            const status = error.response?.status;
+            // Ignore 401s handled above, or other expected silent statuses if added
+            if (status !== 401) {
+                 const msg = error.response?.data?.message || error.response?.data?.error || error.message;
+                 showErrorDialog(msg);
+                 error.isHandled = true;
+            }
+        }
+        
         return Promise.reject(error);
     }
 );
