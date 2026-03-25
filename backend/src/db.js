@@ -21,10 +21,21 @@ const MONGO_URI = settings.database && settings.database.url
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(MONGO_URI);
-        console.log('MongoDB connected');
+        mongoose.connection.on('disconnected', () => {
+            console.error('❌ [DB] MongoDB disconnected! (Verbindung zur Datenbank verloren)');
+        });
+        
+        mongoose.connection.on('error', (err) => {
+            console.error('❌ [DB] MongoDB Fehler:', err.message);
+        });
+
+        await mongoose.connect(MONGO_URI, {
+            serverSelectionTimeoutMS: 5000 // 5 seconds instead of default 30s
+        });
+        console.log('✅ [DB] MongoDB connected');
     } catch (err) {
-        console.error('MongoDB connection error:', err);
+        console.error('❌ [DB] MongoDB connection error:', err.message);
+        console.error('💡 Bitte prüfen, ob der MongoDB Docker Container (sudo docker compose up -d) läuft!');
         process.exit(1);
     }
 };

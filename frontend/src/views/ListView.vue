@@ -153,11 +153,11 @@ const filterDateFrom = ref('');
 const filterDateTo = ref('');
 const filterBadges = ref([]);
 
-const savedFilters = ref([]);
-const executingActionId = ref(null);
-
 const sortColumn = ref(null);
 const sortDirection = ref(1);
+
+const savedFilters = ref([]);
+const executingActionId = ref(null);
 
 const toggleSort = (col) => {
     if (sortColumn.value === col) {
@@ -171,6 +171,7 @@ const toggleSort = (col) => {
         sortColumn.value = col;
         sortDirection.value = 1; // 1st click: asc
     }
+    syncFiltersToRoute();
 };
 
 const getSortIcon = (col) => {
@@ -287,6 +288,46 @@ const pageTitle = computed(() => {
     }
 });
 
+const syncFiltersToRoute = () => {
+    const query = { filter: currentFilter.value };
+    
+    if (filterType.value.length) query.type = filterType.value;
+    if (filterBadges.value.length) query.badge = filterBadges.value;
+    if (filterStatus.value) query.status = filterStatus.value;
+    if (filterCreator.value) query.creator = filterCreator.value;
+    if (filterAssignmentType.value) query.assignmentType = filterAssignmentType.value;
+    if (filterDateRange.value) query.dateRange = filterDateRange.value;
+    if (filterDateFrom.value) query.dateFrom = filterDateFrom.value;
+    if (filterDateTo.value) query.dateTo = filterDateTo.value;
+    
+    if (sortColumn.value) {
+        query.sort = sortColumn.value;
+        query.dir = sortDirection.value;
+    }
+
+    router.replace({ query }).catch(() => {});
+};
+
+const initFiltersFromRoute = () => {
+    const parseArray = (val) => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : [val];
+    };
+
+    filterType.value = parseArray(route.query.type);
+    filterBadges.value = parseArray(route.query.badge);
+    
+    filterStatus.value = route.query.status || '';
+    filterCreator.value = route.query.creator || '';
+    filterAssignmentType.value = route.query.assignmentType || '';
+    filterDateRange.value = route.query.dateRange || '';
+    filterDateFrom.value = route.query.dateFrom || '';
+    filterDateTo.value = route.query.dateTo || '';
+
+    sortColumn.value = route.query.sort || null;
+    sortDirection.value = parseInt(route.query.dir) || 1;
+};
+
 
 
 const fetchTickets = async () => {
@@ -329,6 +370,7 @@ const fetchTickets = async () => {
 };
 
 const applyFilters = () => {
+    syncFiltersToRoute();
     fetchTickets();
 };
 
@@ -526,13 +568,15 @@ const handleAction = async (ticket, action) => {
 };
 
 watch(currentFilter, () => {
-    loading.value = true; // Show loading immediately
+    loading.value = true;
+    initFiltersFromRoute();
     loadSavedFilters();
     fetchTickets();
 });
 
 onMounted(async () => {
     await workflow.fetchConfig();
+    initFiltersFromRoute();
     loadSavedFilters();
     fetchTickets();
 });
