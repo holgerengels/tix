@@ -5,21 +5,21 @@
         <div class="filter-group">
             <label>Typ:</label>
             <div style="min-width: 200px;">
-                <wa-select multiple clearable v-model="type" @change="handleTypeChange">
+                <wa-select multiple clearable :value.prop="type" @wa-change="type = $event.target.value; handleTypeChange()">
                     <wa-option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</wa-option>
                 </wa-select>
             </div>
         </div>
         <div class="filter-group">
             <label>Status:</label>
-            <wa-select clearable v-model="status" @change="emit('apply')" placeholder="Status" size="small">
+            <wa-select clearable :value.prop="status" @wa-change="status = $event.target.value; emit('apply')" placeholder="Status" size="small">
                 <wa-option value=""></wa-option>
                 <wa-option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</wa-option>
             </wa-select>
         </div>
         <div class="filter-group" v-if="$route.query.filter === 'assigned' || $route.query.filter === 'all'">
             <label>Zuweisung:</label>
-            <wa-select clearable v-model="assignmentType" @change="emit('apply')" size="small" placeholder="Alle">
+            <wa-select clearable :value.prop="assignmentType" @wa-change="assignmentType = $event.target.value; emit('apply')" size="small" placeholder="Alle">
                 <wa-option value="personal">Nur persönlich</wa-option>
                 <wa-option value="group">Persönlich oder Gruppe</wa-option>
             </wa-select>
@@ -29,7 +29,7 @@
             <wa-input type="text" v-model="creator" @input="emit('apply-debounced')" placeholder="Name..." size="small" clearable></wa-input>
         </div>
         <div class="filter-group">
-            <wa-select v-model="dateRange" @change="handleDateRangeChange" placeholder="Zeitraum" size="small" clearable>
+            <wa-select :value.prop="dateRange" @wa-change="dateRange = $event.target.value; handleDateRangeChange()" placeholder="Zeitraum" size="small" clearable>
                 <wa-option value="">Zeitraum wählen</wa-option>
                 <wa-option value="week">Letzte Woche</wa-option>
                 <wa-option value="month">Letzter Monat</wa-option>
@@ -39,7 +39,7 @@
         <div class="filter-group">
             <label>Label:</label>
             <div style="min-width: 200px;">
-                <wa-select multiple clearable v-model="badges" @change="emit('apply')">
+                <wa-select multiple clearable :value.prop="badges" @wa-change="badges = $event.target.value; emit('apply')">
                     <wa-option v-for="badge in availableBadges" :key="badge" :value="badge">
                         <wa-badge :variant="getBadgeVariant(badge)" size="small" appearance="filled-outlined" pill>{{ badge }}</wa-badge>
                     </wa-option>

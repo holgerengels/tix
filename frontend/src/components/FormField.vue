@@ -7,7 +7,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
       ></wa-input>
@@ -19,7 +19,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
       ></wa-input>
@@ -32,7 +32,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || (field.multiple ? [] : '')"
+        :value.prop="modelValue || (field.multiple ? [] : '')"
         :hint="field.hint"
         @change.stop="updateValue(field.multiple && $event.target.value === '' ? [] : $event.target.value)"
         @input.stop
@@ -100,7 +100,7 @@
       <!-- Boolean -->
       <wa-checkbox
         v-else-if="field.type === 'Boolean'"
-        :checked="modelValue === true"
+        :checked.prop="modelValue === true"
         :disabled="field.readonly === true"
         :required="field.required === true"
         :hint="field.hint"
@@ -116,7 +116,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
       ></wa-input>
@@ -129,7 +129,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
       ></wa-input>
@@ -183,7 +183,7 @@
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
-        :value="modelValue || ''"
+        :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
       ></wa-input>

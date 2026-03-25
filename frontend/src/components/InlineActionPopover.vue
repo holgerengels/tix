@@ -46,8 +46,8 @@
                 </div>
                 <wa-select 
                     v-else
-                    :value="assignee"
-                    @change="assignee = $event.target.value"
+                    :value.prop="assignee"
+                    @wa-change="assignee = $event.target.value"
                     placeholder="Benutzer auswählen..."
                     hoist
                 >
