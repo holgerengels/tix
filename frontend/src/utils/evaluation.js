@@ -18,7 +18,23 @@ const createSafeEvaluator = (expr, ticketData) => {
         formatDistance: (d1, d2) => d1 && d2 ? formatDistance(new Date(d1), new Date(d2), { locale: de }) : '',
         addDays: (date, amount) => date ? addDays(new Date(date), amount) : null,
         subDays: (date, amount) => date ? subDays(new Date(date), amount) : null,
-        now: new Date()
+        now: new Date(),
+        currentUser: () => {
+            try {
+                return JSON.parse(localStorage.getItem('user') || '{}');
+            } catch (e) {
+                return {};
+            }
+        },
+        context: { 
+            get user() {
+                try {
+                    return JSON.parse(localStorage.getItem('user') || '{}').username;
+                } catch (e) {
+                    return null;
+                }
+            }
+        }
     };
 
     const validKeys = ['ticket', 'helpers'];

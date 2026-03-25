@@ -316,10 +316,12 @@ watch(userGroupsKey, () => {
     }
 }, { immediate: true });
 
-// Initialize Default Values for Sliders if empty
-watch(() => props.field.type, (newType) => {
-    if (props.modelValue == null) {
-        if (newType === 'Lesson') {
+// Initialize Default Values if empty
+watch(() => [props.field.type, props.field.default], ([newType, newDefault]) => {
+    if (props.modelValue === undefined) {
+        if (newDefault !== undefined) {
+            updateValue(newDefault);
+        } else if (newType === 'Lesson') {
             updateValue(1);
         } else if (newType === 'Lessons') {
             updateValue({ min: 1, max: 11 });

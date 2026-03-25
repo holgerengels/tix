@@ -39,8 +39,8 @@
             "required": true
         },
         {
-            "name": "companions",
-            "label": "Begleitpersonen",
+            "name": "teachers",
+            "label": "Beteiligte Lehrkräfte",
             "type": "Array",
             "layout": "columns",
             "minWidth": "220px",
@@ -50,6 +50,7 @@
                     "Lehrkräfte"
                 ]
             },
+            "default": "{{ context.user ? [context.user] : [] }}",
             "required": false
         },
         {
@@ -95,7 +96,7 @@
         "dateFrom dateFrom lessonFrom lessonFrom",
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
-        "companions companions companions companions",
+        "teachers teachers teachers teachers",
         "colleaguesAgree colleaguesAgree acrossDepartments acrossDepartments",
         "assignee assignee assignee assignee",
         "description description description description"
