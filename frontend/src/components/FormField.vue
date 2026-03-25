@@ -43,17 +43,16 @@
       </wa-select>
 
       <!-- Autocomplete -->
-      <div v-else-if="field.type === 'Autocomplete'">
-        <WAAutocomplete
-            :label="field.label"
-            :required="field.required === true"
-            :disabled="field.readonly === true"
-            :modelValue="modelValue || ''"
-            :hint="field.hint"
-            :options="field.options"
-            @update:modelValue="updateValue"
-        />
-      </div>
+      <WAAutocomplete
+        v-else-if="field.type === 'Autocomplete'"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :modelValue="modelValue || ''"
+        :hint="field.hint"
+        :options="field.options"
+        @update:modelValue="updateValue"
+      />
 
       <!-- Rich Text -->
       <RichTextEditor
@@ -67,17 +66,16 @@
       />
 
       <!-- User Select -->
-      <div v-else-if="field.type === 'User'">
-        <WAAutocomplete class="user"
-            :label="field.label"
-            :required="field.required === true"
-            :disabled="field.readonly === true"
-            :modelValue="modelValue || ''"
-            :hint="field.hint"
-            :options="displayUsers.map(u => ({ value: u.username, label: u.displayName || u.username }))"
-            @update:modelValue="updateValue"
-        />
-      </div>
+      <WAAutocomplete class="user"
+        v-else-if="field.type === 'User'"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :modelValue="modelValue || ''"
+        :hint="field.hint"
+        :options="displayUsers.map(u => ({ value: u.username, label: u.displayName || u.username }))"
+        @update:modelValue="updateValue"
+      />
 
       <!-- Badges -->
       <BadgeEditor
@@ -87,60 +85,17 @@
         @update:modelValue="updateValue"
       />
 
-      <!-- Lesson (Slider) -->
-      <wa-slider v-else-if="field.type === 'Lesson'"
-        class="lesson"
-        :class="{'single': !field.indicator}"
-        :indicator-offset="field.indicator === 'until' ? '1' : (field.indicator === 'from' ? '11' : undefined)"
+      <!-- Lesson / Lessons -->
+      <LessonSlider
+        v-else-if="field.type === 'Lesson' || field.type === 'Lessons'"
         :label="field.label"
-        :min="1"
-        :max="11"
-        :value="modelValue"
-        :disabled="field.readonly === true"
-        with-markers
-        with-tooltip
+        :isRange="field.type === 'Lessons'"
+        :readonly="field.readonly === true"
         :hint="field.hint"
-        @change="updateValue($event.target.value)"
-      >
-            <span slot="reference" class="tick">1</span>
-            <span slot="reference" class="tick">2</span>
-            <span slot="reference" class="tick">3</span>
-            <span slot="reference" class="tick">4</span>
-            <span slot="reference" class="tick">5</span>
-            <span slot="reference" class="tick">6</span>
-            <span slot="reference" class="tick">7</span>
-            <span slot="reference" class="tick">8</span>
-            <span slot="reference" class="tick">9</span>
-            <span slot="reference" class="tick">10</span>
-            <span slot="reference" class="tick">11</span>
-        </wa-slider>
-
-      <!-- Lessons (Slider) -->
-      <wa-slider v-else-if="field.type === 'Lessons'"
-          :label="field.label"
-          :min="1"
-          :max="11"
-          :min-value="modelValue?.min"
-          :max-value="modelValue?.max"
-          :disabled="field.readonly === true"
-          range
-          with-markers
-          with-tooltip
-          :hint="field.hint"
-          @change="updateValue({ min: $event.target.minValue, max: $event.target.maxValue })"
-        >
-            <span slot="reference" class="tick">1</span>
-            <span slot="reference" class="tick">2</span>
-            <span slot="reference" class="tick">3</span>
-            <span slot="reference" class="tick">4</span>
-            <span slot="reference" class="tick">5</span>
-            <span slot="reference" class="tick">6</span>
-            <span slot="reference" class="tick">7</span>
-            <span slot="reference" class="tick">8</span>
-            <span slot="reference" class="tick">9</span>
-            <span slot="reference" class="tick">10</span>
-            <span slot="reference" class="tick">11</span>
-        </wa-slider>
+        :indicator="field.indicator"
+        :modelValue="modelValue"
+        @update:modelValue="updateValue"
+      />
 
       <!-- Boolean -->
       <wa-checkbox
@@ -180,23 +135,13 @@
       ></wa-input>
 
       <!-- Weekday -->
-      <div v-else-if="field.type === 'Weekday'" class="weekday-group">
-        <label v-if="field.label" class="weekday-label">{{ field.label }}</label>
-        <wa-button-group>
-            <wa-button 
-                v-for="day in ['Mo', 'Di', 'Mi', 'Do', 'Fr']" 
-                :key="day"
-                pill
-                size="small"
-                variant="brand"
-                :appearance="modelValue === day ? 'accent' : 'filled-outlined'"
-                :disabled="field.readonly === true"
-                @click="updateValue(modelValue === day ? null : day)"
-            >
-                {{ day }}
-            </wa-button>
-        </wa-button-group>
-      </div>
+      <WeekdayInput
+        v-else-if="field.type === 'Weekday'"
+        :label="field.label"
+        :readonly="field.readonly === true"
+        :modelValue="modelValue"
+        @update:modelValue="updateValue"
+      />
 
       <!-- Array -->
       <ArrayFieldEditor
@@ -254,6 +199,8 @@ import ArrayFieldEditor from './ArrayFieldEditor.vue';
 import TimelineDisplay from './TimelineDisplay.vue';
 import TerminInput from './TerminInput.vue';
 import FileAttachments from './FileAttachments.vue';
+import WeekdayInput from './WeekdayInput.vue';
+import LessonSlider from './LessonSlider.vue';
 import { useUsersStore } from '../stores/users';
 
 const props = defineProps({
@@ -332,24 +279,15 @@ watch(() => [props.field.type, props.field.default], ([newType, newDefault]) => 
 </script>
 
 <style scoped>
-.tick {
-  width: 2ch;
-  text-align: center;
-}
-wa-slider {
-    margin: 0 1rem;
-}
-.single::part(indicator) {
-    background-color: unset;
-}
-.weekday-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
+</style>
+
+<style>
+/* Fix alignment between Ort and Kategorie labels (ensuring all labels have the exact same line height across components) */
+wa-input::part(label),
+wa-select::part(label),
+wa-slider::part(label),
+wa-checkbox::part(label),
 .weekday-label {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--wa-color-neutral-20);
+    line-height: 1.5;
 }
 </style>

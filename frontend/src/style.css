@@ -92,6 +92,11 @@ wa-button.action::part(base) {
   padding: 3px;
 }
 
+wa-input::part(label),
+wa-select::part(label) {
+  line-height: 1;
+}
+
 wa-input::part(base),
 wa-select::part(combobox),
 wa-textarea::part(base) {
