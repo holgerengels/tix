@@ -3,6 +3,7 @@ const path = require('path');
 const vm = require('vm');
 const cron = require('node-cron');
 const Ticket = require('./models/ticket');
+const Log = require('./models/log');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
@@ -53,23 +54,38 @@ function loadBots() {
                                 // Compile the script into a function that takes 'ticket' as an argument
                                 // We combine the exports from the file with the script string
                                 const runFn = async (ticket) => {
-                                    // Make exported functions available in the execution scope
-                                    const scope = { ticket, ...scriptExports };
-                                    const keys = Object.keys(scope);
-                                    const values = Object.values(scope);
+                                    // Create a fresh sandbox for each execution to avoid race conditions
+                                    const freshContext = {
+                                        require: require,
+                                        console: console,
+                                        process: process,
+                                        path: path,
+                                        fs: fs,
+                                        otpauth: require('otpauth'),
+                                        __dirname: CONFIG_DIR,
+                                        setTimeout: setTimeout,
+                                        setInterval: setInterval,
+                                        clearTimeout: clearTimeout,
+                                        clearInterval: clearInterval,
+                                        ticket: ticket
+                                    };
+                                    
+                                    // Copy globally defined functions/variables from the initial script evaluation
+                                    Object.keys(sandbox).forEach(key => {
+                                        if (!(key in freshContext) && key !== 'module' && key !== 'exports') {
+                                            freshContext[key] = sandbox[key];
+                                        }
+                                    });
 
-                                    // If script is just calling a globally available function in the VM,
-                                    // we need to make sure those are accessible.
-                                    // Since script file already ran in `sandbox`, its declarations are in `sandbox`.
-                                    // Instead of a new Function, we can evaluate inside the VM with ticket.
-                                    sandbox.ticket = ticket;
                                     try {
-                                        const result = vm.runInContext(botConfig.script, sandbox);
+                                        vm.createContext(freshContext);
+                                        const result = vm.runInContext(botConfig.script, freshContext);
                                         if (result && typeof result.then === 'function') {
                                             await result;
                                         }
                                     } catch (e) {
                                         console.error(`Error running bot script ${botConfig.name}:`, e);
+                                        throw e; // Propagate to let caller catch and log it
                                     }
                                 };
 
@@ -119,6 +135,14 @@ async function runBots() {
                     }
                 } catch (err) {
                     console.error(`Error in bot ${bot.name} for ticket ${ticket.id}:`, err);
+                    try {
+                        await new Log({
+                            ticket: ticket._id,
+                            editor: 'System',
+                            action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
+                            timestamp: new Date()
+                        }).save();
+                    } catch(logErr) { console.error('Failed to save error log', logErr); }
                 }
             }
         } catch (err) {
@@ -145,6 +169,14 @@ async function runBotsForTicket(ticket) {
             }
         } catch (err) {
             console.error(`Error in sync bot ${bot.name} for ticket ${ticket.id}:`, err);
+            try {
+                await new Log({
+                    ticket: ticket._id,
+                    editor: 'System',
+                    action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
+                    timestamp: new Date()
+                }).save();
+            } catch(logErr) { console.error('Failed to save error log', logErr); }
         }
     }
 
@@ -165,6 +197,14 @@ async function runBotsForTicket(ticket) {
                 }
             } catch (err) {
                 console.error(`Error in async bot ${bot.name} for ticket ${ticket.id}:`, err);
+                try {
+                    await new Log({
+                        ticket: ticket._id,
+                        editor: 'System',
+                        action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
+                        timestamp: new Date()
+                    }).save();
+                } catch(logErr) { console.error('Failed to save error log', logErr); }
             }
         })();
     });
@@ -191,6 +231,14 @@ function scheduleBots() {
                                 }
                             } catch (err) {
                                 console.error(`Error in scheduled bot ${bot.name} for ticket ${t.id}:`, err);
+                                try {
+                                    await new Log({
+                                        ticket: t._id,
+                                        editor: 'System',
+                                        action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
+                                        timestamp: new Date()
+                                    }).save();
+                                } catch(logErr) { console.error('Failed to save error log', logErr); }
                             }
                         }
                     } catch (err) {

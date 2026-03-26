@@ -449,6 +449,13 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             // Check for generic 'edit' permission if action not found in state
             // This allows global actions like 'Bearbeiten' to work in any state
             // provided the user has 'edit' access.
+            
+            // Fix: Enforce that only explicit generic actions (like 'editieren') fall back to edit rights.
+            // Invalid workflow transitions are strictly rejected.
+            if (actionName !== 'editieren') {
+                return res.status(400).json({ message: `Aktion '${actionName}' ist im aktuellen Status (${ticket.state}) nicht verfügbar.` });
+            }
+
             const { canEdit } = require('./workflow');
             if (canEdit(ticket.type, req.user.groups)) {
                 action = {

@@ -41,10 +41,10 @@ If this is `true`, the backend route for ticket actions (`POST /api/tickets/:id/
 
 ## 3. Data Model
 
-Subtickets store a direct reference to their parent ticket via the `parentTicket` field. 
+Subtickets store a direct reference to their parent ticket via the `parentTicket` field using the readable string `id` (z.B. `IT-1`). This field is indexed for performant lookups.
 
 ```javascript
-parentTicket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' }
+parentTicket: { type: String, index: true }
 ```
 To avoid inconsistencies (Single Source of Truth), the parent ticket does *not* store an array of its children. The assignment is gathered on demand via `Ticket.find({ parentTicket: req.query.id })` and attached to the frontend response.
 

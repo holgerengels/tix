@@ -3,6 +3,20 @@ const ldap = require('ldapjs');
 const fs = require('fs');
 const path = require('path');
 
+const escapeLDAP = (str) => {
+    if (!str) return '';
+    return str.replace(/[\*\(\)\\\0]/g, function (char) {
+        switch (char) {
+            case '*': return '\\2a';
+            case '(': return '\\28';
+            case ')': return '\\29';
+            case '\\': return '\\5c';
+            case '\0': return '\\00';
+            default: return char;
+        }
+    });
+};
+
 // Load Settings
 let settings = {};
 try {
@@ -75,8 +89,8 @@ const login = async (username, password, isPwa) => {
 
             // B. Search for User
             // Filter: (&(userfilter)(sAMAccountName=username))
-            // Filter: (&(userfilter)(sAMAccountName=username))
-            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const escapedUsername = escapeLDAP(username);
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
             const opts = {
                 filter: filter,
                 scope: 'sub',
@@ -363,7 +377,8 @@ const getUser = async (username) => {
                     return resolve({ username, displayName: username });
                 }
 
-                const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+                const escapedUsername = escapeLDAP(username);
+                const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
                 const opts = {
                     filter: filter,
                     scope: 'sub',
@@ -467,7 +482,8 @@ const getUserSettings = async (username) => {
                 return resolve({});
             }
 
-            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const escapedUsername = escapeLDAP(username);
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
             const opts = {
                 filter: filter,
                 scope: 'sub',
@@ -532,7 +548,8 @@ const updateUserSettings = async (username, newSettings) => {
             }
 
             // Find DN first
-            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${username}))`;
+            const escapedUsername = escapeLDAP(username);
+            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
             const opts = {
                 filter: filter,
                 scope: 'sub',
