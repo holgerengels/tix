@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const logSchema = new mongoose.Schema({
-    ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true },
+    ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true, index: true },
     editor: { type: String, required: true },
     timestamp: { type: Date, required: true, default: Date.now },
     action: { type: String, required: true },

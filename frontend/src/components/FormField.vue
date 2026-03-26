@@ -100,8 +100,8 @@
       <!-- Boolean -->
       <wa-checkbox
         v-else-if="field.type === 'Boolean'"
-        :defaultChecked="modelValue === true || modelValue === 'true' ? true : undefined"
-        :checked="modelValue === true || modelValue === 'true' ? true : undefined"
+        :defaultChecked="modelValue === true ? true : undefined"
+        :checked="modelValue === true ? true : undefined"
         :disabled="field.readonly === true"
         :required="field.required === true"
         :hint="field.hint"

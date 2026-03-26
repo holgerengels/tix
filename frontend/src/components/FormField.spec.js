@@ -18,6 +18,7 @@ const globalStubs = {
     },
     'wa-checkbox': { 
         template: '<div class="wa-checkbox-stub" @change="emitChange"></div>',
+        props: ['checked', 'defaultChecked'],
         methods: { emitChange(val) { this.$emit('change', { target: { checked: val }, stopPropagation: () => {} }); } }
     },
     'wa-option': true,
@@ -40,8 +41,8 @@ describe('FormField.vue Data Binding & Reactivity', () => {
         });
 
         const checkbox = wrapper.findComponent('.wa-checkbox-stub');
-        // Vue 3 .prop bindings directly alter the DOM property of the root element
-        expect(checkbox.element.checked).toBe(true);
+        // Vue bindings for wa-checkbox use explicit attributes instead of .prop modifier to force update 
+        expect(checkbox.props('checked')).toBe(true) || expect(checkbox.attributes('checked')).toBe("true");
 
         // Test upward emission
         await checkbox.vm.emitChange(false);

@@ -270,7 +270,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
 
     try {
-        const docTickets = await Ticket.find(finalQuery).sort({ created: -1 });
+        const docTickets = await Ticket.find(finalQuery).sort({ created: -1 }).limit(200);
         const tickets = docTickets.map(t => t.toObject());
 
         // Load subtickets efficiently
@@ -694,30 +694,32 @@ router.get('/logs', verifyToken, async (req, res) => {
         const { type, editor, dateFrom, dateTo } = req.query;
 
         // 1. Get Accessible Ticket IDs (filtered by type if provided)
-        let ticketQuery = {};
+        let ticketBaseQuery = {};
         if (type) {
-            ticketQuery.type = type;
+            ticketBaseQuery.type = type;
         }
 
-        const allTickets = await Ticket.find(ticketQuery);
-        const accessibleTicketIds = [];
-
-        for (const ticket of allTickets) {
-            const wf = wfConfig[ticket.type];
-            if (!wf) continue;
-
-            // Access check (read) - reuse logic
-            let canRead = false;
-            if (ticket.creator === user.username) canRead = true;
-            else if (ticket.assignee === user.username) canRead = true;
-            else {
-                const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
-                if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
-                    canRead = true;
-                }
+        const accessOr = [];
+        Object.values(wfConfig).forEach(wf => {
+            const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
+            if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                accessOr.push({ type: wf.type });
             }
-            if (canRead) accessibleTicketIds.push(ticket._id);
-        }
+        });
+
+        accessOr.push({ creator: user.username });
+        accessOr.push({ assignee: user.username });
+
+        const finalTicketQuery = {
+            $and: [
+                ticketBaseQuery,
+                { $or: accessOr }
+            ]
+        };
+
+        // Fetch only the _id field using lean projection to prevent Out-Of-Memory crashes
+        const accessibleDocs = await Ticket.find(finalTicketQuery).select('_id').lean();
+        const accessibleTicketIds = accessibleDocs.map(doc => doc._id);
 
         // 2. Build Log Query
         let logQuery = { ticket: { $in: accessibleTicketIds } };
