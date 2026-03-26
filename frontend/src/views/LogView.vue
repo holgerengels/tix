@@ -13,27 +13,27 @@
             <div class="filters">
                 <div class="filter-group">
                     <label>Typ:</label>
-                    <select v-model="filterType" @change="fetchLogs">
-                        <option value="">Alle</option>
-                        <option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</option>
-                    </select>
+                    <wa-select clearable :value.prop="filterType" @change="filterType = $event.target.value; fetchLogs()" placeholder="Alle" size="small">
+                        <wa-option value=""></wa-option>
+                        <wa-option v-for="type in availableTypes" :key="type" :value="type">{{ type }}</wa-option>
+                    </wa-select>
                 </div>
                 <div class="filter-group">
                     <label>User:</label>
-                    <input type="text" v-model="filterEditor" @input="fetchLogsDebounced" placeholder="Name..." />
+                    <wa-input type="text" :value.prop="filterEditor" @input="filterEditor = $event.target.value; fetchLogsDebounced()" placeholder="Name..." size="small" clearable></wa-input>
                 </div>
                 <div class="filter-group">
-                    <select v-model="filterDateRange" @change="handleDateRangeChange">
-                        <option value="">Zeitraum wählen</option>
-                        <option value="week">Letzte Woche</option>
-                        <option value="month">Letzter Monat</option>
-                        <option value="custom">Benutzerdefiniert</option>
-                    </select>
+                    <wa-select clearable :value.prop="filterDateRange" @change="filterDateRange = $event.target.value; handleDateRangeChange()" placeholder="Zeitraum wählen" size="small">
+                        <wa-option value="">Zeitraum wählen</wa-option>
+                        <wa-option value="week">Letzte Woche</wa-option>
+                        <wa-option value="month">Letzter Monat</wa-option>
+                        <wa-option value="custom">Benutzerdefiniert</wa-option>
+                    </wa-select>
                 </div>
                  <div class="filter-group" v-if="filterDateRange === 'custom'">
-                    <input type="date" v-model="filterDateFrom" @change="fetchLogs" />
+                    <wa-input type="date" :value.prop="filterDateFrom" @change="filterDateFrom = $event.target.value; fetchLogs()" size="small"></wa-input>
                     <span>-</span>
-                    <input type="date" v-model="filterDateTo" @change="fetchLogs" />
+                    <wa-input type="date" :value.prop="filterDateTo" @change="filterDateTo = $event.target.value; fetchLogs()" size="small"></wa-input>
                 </div>
                 <div class="filter-group">
                     <wa-button appearance="plain" @click="resetFilters">Reset</wa-button>
@@ -325,23 +325,12 @@ onMounted(async () => {
     font-size: 0.9rem;
 }
 
-.filter-group select,
-.filter-group input {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--wa-color-neutral-80);
-    border-radius: 6px;
-    font-size: 0.9rem;
+.filter-group wa-select {
     min-width: 140px;
-    transition: all 0.2s;
-    background-color: var(--wa-color-neutral-90);
 }
 
-.filter-group select:focus,
-.filter-group input:focus {
-    outline: none;
-    border-color: var(--wa-color-brand-40);
-    box-shadow: 0 0 0 2px var(--wa-color-brand-80);
-    background-color: white;
+.filter-group wa-input {
+    min-width: 140px;
 }
 /* Mobile Styles using .is-mobile class */
 .is-mobile .header {

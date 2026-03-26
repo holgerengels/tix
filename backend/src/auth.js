@@ -204,12 +204,26 @@ const verifyToken = (req, res, next) => {
     });
 };
 
+let cachedUsers = null;
+let lastUsersFetch = 0;
+
 const getUsers = async (filterGroups = []) => {
+    const now = Date.now();
+    if (cachedUsers && now - lastUsersFetch < 5 * 60 * 1000) {
+        let users = cachedUsers;
+        if (filterGroups && filterGroups.length > 0) {
+            users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
+        }
+        return users;
+    }
+
     let users = [];
 
     // 1. DevMode: Start with mock users
     if (settings.devmode || !settings.server || !settings.server.ldap) {
         users = MOCK_USERS.map(({ password, ...u }) => u);
+        cachedUsers = users;
+        lastUsersFetch = now;
         if (filterGroups && filterGroups.length > 0) {
             users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
         }
@@ -337,6 +351,9 @@ const getUsers = async (filterGroups = []) => {
     } catch (err) {
         console.error('[Auth] General Error in getUsers:', err);
     }
+
+    cachedUsers = users;
+    lastUsersFetch = Date.now();
 
     // 3. Filter by groups if provided
     if (filterGroups && filterGroups.length > 0) {

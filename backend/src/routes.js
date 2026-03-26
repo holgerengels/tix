@@ -223,7 +223,24 @@ router.get('/tickets', verifyToken, async (req, res) => {
             sensitiveFilters.push({ state: status });
         }
     }
-    if (creator) sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } }); // Fuzzy search
+    if (creator) {
+        try {
+            const { getUsers } = require('./auth');
+            const allUsers = await getUsers();
+            const searchRegex = new RegExp(creator, 'i');
+            const matchedUsernames = allUsers
+                .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
+                .map(u => u.username);
+            
+            if (matchedUsernames.length > 0) {
+                sensitiveFilters.push({ creator: { $in: matchedUsernames } });
+            } else {
+                sensitiveFilters.push({ creator: '___NO_MATCH___' });
+            }
+        } catch (e) {
+            sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } });
+        }
+    }
     if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.e. ABW-1)
     if (assignmentType === 'personal') sensitiveFilters.push({ assignee: user.username }); // Filter for purely personal assignment
 
@@ -725,7 +742,22 @@ router.get('/logs', verifyToken, async (req, res) => {
         let logQuery = { ticket: { $in: accessibleTicketIds } };
 
         if (editor) {
-            logQuery.editor = { $regex: editor, $options: 'i' }; // Case insensitive partial match
+            try {
+                const { getUsers } = require('./auth');
+                const allUsers = await getUsers();
+                const searchRegex = new RegExp(editor, 'i');
+                const matchedUsernames = allUsers
+                    .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
+                    .map(u => u.username);
+                
+                if (matchedUsernames.length > 0) {
+                    logQuery.editor = { $in: matchedUsernames };
+                } else {
+                    logQuery.editor = '___NO_MATCH___';
+                }
+            } catch (e) {
+                logQuery.editor = { $regex: editor, $options: 'i' };
+            }
         }
 
         if (dateFrom || dateTo) {
