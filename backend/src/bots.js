@@ -4,6 +4,7 @@ const vm = require('vm');
 const cron = require('node-cron');
 const Ticket = require('./models/ticket');
 const Log = require('./models/log');
+const { askKI } = require('./ki');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
@@ -40,7 +41,8 @@ function loadBots() {
                         setTimeout: setTimeout,
                         setInterval: setInterval,
                         clearTimeout: clearTimeout,
-                        clearInterval: clearInterval
+                        clearInterval: clearInterval,
+                        askKI: askKI
                     };
                     sandbox.module.exports = sandbox.exports;
 
@@ -67,9 +69,10 @@ function loadBots() {
                                         setInterval: setInterval,
                                         clearTimeout: clearTimeout,
                                         clearInterval: clearInterval,
+                                        askKI: askKI,
                                         ticket: ticket
                                     };
-                                    
+
                                     // Copy globally defined functions/variables from the initial script evaluation
                                     Object.keys(sandbox).forEach(key => {
                                         if (!(key in freshContext) && key !== 'module' && key !== 'exports') {
@@ -142,7 +145,7 @@ async function runBots() {
                             action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                             timestamp: new Date()
                         }).save();
-                    } catch(logErr) { console.error('Failed to save error log', logErr); }
+                    } catch (logErr) { console.error('Failed to save error log', logErr); }
                 }
             }
         } catch (err) {
@@ -176,7 +179,7 @@ async function runBotsForTicket(ticket) {
                     action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                     timestamp: new Date()
                 }).save();
-            } catch(logErr) { console.error('Failed to save error log', logErr); }
+            } catch (logErr) { console.error('Failed to save error log', logErr); }
         }
     }
 
@@ -204,7 +207,7 @@ async function runBotsForTicket(ticket) {
                         action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                         timestamp: new Date()
                     }).save();
-                } catch(logErr) { console.error('Failed to save error log', logErr); }
+                } catch (logErr) { console.error('Failed to save error log', logErr); }
             }
         })();
     });
@@ -238,7 +241,7 @@ function scheduleBots() {
                                         action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                                         timestamp: new Date()
                                     }).save();
-                                } catch(logErr) { console.error('Failed to save error log', logErr); }
+                                } catch (logErr) { console.error('Failed to save error log', logErr); }
                             }
                         }
                     } catch (err) {
