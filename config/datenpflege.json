@@ -1,0 +1,136 @@
+{
+    "type": "Datenpflege",
+    "abbreviation": "DPF",
+    "template": "{{ ticket.category }}",
+    "fields": [
+        {
+            "name": "assignee",
+            "groups": [
+                "Abteilungsleitung",
+                "Stundenplanung",
+                "Netzwerkteam"
+            ],
+            "visible": true
+        },
+        {
+            "name": "category",
+            "label": "Kategorie",
+            "type": "Select",
+            "options": [
+                "ASV-Untis",
+                "Sonstiges"
+            ],
+            "required": true
+        }
+    ],
+    "validations": [],
+    "grid": [
+        "title title title title",
+        "badges badges badges badges",
+        "category category category category",
+        "description description description description",
+        "assignee assignee assignee assignee"
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "@assignee",
+                        "Abteilungsleitung",
+                        "Stundenplanung",
+                        "Netzwerkteam"
+                    ],
+                    "form": "bearbeiten"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "Stundenplanung"
+                    ],
+                    "inline": "assign"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Abteilungsleitung",
+                "Stundenplanung",
+                "Netzwerkteam"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Abteilungsleitung",
+                "Stundenplanung",
+                "Netzwerkteam",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Netzwerkteam"
+            ]
+        }
+    ],
+    "forms": [
+        {
+            "name": "bearbeiten",
+            "title": "Aufgabe bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'geschlossen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen",
+            "label": "offen",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "geschlossen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen",
+            "label": "geschlossen",
+            "color": "green"
+        }
+    ]
+}

@@ -259,7 +259,30 @@ async function fetchtimetable(client, url, room, csrfToken) {
   return periods;
 }
 
+async function sentiment_analyse(ticket) {
+  const sentiment = await askKI('Bewerte den Frust-Level des folgenden Tickets. Wenn der Benutzer extrem frustriert, aggressiv oder sehr wütend wirkt (z.B. "zum x-ten Mal defekt", Beschwerden, viele Ausrufezeichen), antworte AUSSCHLIESSLICH mit ESKALIERT. Sonst antworte mit OK. Text: ' + ticket.description);
+  if (sentiment.trim().toUpperCase() === 'ESKALIERT' && (!ticket.badges || !ticket.badges.includes('eskaliert'))) {
+    if (!ticket.badges) ticket.badges = [];
+    ticket.badges.push('eskaliert');
+  }
+}
+
+async function raum_erkennung(ticket) {
+  if (!ticket.location || ticket.location === 'Kein Raum') {
+    const reply = await askKI('Extrahiere den Raum oder Ort aus folgendem Text. Antworte AUSSCHLIESSLICH mit der Raumnummer (z.B. 302) oder Ort (z.B. Aula, Mensa). Wenn kein Ort im Text steht, antworte mit NULL. Text: ' + ticket.title + ' ' + ticket.description);
+    const match = reply.trim();
+    if (match !== 'NULL' && match !== '') {
+      const conf = JSON.parse(fs.readFileSync(__dirname + '/it.json'));
+      const roomOpts = conf.fields.find(f => f.name === 'location').options;
+      const found = roomOpts.find(r => r.includes(match) || match.includes(r));
+      if (found) ticket.location = found;
+    }
+  }
+}
+
 module.exports = {
   dringend,
-  raum
+  raum,
+  sentiment_analyse,
+  raum_erkennung
 };

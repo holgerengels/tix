@@ -286,7 +286,15 @@
                 "offen.neu"
             ],
             "onChange": "async",
-            "script": "const sentiment = await askKI('Bewerte den Frust-Level des folgenden Tickets. Wenn der Benutzer extrem frustriert, aggressiv oder sehr wütend wirkt (z.B. \"zum x-ten Mal defekt\", Beschwerden, viele Ausrufezeichen), antworte AUSSCHLIESSLICH mit ESKALIERT. Sonst antworte mit OK. Text: ' + ticket.description); if (sentiment.trim().toUpperCase() === 'ESKALIERT' && (!ticket.badges || !ticket.badges.includes('eskaliert'))) { if (!ticket.badges) ticket.badges = []; ticket.badges.push('eskaliert'); }"
+            "script": "await sentiment_analyse(ticket)"
+        },
+        {
+            "name": "raum_erkennung",
+            "states": [
+                "offen.neu"
+            ],
+            "onChange": "async",
+            "script": "await raum_erkennung(ticket)"
         }
     ],
     "access": [
