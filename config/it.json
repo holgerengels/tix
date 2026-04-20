@@ -218,8 +218,9 @@
                 {
                     "name": "Subticket erstellen",
                     "groups": [
+                        "@assignee",
                         "Netzwerkteam",
-                        "@assignee"
+                        "IT-Support"
                     ],
                     "subTickets": [
                         "IT-Ticket",
@@ -301,7 +302,8 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte"
+                "Lehrkräfte",
+                "IT-Support"
             ]
         },
         {
@@ -314,7 +316,8 @@
             "name": "read",
             "groups": [
                 "@creator",
-                "Lehrkräfte"
+                "Lehrkräfte",
+                "IT-Support"
             ]
         },
         {
@@ -335,7 +338,8 @@
             "name": "comment",
             "groups": [
                 "Schulleitung",
-                "Netzwerkteam"
+                "Netzwerkteam",
+                "IT-Support"
             ]
         }
     ],
