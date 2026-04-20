@@ -40,6 +40,16 @@
             "type": "Attachments",
             "label": "Anhänge",
             "visible": false
+        },
+        {
+            "name": "creator",
+            "type": "User",
+            "groups": [
+                "Lehrkräfte"
+            ],
+            "label": "Ersteller",
+            "readonly": "{{ !(currentUser().groups || []).includes('Netzwerkteam') }}",
+            "visible": "{{ (currentUser().groups || []).includes('Netzwerkteam') }}"
         }
     ]
 }
