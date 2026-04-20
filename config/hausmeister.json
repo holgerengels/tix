@@ -2,16 +2,6 @@
     "type": "Hausmeisterauftrag",
     "abbreviation": "HSM",
     "template": "{{ticket.category}}",
-    "bots": [
-        {
-            "name": "raum_erkennung",
-            "states": [
-                "offen.neu"
-            ],
-            "onChange": "async",
-            "script": "await raum_erkennung(ticket)"
-        }
-    ],
     "fields": [
         {
             "name": "attachments",
@@ -115,6 +105,14 @@
                 "offen.neu"
             ],
             "script": "automatisch_genehmigen(ticket)"
+        },
+        {
+            "name": "raum_erkennung",
+            "states": [
+                "offen.neu"
+            ],
+            "onChange": "async",
+            "script": "await raum_erkennung(ticket)"
         }
     ],
     "access": [
