@@ -4,15 +4,17 @@ const https = require('https');
 const args = process.argv.slice(2);
 const username = args[0];
 const password = args[1];
-const kiUser = args[2];
-const kiPass = args[3];
-const testOnly = args[4] === 'true';
+const testOnly = args[2] === 'true';
 
-if (!password || !kiPass) {
-    console.error("Usage: node import_tickets.js <tix_username> <tix_password> <ki_email> <ki_password> [testOnly]");
-    console.error("Example: node import_tickets.js holger_engels tixPass email@schule.de kiPass true");
+if (!password) {
+    console.error("Usage: node import_tickets.js <tix_username> <tix_password> [testOnly]");
+    console.error("Example: node import_tickets.js holger_engels tixPass true");
     process.exit(1);
 }
+
+const settings = JSON.parse(fs.readFileSync(__dirname + '/config/settings.json', 'utf8'));
+const kiUser = settings.ki.login;
+const kiPass = settings.ki.password;
 
 // Load IT-Ticket and Hausmeisterauftrag config to get valid room and category options
 const itConfig = JSON.parse(fs.readFileSync(__dirname + '/config/it.json', 'utf8'));
@@ -158,28 +160,47 @@ async function determineCategoryByAI(type, record) {
     });
 }
 
-function parseCSVLine(line) {
-    const result = [];
-    let current = '';
+function parseCSVContent(content) {
+    const records = [];
+    let currentRecord = [];
+    let currentField = '';
     let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
+
+    for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        const nextChar = content[i + 1];
+
         if (char === '"') {
-            if (inQuotes && line[i+1] === '"') {
-                current += '"';
+            if (inQuotes && nextChar === '"') {
+                currentField += '"';
                 i++;
             } else {
                 inQuotes = !inQuotes;
             }
         } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
+            currentRecord.push(currentField);
+            currentField = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            if (char === '\r' && nextChar === '\n') i++;
+            currentRecord.push(currentField);
+            if (currentRecord.some(f => f.trim() !== '')) {
+                records.push(currentRecord);
+            }
+            currentRecord = [];
+            currentField = '';
         } else {
-            current += char;
+            currentField += char;
         }
     }
-    result.push(current);
-    return result;
+    
+    if (currentField !== '' || currentRecord.length > 0) {
+        currentRecord.push(currentField);
+        if (currentRecord.some(f => f.trim() !== '')) {
+            records.push(currentRecord);
+        }
+    }
+    
+    return records;
 }
 
 function mapRoom(rawRoom) {
@@ -267,13 +288,11 @@ async function run() {
         const token = loginRes.token;
         console.log('Login successful.');
 
-        const lines = fs.readFileSync(__dirname + '/export.csv', 'utf8')
-            .split('\n')
-            .map(l => l.trim())
-            .filter(l => l !== '');
+        const fileContent = fs.readFileSync(__dirname + '/export.csv', 'utf8');
+        const parsedRecords = parseCSVContent(fileContent);
             
-        const headers = parseCSVLine(lines[0]);
-        let recordsToProcess = lines.slice(1);
+        const headers = parsedRecords[0];
+        let recordsToProcess = parsedRecords.slice(1);
         
         if (testOnly) {
             recordsToProcess = [recordsToProcess[0]];
@@ -281,7 +300,7 @@ async function run() {
         }
 
         for (let idx = 0; idx < recordsToProcess.length; idx++) {
-            const cols = parseCSVLine(recordsToProcess[idx]);
+            const cols = recordsToProcess[idx];
             const record = {};
             for(let i = 0; i < headers.length; i++) {
                 record[headers[i]] = cols[i];
@@ -315,7 +334,7 @@ async function run() {
             const payload = {
                 type: type,
                 title: record.Titel || 'Ohne Titel',
-                description: `Importiertes Ticket (ErstellungsDatum: ${record.ErstellungsDatum})`,
+                description: `**Importiert von Intrexx**\n\n${record.Beschreibung || record.beschreibung || ''}`,
                 category: category,
                 location: mapRoom(record.Raum),
                 badges: []
@@ -340,9 +359,8 @@ async function run() {
             if (targetState === 'offen.inArbeit') {
                 console.log(`Advancing state to: ${targetState}`);
                 const stateAction = {
-                    actionName: "bearbeiten",
-                    formButtonName: "in Arbeit",
-                    formData: {}
+                    actionName: "editieren",
+                    formData: { state: targetState }
                 };
                 await apiRequest(`/tickets/${ticketRes._id}/action`, 'POST', stateAction, token);
                 console.log(`State updated.`);

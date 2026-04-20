@@ -17,7 +17,8 @@
         {
             "name": "assignee",
             "groups": [
-                "Netzwerkteam"
+                "Netzwerkteam",
+                "IT-Support"
             ],
             "readonly": "{{ !(currentUser().groups || []).includes('Netzwerkteam') }}",
             "visible": "{{ (currentUser().groups || []).includes('Netzwerkteam') }}"
