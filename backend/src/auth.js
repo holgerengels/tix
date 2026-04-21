@@ -471,6 +471,15 @@ const refreshAccessToken = (refreshToken) => {
     }
 };
 
+const extendAccessToken = (username, groups) => {
+    const token = jwt.sign(
+        { username: username, groups: groups },
+        SECRET_KEY,
+        { expiresIn: ACCESS_TOKEN_EXPIRY }
+    );
+    return { token, user: { username, groups } };
+};
+
 const isDevMode = () => !!settings.devmode;
 
 
@@ -622,4 +631,4 @@ const updateUserSettings = async (username, newSettings) => {
     });
 };
 
-module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, refreshAccessToken };
+module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, refreshAccessToken, extendAccessToken };

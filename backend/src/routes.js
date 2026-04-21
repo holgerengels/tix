@@ -39,6 +39,12 @@ router.post('/refresh', async (req, res) => {
 });
 
 
+router.post('/extend', verifyToken, (req, res) => {
+    const { extendAccessToken } = require('./auth');
+    const result = extendAccessToken(req.user.username, req.user.groups);
+    res.json(result);
+});
+
 router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
     // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin

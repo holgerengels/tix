@@ -3,11 +3,39 @@ import { useAuthStore } from './stores/auth';
 import { useRequestQueueStore } from './stores/requestQueue';
 import { showErrorDialog } from './composables/useToast';
 
+let isExtending = false;
+
 // Request interceptor to add token
 axios.interceptors.request.use(config => {
     const auth = useAuthStore();
     if (auth.token) {
         config.headers.Authorization = `Bearer ${auth.token}`;
+        
+        // Sliding session logic
+        try {
+            const parts = auth.token.split('.');
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1]));
+                const timeToExpiryMs = payload.exp * 1000 - Date.now();
+                
+                // If it is an API call, and token has less than 15 minutes left, and not already extending
+                if (timeToExpiryMs > 0 && timeToExpiryMs < 15 * 60 * 1000 
+                    && !isExtending 
+                    && !config.url.endsWith('/extend') 
+                    && !config.url.endsWith('/refresh')) {
+                    
+                    isExtending = true;
+                    // Fire-and-forget background extension
+                    axios.post('/api/extend').then(res => {
+                        auth.login(res.data.token, res.data.user, auth.refreshToken);
+                    }).catch(() => {}).finally(() => {
+                        isExtending = false;
+                    });
+                }
+            }
+        } catch (e) {
+            // Ignore decode errors
+        }
     }
     return config;
 });
