@@ -241,7 +241,7 @@
                 "offen.neu"
             ],
             "onChange": "insync",
-            "script": "acrossDepartments(ticket)"
+            "script": "await acrossDepartments(ticket)"
         }
     ],
     "forms": [

@@ -196,7 +196,7 @@
                 "offen.neu"
             ],
             "onChange": "insync",
-            "script": "korrekturtag(ticket)"
+            "script": "await korrekturtag(ticket)"
         }
     ],
     "forms": [

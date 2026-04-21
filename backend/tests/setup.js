@@ -4,6 +4,16 @@ const jwt = require('jsonwebtoken');
 // Load env or defaults
 const SECRET_KEY = 'supersecretkey'; // Same as in auth.js
 
+jest.mock('../src/ki', () => ({
+    askKI: jest.fn(async (prompt) => {
+        if (prompt.includes('extrem frustriert')) return 'ESKALIERT';
+        if (prompt.includes('Raum oder Ort aus folgendem Text')) return 'Raum 101';
+        return 'OK';
+    }),
+    askKIWithMessages: jest.fn(async () => 'OK'),
+    getClient: jest.fn(async () => ({}))
+}));
+
 // Mock tokens based on auth.js MOCK_USERS
 const generateToken = (username, groups) => {
     return jwt.sign({ username, groups }, SECRET_KEY, { expiresIn: '8h' });

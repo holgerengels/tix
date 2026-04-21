@@ -97,21 +97,21 @@
             "states": [
                 "offen.neu"
             ],
-            "script": "eintragen(ticket)"
+            "script": "await eintragen(ticket)"
         },
         {
             "name": "verschieben",
             "states": [
                 "offen.verschoben"
             ],
-            "script": "verschieben(ticket)"
+            "script": "await verschieben(ticket)"
         },
         {
             "name": "stornieren",
             "states": [
                 "offen.storniert"
             ],
-            "script": "stornieren(ticket)"
+            "script": "await stornieren(ticket)"
         },
         {
             "name": "abschliessen",
@@ -120,7 +120,7 @@
             ],
             "onChange": "async",
             "schedule": "0 1 * * *",
-            "script": "abschliessen(ticket)"
+            "script": "await abschliessen(ticket)"
         }
     ],
     "forms": [

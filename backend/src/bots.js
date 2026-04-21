@@ -4,7 +4,7 @@ const vm = require('vm');
 const cron = require('node-cron');
 const Ticket = require('./models/ticket');
 const Log = require('./models/log');
-const { askKI } = require('./ki');
+const ki = require('./ki');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
@@ -42,7 +42,7 @@ function loadBots() {
                         setInterval: setInterval,
                         clearTimeout: clearTimeout,
                         clearInterval: clearInterval,
-                        askKI: askKI
+                        askKI: ki.askKI
                     };
                     sandbox.module.exports = sandbox.exports;
 
@@ -69,7 +69,7 @@ function loadBots() {
                                         setInterval: setInterval,
                                         clearTimeout: clearTimeout,
                                         clearInterval: clearInterval,
-                                        askKI: askKI,
+                                        askKI: ki.askKI,
                                         ticket: ticket
                                     };
 
@@ -82,7 +82,9 @@ function loadBots() {
 
                                     try {
                                         vm.createContext(freshContext);
-                                        const result = vm.runInContext(botConfig.script, freshContext);
+                                        // Wrap script in an async IIFE to support top-level await
+                                        const wrappedScript = `(async () => {\n${botConfig.script}\n})()`;
+                                        const result = vm.runInContext(wrappedScript, freshContext);
                                         if (result && typeof result.then === 'function') {
                                             await result;
                                         }

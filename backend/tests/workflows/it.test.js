@@ -1,8 +1,12 @@
+
+
 const request = require('supertest');
 const app = require('../../src/server'); // This will start connecting to DB asynchronously
 const mongoose = require('mongoose');
+
 const { getTokens, clearDatabase, closeDatabase } = require('../setup');
 
+const ki = require('../../src/ki');
 const { getWorkflowForType } = require('../../src/workflow');
 const { updateUserSettings } = require('../../src/auth');
 const Subscription = require('../../src/models/subscription');
@@ -18,6 +22,14 @@ beforeAll(async () => {
         await new Promise(resolve => mongoose.connection.once('connected', resolve));
     }
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Dynamically spy on askKI
+    jest.spyOn(ki, 'askKI').mockImplementation(async (prompt) => {
+        console.log("KI SPY CALLED:", prompt);
+        if (prompt.includes('extrem frustriert')) return 'ESKALIERT';
+        if (prompt.includes('Raum oder Ort')) return 'Raum 101';
+        return 'OK';
+    });
 
     tokens = getTokens();
     loadBots();
@@ -48,7 +60,7 @@ describe('Workflow: IT-Ticket', () => {
         title: 'Beamer defekt',
         category: 'Medien',
         location: 'Raum 101 (Textilarbeit / Werken)',
-        description: 'Testticket'
+        description: 'Zum x-ten mal defekt! Ich bin extrem frustriert und wütend über diese kaputte Technik!!!'
     };
 
     it('should complete the full lifecycle of an IT-Ticket', async () => {
@@ -60,8 +72,19 @@ describe('Workflow: IT-Ticket', () => {
 
         expect(res.status).toBe(201);
         const t1 = res.body;
-        // Bot 'dringend' is always added for offen.neu in IT
+        // Bot 'dringend' is always added for offen.neu in IT (synchronous)
         expect(t1.badges || []).toContain('dringend');
+
+        // --- Wait for background async bots to finish modifying the ticket ---
+        // Generous wait for KI and WebUntis API calls
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const Ticket = mongoose.model('Ticket');
+        const updatedTicket = await Ticket.findById(t1._id);
+        
+        // Verify sentiment_analyse worked
+        expect(updatedTicket.badges || []).toContain('eskaliert');
+
 
         // Verify sub check
         await runSubscriptionCheck();

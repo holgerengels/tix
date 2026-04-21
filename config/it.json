@@ -280,7 +280,7 @@
             ],
             "onChange": "async",
             "schedule": "0 8 * * 1-5",
-            "script": "raum(ticket)"
+            "script": "await raum(ticket)"
         },
         {
             "name": "sentiment_analyse",

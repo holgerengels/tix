@@ -45,6 +45,7 @@ describe('Workflow: Hausmeisterauftrag', () => {
         type: 'Hausmeisterauftrag',
         title: 'Lampe flackert',
         category: 'Reparatur',
+        location: 'Raum 101 (Textilarbeit / Werken)',
         description: 'Testticket'
     };
 
