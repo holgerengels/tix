@@ -187,6 +187,10 @@ router.get('/tickets', verifyToken, async (req, res) => {
         if (conditions.length > 0) baseQuery.$or = conditions;
         else baseQuery = { _id: null }; // No access
 
+    } else if (filter === 'admin' && user.groups.includes('Administration')) {
+        // Dedicated admin filter bypasses workflow restrictions entirely
+        if (baseQuery.$or) delete baseQuery.$or;
+
     } else if (filter === 'all' || !filter) {
         const conditions = [];
         const allWorkflows = workflowEngine.getWorkflows();
@@ -237,7 +241,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
             const matchedUsernames = allUsers
                 .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
                 .map(u => u.username);
-            
+
             if (matchedUsernames.length > 0) {
                 sensitiveFilters.push({ creator: { $in: matchedUsernames } });
             } else {
@@ -359,7 +363,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
             }
             const parentWf = workflowEngine.getWorkflowForType(parent.type);
             const parentMatchingBlocks = parentWf?.workflow?.filter(w => w.states.includes(parent.state)) || [];
-            
+
             let allowed = false;
             for (const block of parentMatchingBlocks) {
                 const subActions = (block.actions || []).filter(a => a.subTickets && a.subTickets.includes(type));
@@ -368,14 +372,14 @@ router.post('/tickets', verifyToken, async (req, res) => {
                     const isCreator = parent.creator === req.user.username;
                     const isAssignee = parent.assignee === req.user.username;
                     const userGroups = req.user.groups || [];
-                    
+
                     const allowedGroup = groups.some(g => {
                         if (g === '@creator' && isCreator) return true;
                         if (g === '@assignee' && isAssignee) return true;
                         if (userGroups.includes(g)) return true;
                         return false;
                     });
-                    
+
                     if (allowedGroup || groups.length === 0) {
                         allowed = true;
                         break;
@@ -383,7 +387,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
                 }
                 if (allowed) break;
             }
-            
+
             if (!allowed) {
                 return res.status(400).json({ message: 'This ticket type is not allowed as a subticket for the given parent in its current state or you do not have permission' });
             }
@@ -472,7 +476,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             // Check for generic 'edit' permission if action not found in state
             // This allows global actions like 'Bearbeiten' to work in any state
             // provided the user has 'edit' access.
-            
+
             // Fix: Enforce that only explicit generic actions (like 'editieren') fall back to edit rights.
             // Invalid workflow transitions are strictly rejected.
             if (actionName !== 'editieren') {
@@ -755,7 +759,7 @@ router.get('/logs', verifyToken, async (req, res) => {
                 const matchedUsernames = allUsers
                     .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
                     .map(u => u.username);
-                
+
                 if (matchedUsernames.length > 0) {
                     logQuery.editor = { $in: matchedUsernames };
                 } else {

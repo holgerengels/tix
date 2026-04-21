@@ -138,7 +138,7 @@ const fetchTickets = async () => {
         
         try {
             const params = {
-                filter: 'all', // Admin view always shows all tickets subject to filters
+                filter: 'admin', // Admin view sees all tickets, skipping workflow access checks
                 type: filterType.value,
                 status: filterStatus.value,
                 creator: filterCreator.value,
