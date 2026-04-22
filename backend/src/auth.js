@@ -17,6 +17,17 @@ const escapeLDAP = (str) => {
     });
 };
 
+const decodeDN = (dn) => {
+    if (!dn) return '';
+    try {
+        const urlEncoded = dn.replace(/\\([0-9a-fA-F]{2})/g, (match, hex) => '%' + hex);
+        return decodeURIComponent(urlEncoded);
+    } catch(e) {
+        return dn;
+    }
+};
+
+
 // Load Settings
 let settings = {};
 try {
@@ -141,7 +152,8 @@ const login = async (username, password, isPwa) => {
                     // C. Verify Password (Bind as User)
                     const userClient = ldap.createClient({ url: ldapConfig.url });
 
-                    userClient.bind(userEntry.dn, password, (err) => {
+                    const bindDn = decodeDN(userEntry.dn);
+                    userClient.bind(bindDn, password, (err) => {
                         if (err) {
                             console.log(`[Auth] Password check failed for ${username}`);
                             userClient.unbind();
