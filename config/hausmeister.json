@@ -257,7 +257,11 @@
         {
             "name": "create",
             "groups": [
-                "Lehrkräfte"
+                "Lehrkräfte",
+		"Sekretariat",
+                "Hausmeister",
+                "Mensa",
+		"IT-Support"
             ]
         },
         {
@@ -270,9 +274,11 @@
             "name": "read",
             "groups": [
                 "@creator",
-                "Schulleitung",
-                "Netzwerkteam",
-                "Hausmeister"
+		"Lehrkräfte",
+		"Sekretariat",
+                "Hausmeister",
+                "Mensa",
+                "IT-Support"
             ]
         },
         {
@@ -291,9 +297,11 @@
         {
             "name": "comment",
             "groups": [
+		"@creator",
                 "Schulleitung",
                 "Netzwerkteam",
-                "Hausmeister"
+                "Hausmeister",
+		"IT-Support"
             ]
         }
     ],
