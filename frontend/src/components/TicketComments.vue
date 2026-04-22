@@ -25,7 +25,7 @@
         placeholder="Kommentar schreiben..." 
         rows="2"
         resize="auto"
-        @keydown.enter.prevent="sendComment"
+        @keydown.enter.exact.prevent="sendComment"
         :disabled="sending"
       ></wa-textarea>
       <wa-button size="small" variant="primary" @click="sendComment" :loading="sending" :disabled="!newComment.trim()">

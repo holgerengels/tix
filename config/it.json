@@ -269,7 +269,6 @@
                 "offen.neu"
             ],
             "onChange": "insync",
-            "schedule": "0 8 * * 1-5",
             "script": "dringend(ticket)"
         },
         {
@@ -304,9 +303,9 @@
             "name": "create",
             "groups": [
                 "Lehrkräfte",
-		"Sekretariat",
-		"Hausmeister",
-		"Mensa",
+                "Sekretariat",
+                "Hausmeister",
+                "Mensa",
                 "IT-Support"
             ]
         },
@@ -321,7 +320,7 @@
             "groups": [
                 "@creator",
                 "Lehrkräfte",
-		"Sekretariat",
+                "Sekretariat",
                 "Hausmeister",
                 "Mensa",
                 "IT-Support"
@@ -344,7 +343,7 @@
         {
             "name": "comment",
             "groups": [
-		"@creator",
+                "@creator",
                 "Schulleitung",
                 "Netzwerkteam",
                 "IT-Support"
