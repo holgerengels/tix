@@ -136,7 +136,7 @@ router.get('/config/:type/doc', verifyToken, async (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter, type, status, creator, dateFrom, dateTo, badge, assignmentType } = req.query; // 'my', 'assigned', 'all' AND granular filters
+    const { filter, type, status, creator, assignee, dateFrom, dateTo, badge, assignmentType } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     let baseQuery = {};
@@ -249,6 +249,24 @@ router.get('/tickets', verifyToken, async (req, res) => {
             }
         } catch (e) {
             sensitiveFilters.push({ creator: { $regex: creator, $options: 'i' } });
+        }
+    }
+    if (assignee) {
+        try {
+            const { getUsers } = require('./auth');
+            const allUsers = await getUsers();
+            const searchRegex = new RegExp(assignee, 'i');
+            const matchedUsernames = allUsers
+                .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
+                .map(u => u.username);
+
+            if (matchedUsernames.length > 0) {
+                sensitiveFilters.push({ assignee: { $in: matchedUsernames } });
+            } else {
+                sensitiveFilters.push({ assignee: '___NO_MATCH___' });
+            }
+        } catch (e) {
+            sensitiveFilters.push({ assignee: { $regex: assignee, $options: 'i' } });
         }
     }
     if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.e. ABW-1)

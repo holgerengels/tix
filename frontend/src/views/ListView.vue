@@ -8,39 +8,15 @@
     </div>
 
     <div class="ticket-list-container">
-        <TicketFilter
-            v-model:type="filterType"
-            v-model:status="filterStatus"
-            v-model:creator="filterCreator"
-            v-model:assignmentType="filterAssignmentType"
-            v-model:dateRange="filterDateRange"
-            v-model:dateFrom="filterDateFrom"
-            v-model:dateTo="filterDateTo"
-            v-model:badges="filterBadges"
-            @apply="applyFilters"
-            @apply-debounced="applyFiltersDebounced"
-            @reset="resetFilters"
+        <TicketListConfig
+            ref="ticketConfigRef"
+            @update="handleViewUpdate"
+            @fetch="handleFetchRequest"
         >
             <template #actions>
-                <wa-button appearance="plain" @click="saveCurrentFilter">Speichern</wa-button>
+                <!-- Actions specific to ListView could go here, or remain empty if TicketListConfig handles everything -->
             </template>
-            <template #footer>
-                <div class="saved-filters" v-if="savedFilters.length > 0">
-                    <span class="saved-filters-label">Gespeicherte Filter:</span>
-                    <wa-tag 
-                        v-for="(filter, index) in savedFilters" 
-                        :key="index" 
-                        with-remove 
-                        @wa-remove="deleteSavedFilter(index)"
-                        @click="applySavedFilter(filter)"
-                        class="saved-filter-tag"
-                        variant="brand"
-                    >
-                        {{ filter.name }}
-                    </wa-tag>
-                </div>
-            </template>
-        </TicketFilter>
+        </TicketListConfig>
 
         <wa-spinner v-if="loading"></wa-spinner>
         
@@ -50,65 +26,64 @@
             <table class="ticket-table">
             <thead>
                 <tr>
-                <th>ID</th>
-                <th class="sortable" @click="toggleSort('type')">Typ <span class="sort-icon">{{ getSortIcon('type') }}</span></th>
-                <th class="sortable" @click="toggleSort('title')">Titel <span class="sort-icon">{{ getSortIcon('title') }}</span></th>
-                <th class="sortable" @click="toggleSort('state')">Status <span class="sort-icon">{{ getSortIcon('state') }}</span></th>
-                <th class="sortable" @click="toggleSort('creator')">Ersteller <span class="sort-icon">{{ getSortIcon('creator') }}</span></th>
-                <th class="sortable" @click="toggleSort('data')">Daten <span class="sort-icon">{{ getSortIcon('data') }}</span></th>
-                <th>Aktionen</th>
+                    <th v-for="col in visibleColumns" :key="col.id" :class="{ sortable: col.sortable }" @click="col.sortable ? toggleSort(col.id) : null">
+                        {{ col.label }} <span v-if="col.sortable" class="sort-icon">{{ getSortIcon(col.id) }}</span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="ticket in sortedTickets" :key="ticket._id">
-                <td data-label="ID">
-                    <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
-                        {{ ticket.id }}
-                    </router-link>
-                </td>
-                <td data-label="Typ">{{ ticket.type }}</td>
-                <td data-label="Titel" class="title-cell"><span><strong>{{ ticket.title }}</strong>
-                        <span 
-                            v-for="badge in ticket.badges" 
-                            :key="badge" 
-                            class="badge-pill"
-                            :class="getBadgeColorClass(badge)"
-                        >
-                            {{ badge }}
-                        </span>
-                </span></td>
-                <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
-                <td data-label="Ersteller">{{ usersStore.getDisplayName(ticket.creator) }}</td>
-                <td data-label="Daten">
-                    <div class="dynamic-data">
-                        <div v-if="hasTemplate(ticket)" class="template-data">
-                            {{ getFormattedData(ticket) }}
-                        </div>
-                        <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
-                            <strong>{{ key }}:</strong> {{ val }}
-                        </span>
-                    </div>
-                </td>
-                <td class="actions-cell" :class="{ 'has-actions': getActions(ticket).length > 0 }">
-                    <template v-for="action in getActions(ticket)" :key="action.name">
-                        <InlineActionPopover 
-                            v-if="action.inline"
-                            :ticket="ticket"
-                            :action="action"
-                            placement="left"
-                            @done="fetchTickets"
-                        />
-                        <wa-button 
-                            v-else
-                            size="small"
-                            appearance="plain" class="action"
-                            :loading="executingActionId === (ticket._id + '-' + action.name)"
-                            @click="handleAction(ticket, action)"
-                        >
-                            {{ action.name }}
-                        </wa-button>
-                    </template>
-                </td>
+                    <td v-for="col in visibleColumns" :key="col.id" :data-label="col.label" :class="{ 'title-cell': col.id === 'title', 'actions-cell': col.id === 'actions', 'has-actions': col.id === 'actions' && getActions(ticket).length > 0 }">
+                        <template v-if="col.id === 'id'">
+                            <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
+                                {{ ticket.id }}
+                            </router-link>
+                        </template>
+                        <template v-else-if="col.id === 'type'">{{ ticket.type }}</template>
+                        <template v-else-if="col.id === 'title'">
+                            <span><strong>{{ ticket.title }}</strong>
+                                <span v-for="badge in ticket.badges" :key="badge" class="badge-pill" :class="getBadgeColorClass(badge)">
+                                    {{ badge }}
+                                </span>
+                            </span>
+                        </template>
+                        <template v-else-if="col.id === 'state'">
+                            <wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag>
+                        </template>
+                        <template v-else-if="col.id === 'creator'">{{ usersStore.getDisplayName(ticket.creator) }}</template>
+                        <template v-else-if="col.id === 'assignee'">{{ ticket.assignee ? usersStore.getDisplayName(ticket.assignee) : '-' }}</template>
+                        <template v-else-if="col.id === 'created'">{{ formatDate(ticket.created) }}</template>
+                        <template v-else-if="col.id === 'data'">
+                            <div class="dynamic-data">
+                                <div v-if="hasTemplate(ticket)" class="template-data">
+                                    {{ getFormattedData(ticket) }}
+                                </div>
+                                <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
+                                    <strong>{{ key }}:</strong> {{ val }}
+                                </span>
+                            </div>
+                        </template>
+                        <template v-else-if="col.id === 'actions'">
+                            <template v-for="action in getActions(ticket)" :key="action.name">
+                                <InlineActionPopover 
+                                    v-if="action.inline"
+                                    :ticket="ticket"
+                                    :action="action"
+                                    placement="left"
+                                    @done="fetchTickets"
+                                />
+                                <wa-button 
+                                    v-else
+                                    size="small"
+                                    appearance="plain" class="action"
+                                    :loading="executingActionId === (ticket._id + '-' + action.name)"
+                                    @click="handleAction(ticket, action)"
+                                >
+                                    {{ action.name }}
+                                </wa-button>
+                            </template>
+                        </template>
+                    </td>
                 </tr>
             </tbody>
             </table>
@@ -125,7 +100,7 @@ import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
-import TicketFilter from '../components/TicketFilter.vue';
+import TicketListConfig from '../components/TicketListConfig.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
@@ -144,72 +119,76 @@ const loading = ref(false);
 const dummyTicket = ref(null);
 const { getStatusColor, getStatusLabel, getActions: _getRawActions } = useTicketAccess(dummyTicket, config, user);
 
-const filterType = ref([]);
-const filterStatus = ref('');
-const filterCreator = ref('');
-const filterAssignmentType = ref('');
-const filterDateRange = ref('');
-const filterDateFrom = ref('');
-const filterDateTo = ref('');
-const filterBadges = ref([]);
+const fetchParams = ref({});
+const visibleColumns = ref([]);
+const sort = ref('');
 
-const sortColumn = ref(null);
-const sortDirection = ref(1);
-
-const savedFilters = ref([]);
 const executingActionId = ref(null);
+const ticketConfigRef = ref(null);
+
+const handleViewUpdate = (payload) => {
+    visibleColumns.value = payload.visibleColumns;
+    sort.value = payload.sort;
+};
+
+const handleFetchRequest = (params) => {
+    fetchParams.value = params;
+    fetchTickets();
+};
 
 const toggleSort = (col) => {
-    if (sortColumn.value === col) {
-        if (sortDirection.value === 1) {
-            sortDirection.value = -1; // 2nd click: desc
-        } else {
-            sortColumn.value = null; // 3rd click: no sort
-            sortDirection.value = 1;
-        }
-    } else {
-        sortColumn.value = col;
-        sortDirection.value = 1; // 1st click: asc
+    if (ticketConfigRef.value) {
+        ticketConfigRef.value.toggleSort(col);
     }
-    syncFiltersToRoute();
 };
 
 const getSortIcon = (col) => {
-    if (sortColumn.value !== col) return '↕';
-    return sortDirection.value === 1 ? '↑' : '↓';
+    if (sort.value === col) return '↑';
+    if (sort.value === '-' + col) return '↓';
+    return '↕';
 };
 
 const sortedTickets = computed(() => {
-    if (!sortColumn.value) return tickets.value;
+    if (!sort.value) return tickets.value;
+
+    const isDesc = sort.value.startsWith('-');
+    const sortCol = isDesc ? sort.value.substring(1) : sort.value;
+    const direction = isDesc ? -1 : 1;
 
     return [...tickets.value].sort((a, b) => {
         let valA = '';
         let valB = '';
 
-        if (sortColumn.value === 'id') {
+        if (sortCol === 'id') {
             valA = a.id || 0;
             valB = b.id || 0;
-            return (valA - valB) * sortDirection.value;
-        } else if (sortColumn.value === 'type') {
+            return (valA - valB) * direction;
+        } else if (sortCol === 'type') {
             valA = a.type || '';
             valB = b.type || '';
-        } else if (sortColumn.value === 'title') {
+        } else if (sortCol === 'title') {
             valA = a.title || '';
             valB = b.title || '';
-        } else if (sortColumn.value === 'state') {
+        } else if (sortCol === 'state') {
             valA = getStatusLabel(a);
             valB = getStatusLabel(b);
-        } else if (sortColumn.value === 'creator') {
+        } else if (sortCol === 'creator') {
             valA = a.creator || '';
             valB = b.creator || '';
-        } else if (sortColumn.value === 'data') {
+        } else if (sortCol === 'assignee') {
+            valA = a.assignee || '';
+            valB = b.assignee || '';
+        } else if (sortCol === 'created') {
+            valA = a.created || '';
+            valB = b.created || '';
+        } else if (sortCol === 'data') {
             // Sort by the rendered text representation
             valA = hasTemplate(a) ? getFormattedData(a) : JSON.stringify(getDynamicFields(a));
             valB = hasTemplate(b) ? getFormattedData(b) : JSON.stringify(getDynamicFields(b));
         }
         
         if (typeof valA === 'string' && typeof valB === 'string') {
-            return valA.localeCompare(valB) * sortDirection.value;
+            return valA.localeCompare(valB) * direction;
         }
         return 0;
     });
@@ -218,66 +197,10 @@ const sortedTickets = computed(() => {
 
 
 
-const loadSavedFilters = () => {
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    try {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-            savedFilters.value = JSON.parse(saved);
-        } else {
-            savedFilters.value = [];
-        }
-    } catch (e) {
-        console.error('Error loading saved filters:', e);
-        savedFilters.value = [];
-    }
-};
-
-const saveCurrentFilter = async () => {
-    const name = await prompt('Bitte gib einen Namen für diesen Filter ein:');
-    if (!name) return;
-
-    const newFilter = {
-        name,
-        type: filterType.value,
-        status: filterStatus.value,
-        creator: filterCreator.value,
-        assignmentType: filterAssignmentType.value,
-        dateRange: filterDateRange.value,
-        dateFrom: filterDateFrom.value,
-        dateTo: filterDateTo.value,
-        badges: [...filterBadges.value]
-    };
-
-    savedFilters.value.push(newFilter);
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    localStorage.setItem(key, JSON.stringify(savedFilters.value));
-};
-
-const deleteSavedFilter = async (index) => {
-    if (await confirm('Soll der Filter wirklich gelöscht werden?')) {
-        savedFilters.value.splice(index, 1);
-        const key = `vin_saved_filters_${currentFilter.value}`;
-        localStorage.setItem(key, JSON.stringify(savedFilters.value));
-    }
-};
-
-const applySavedFilter = (filter) => {
-    filterType.value = filter.type || [];
-    filterStatus.value = filter.status || '';
-    filterCreator.value = filter.creator || '';
-    filterAssignmentType.value = filter.assignmentType || '';
-    filterDateRange.value = filter.dateRange || '';
-    filterDateFrom.value = filter.dateFrom || '';
-    filterDateTo.value = filter.dateTo || '';
-    filterBadges.value = filter.badges || [];
-    applyFilters();
-};
+const currentFilter = computed(() => route.query.filter || 'my');
 
 let lastRequestId = 0;
 let debounceTimer = null;
-
-const currentFilter = computed(() => route.query.filter || 'my');
 
 const pageTitle = computed(() => {
     switch(currentFilter.value) {
@@ -287,48 +210,6 @@ const pageTitle = computed(() => {
         default: return 'Tickets';
     }
 });
-
-const syncFiltersToRoute = () => {
-    const query = { filter: currentFilter.value };
-    
-    if (filterType.value.length) query.type = filterType.value;
-    if (filterBadges.value.length) query.badge = filterBadges.value;
-    if (filterStatus.value) query.status = filterStatus.value;
-    if (filterCreator.value) query.creator = filterCreator.value;
-    if (filterAssignmentType.value) query.assignmentType = filterAssignmentType.value;
-    if (filterDateRange.value) query.dateRange = filterDateRange.value;
-    if (filterDateFrom.value) query.dateFrom = filterDateFrom.value;
-    if (filterDateTo.value) query.dateTo = filterDateTo.value;
-    
-    if (sortColumn.value) {
-        query.sort = sortColumn.value;
-        query.dir = sortDirection.value;
-    }
-
-    router.replace({ query }).catch(() => {});
-};
-
-const initFiltersFromRoute = () => {
-    const parseArray = (val) => {
-        if (!val) return [];
-        return Array.isArray(val) ? val : [val];
-    };
-
-    filterType.value = parseArray(route.query.type);
-    filterBadges.value = parseArray(route.query.badge);
-    
-    filterStatus.value = route.query.status || '';
-    filterCreator.value = route.query.creator || '';
-    filterAssignmentType.value = route.query.assignmentType || '';
-    filterDateRange.value = route.query.dateRange || '';
-    filterDateFrom.value = route.query.dateFrom || '';
-    filterDateTo.value = route.query.dateTo || '';
-
-    sortColumn.value = route.query.sort || null;
-    sortDirection.value = parseInt(route.query.dir) || 1;
-};
-
-
 
 const fetchTickets = async () => {
     if (debounceTimer) {
@@ -342,13 +223,7 @@ const fetchTickets = async () => {
         try {
             const params = {
                 filter: currentFilter.value,
-                type: filterType.value,
-                status: filterStatus.value,
-                creator: filterCreator.value,
-                assignmentType: filterAssignmentType.value,
-                dateFrom: filterDateFrom.value,
-                dateTo: filterDateTo.value,
-                badge: filterBadges.value
+                ...fetchParams.value
             };
 
             const res = await axios.get('/api/tickets', {
@@ -367,29 +242,6 @@ const fetchTickets = async () => {
             }
         }
     }, 300);
-};
-
-const applyFilters = () => {
-    syncFiltersToRoute();
-    fetchTickets();
-};
-
-const applyFiltersDebounced = () => {
-    fetchTickets();
-};
-
-
-
-const resetFilters = () => {
-    filterType.value = [];
-    filterStatus.value = '';
-    filterCreator.value = '';
-    filterAssignmentType.value = '';
-    filterDateRange.value = '';
-    filterDateFrom.value = '';
-    filterDateTo.value = '';
-    filterBadges.value = [];
-    applyFilters();
 };
 
 const getBadgeColorClass = (badge) => {
@@ -567,17 +419,12 @@ const handleAction = async (ticket, action) => {
 };
 
 watch(currentFilter, () => {
-    loading.value = true;
-    initFiltersFromRoute();
-    loadSavedFilters();
-    fetchTickets();
+    // Current filter is handled by TicketView now. TicketView will emit @fetch when it detects a change.
 });
 
 onMounted(async () => {
     await workflow.fetchConfig();
-    initFiltersFromRoute();
-    loadSavedFilters();
-    fetchTickets();
+    // Tickets are fetched by TicketView emitting @fetch on mount
 });
 </script>
 
