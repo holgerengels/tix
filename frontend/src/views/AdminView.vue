@@ -13,22 +13,15 @@
     </div>
 
     <div class="ticket-list-container">
-        <TicketFilter 
-            v-model:type="filterType"
-            v-model:status="filterStatus"
-            v-model:creator="filterCreator"
-            v-model:dateRange="filterDateRange"
-            v-model:dateFrom="filterDateFrom"
-            v-model:dateTo="filterDateTo"
-            v-model:badges="filterBadges"
-            @apply="applyFilters"
-            @apply-debounced="applyFiltersDebounced"
-            @reset="resetFilters"
+        <TicketListConfig 
+            ref="ticketConfigRef"
+            @update="handleViewUpdate"
+            @fetch="handleFetchRequest"
         >
             <template #actions v-if="selectedTickets.length > 0">
                 <span style="font-weight: 500; color: var(--wa-color-brand-20);">{{ selectedTickets.length }} ausgewählt</span>
             </template>
-        </TicketFilter>
+        </TicketListConfig>
 
         <wa-spinner v-if="loading"></wa-spinner>
         
@@ -38,56 +31,59 @@
             <table class="ticket-table">
             <thead>
                 <tr>
-                <th style="width: 40px;">
+                <th style="width: 40px; position: sticky; left: 0; z-index: 11;">
                     <wa-checkbox :checked.prop="allSelected" @change="toggleSelectAll"></wa-checkbox>
                 </th>
-                <th>ID</th>
-                <th class="sortable" @click="toggleSort('type')">Typ <span class="sort-icon">{{ getSortIcon('type') }}</span></th>
-                <th class="sortable" @click="toggleSort('title')">Titel <span class="sort-icon">{{ getSortIcon('title') }}</span></th>
-                <th class="sortable" @click="toggleSort('state')">Status <span class="sort-icon">{{ getSortIcon('state') }}</span></th>
-                <th class="sortable" @click="toggleSort('creator')">Ersteller <span class="sort-icon">{{ getSortIcon('creator') }}</span></th>
-                <th class="sortable" @click="toggleSort('data')">Daten <span class="sort-icon">{{ getSortIcon('data') }}</span></th>
+                <th v-for="col in visibleColumns" :key="col.id" :class="{ sortable: col.sortable }" @click="col.sortable ? toggleSort(col.id) : null">
+                    {{ col.label }} <span v-if="col.sortable" class="sort-icon">{{ getSortIcon(col.id) }}</span>
+                </th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="ticket in sortedTickets" :key="ticket._id" :class="{ 'selected': selectedTickets.includes(ticket._id) }" @click="toggleSelection(ticket._id)">
-                <td @click.stop>
+                <td @click.stop style="position: sticky; left: 0; z-index: 1; background: inherit;">
                     <wa-checkbox :checked.prop="selectedTickets.includes(ticket._id)" @change="toggleSelection(ticket._id)"></wa-checkbox>
                 </td>
-                <td data-label="ID">
-                    <router-link :to="'/tickets/' + ticket.id + '/view'" style="text-decoration: none;" @click.stop>
-                        <span class="id-tag">{{ ticket.id }}</span>
-                    </router-link>
-                </td>
-                <td data-label="Typ">{{ ticket.type }}</td>
-                <td data-label="Titel" class="title-cell"><span><strong>{{ ticket.title }}</strong>
-                        <span 
-                            v-for="badge in ticket.badges" 
-                            :key="badge" 
-                            class="badge-pill"
-                            :class="getBadgeColorClass(badge)"
-                        >
-                            {{ badge }}
+                <td v-for="col in visibleColumns" :key="col.id" :data-label="col.label" :class="{ 'title-cell': col.id === 'title', 'actions-cell': col.id === 'actions' }">
+                    <template v-if="col.id === 'id'">
+                        <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
+                            {{ ticket.id }}
+                        </router-link>
+                    </template>
+                    <template v-else-if="col.id === 'type'">{{ ticket.type }}</template>
+                    <template v-else-if="col.id === 'title'">
+                        <span><strong>{{ ticket.title }}</strong>
+                            <span v-for="badge in ticket.badges" :key="badge" class="badge-pill" :class="getBadgeColorClass(badge)">
+                                {{ badge }}
+                            </span>
                         </span>
-                </span></td>
-                <td data-label="Status"><wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag></td>
-                <td data-label="Ersteller">{{ ticket.creator }}</td>
-                <td data-label="Daten">
-                    <div class="dynamic-data">
-                        <div v-if="hasTemplate(ticket)" class="template-data">
-                            {{ getFormattedData(ticket) }}
+                    </template>
+                    <template v-else-if="col.id === 'state'">
+                        <wa-tag :variant="getStatusColor(ticket)" size="small">{{ getStatusLabel(ticket) }}</wa-tag>
+                    </template>
+                    <template v-else-if="col.id === 'creator'">{{ usersStore.getDisplayName(ticket.creator) }}</template>
+                    <template v-else-if="col.id === 'assignee'">{{ ticket.assignee ? usersStore.getDisplayName(ticket.assignee) : '-' }}</template>
+                    <template v-else-if="col.id === 'created'">{{ formatDate(ticket.created) }}</template>
+                    <template v-else-if="col.id === 'data'">
+                        <div class="dynamic-data">
+                            <div v-if="hasTemplate(ticket)" class="template-data">
+                                {{ getFormattedData(ticket) }}
+                            </div>
+                            <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
+                                <strong>{{ key }}:</strong> {{ val }}
+                            </span>
                         </div>
-                        <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
-                            <strong>{{ key }}:</strong> {{ val }}
-                        </span>
-                    </div>
+                    </template>
+                    <template v-else-if="col.id === 'actions'">
+                        <!-- No actions in admin view typically -->
+                    </template>
                 </td>
                 </tr>
             </tbody>
             </table>
         </div>
     </div>
-    </div>
+  </div>
 </template>
 
 <script setup>
@@ -97,12 +93,14 @@ import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
-import TicketFilter from '../components/TicketFilter.vue';
+import { useUsersStore } from '../stores/users';
+import TicketListConfig from '../components/TicketListConfig.vue';
 import { toast, confirm } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
+const usersStore = useUsersStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -114,18 +112,25 @@ const loading = ref(false);
 const dummyTicket = ref(null);
 const { getStatusColor, getStatusLabel } = useTicketAccess(dummyTicket, config, user);
 
-const filterType = ref([]);
-const filterStatus = ref('');
-const filterCreator = ref('');
-const filterDateRange = ref('');
-const filterDateFrom = ref('');
-const filterDateTo = ref('');
-const filterBadges = ref([]);
+const visibleColumns = ref([]);
+const sort = ref('');
+const fetchParams = ref({});
+const ticketConfigRef = ref(null);
 
 const selectedTickets = ref([]);
 
 let lastRequestId = 0;
 let debounceTimer = null;
+
+const handleViewUpdate = (payload) => {
+    visibleColumns.value = payload.visibleColumns;
+    sort.value = payload.sort;
+};
+
+const handleFetchRequest = (params) => {
+    fetchParams.value = params;
+    fetchTickets();
+};
 
 const fetchTickets = async () => {
     if (debounceTimer) {
@@ -139,12 +144,7 @@ const fetchTickets = async () => {
         try {
             const params = {
                 filter: 'admin', // Admin view sees all tickets, skipping workflow access checks
-                type: filterType.value,
-                status: filterStatus.value,
-                creator: filterCreator.value,
-                dateFrom: filterDateFrom.value,
-                dateTo: filterDateTo.value,
-                badge: filterBadges.value
+                ...fetchParams.value
             };
 
             const res = await axios.get('/api/tickets', {
@@ -166,25 +166,6 @@ const fetchTickets = async () => {
             }
         }
     }, 300);
-};
-
-const applyFilters = () => {
-    fetchTickets();
-};
-
-const applyFiltersDebounced = () => {
-    fetchTickets();
-};
-
-const resetFilters = () => {
-    filterType.value = [];
-    filterStatus.value = '';
-    filterCreator.value = '';
-    filterDateRange.value = '';
-    filterDateFrom.value = '';
-    filterDateTo.value = '';
-    filterBadges.value = [];
-    applyFilters();
 };
 
 // Selection Logic
@@ -209,58 +190,59 @@ const toggleSelectAll = (e) => {
     }
 };
 
-const sortColumn = ref(null);
-const sortDirection = ref(1);
-
 const toggleSort = (col) => {
-    if (sortColumn.value === col) {
-        if (sortDirection.value === 1) {
-            sortDirection.value = -1; // 2nd click: desc
-        } else {
-            sortColumn.value = null; // 3rd click: no sort
-            sortDirection.value = 1;
-        }
-    } else {
-        sortColumn.value = col;
-        sortDirection.value = 1; // 1st click: asc
+    if (ticketConfigRef.value) {
+        ticketConfigRef.value.toggleSort(col);
     }
 };
 
 const getSortIcon = (col) => {
-    if (sortColumn.value !== col) return '↕';
-    return sortDirection.value === 1 ? '↑' : '↓';
+    if (sort.value === col) return '↑';
+    if (sort.value === '-' + col) return '↓';
+    return '↕';
 };
 
 const sortedTickets = computed(() => {
-    if (!sortColumn.value) return tickets.value;
+    if (!sort.value) return tickets.value;
+
+    const isDesc = sort.value.startsWith('-');
+    const sortCol = isDesc ? sort.value.substring(1) : sort.value;
+    const direction = isDesc ? -1 : 1;
 
     return [...tickets.value].sort((a, b) => {
         let valA = '';
         let valB = '';
 
-        if (sortColumn.value === 'id') {
+        if (sortCol === 'id') {
             valA = a.id || 0;
             valB = b.id || 0;
-            return (valA - valB) * sortDirection.value;
-        } else if (sortColumn.value === 'type') {
+            return (valA - valB) * direction;
+        } else if (sortCol === 'type') {
             valA = a.type || '';
             valB = b.type || '';
-        } else if (sortColumn.value === 'title') {
+        } else if (sortCol === 'title') {
             valA = a.title || '';
             valB = b.title || '';
-        } else if (sortColumn.value === 'state') {
+        } else if (sortCol === 'state') {
             valA = getStatusLabel(a);
             valB = getStatusLabel(b);
-        } else if (sortColumn.value === 'creator') {
-            valA = a.creator || '';
-            valB = b.creator || '';
-        } else if (sortColumn.value === 'data') {
+        } else if (sortCol === 'creator') {
+            valA = usersStore.getDisplayName(a.creator) || '';
+            valB = usersStore.getDisplayName(b.creator) || '';
+        } else if (sortCol === 'assignee') {
+            valA = usersStore.getDisplayName(a.assignee) || '';
+            valB = usersStore.getDisplayName(b.assignee) || '';
+        } else if (sortCol === 'created') {
+            valA = new Date(a.created || 0).getTime();
+            valB = new Date(b.created || 0).getTime();
+            return (valA - valB) * direction;
+        } else if (sortCol === 'data') {
             valA = hasTemplate(a) ? getFormattedData(a) : JSON.stringify(getDynamicFields(a));
             valB = hasTemplate(b) ? getFormattedData(b) : JSON.stringify(getDynamicFields(b));
         }
         
         if (typeof valA === 'string' && typeof valB === 'string') {
-            return valA.localeCompare(valB) * sortDirection.value;
+            return valA.localeCompare(valB) * direction;
         }
         return 0;
     });
@@ -296,7 +278,6 @@ const deleteSelected = async () => {
     }
 };
 
-
 const getBadgeColorClass = (badge) => {
     switch (badge) {
         case 'dringend':
@@ -311,23 +292,6 @@ const getBadgeColorClass = (badge) => {
             return 'badge-green';
         default:
             return 'badge-gray';
-    }
-};
-
-const getBadgeVariant = (badge) => {
-    switch (badge) {
-        case 'dringend':
-        case 'wichtig':
-        case 'eskaliert':
-            return 'danger';
-        case 'langfristig':
-        case 'unwichtig':
-            return 'brand';
-        case 'obsolet':
-        case 'wartet':
-            return 'success';
-        default:
-            return 'neutral';
     }
 };
 
@@ -413,8 +377,13 @@ onMounted(async () => {
         return;
     }
 
+    // Load users if needed
+    if (Object.keys(usersStore.users).length === 0) {
+        usersStore.fetchUsers();
+    }
+
     await workflow.fetchConfig();
-    fetchTickets();
+    // fetchTickets will be triggered by TicketListConfig component emitting @fetch
 });
 </script>
 
@@ -632,5 +601,16 @@ onMounted(async () => {
 }
 .is-mobile .header h2 {
     font-size: 1.2rem;
+}
+.ticket-link {
+    text-decoration: none;
+    white-space: nowrap;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.ticket-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
 }
 </style>
