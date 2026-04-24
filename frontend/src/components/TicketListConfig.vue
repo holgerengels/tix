@@ -13,6 +13,16 @@
             {{ filter.name }}
         </wa-tag>
     </div>
+    <div class="summary-actions">
+        <wa-button 
+            class="summary-reset-btn" 
+            appearance="plain" 
+            size="small" 
+            @click.prevent.stop="resetInternalFilters"
+        >
+            Zurücksetzen
+        </wa-button>
+    </div>
 </summary>
     <div class="view-config-container">
         <!-- Filter Section -->
@@ -482,8 +492,18 @@ defineExpose({ toggleSort });
     border-right: 2px solid var(--wa-color-neutral-40);
     border-bottom: 2px solid var(--wa-color-neutral-40);
     transform: rotate(45deg);
-    margin-left: auto;
+    margin-left: 1rem;
     transition: transform 0.2s;
+}
+
+.summary-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.filter-details[open] .summary-reset-btn {
+    display: none;
 }
 
 .filter-details[open] summary::after {
@@ -525,6 +545,10 @@ defineExpose({ toggleSort });
     flex-wrap: wrap;
     align-items: center;
     gap: 1.5rem;
+}
+
+.saved-filters {
+    margin-left: 1rem;
 }
 
 .filter-actions {
