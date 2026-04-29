@@ -138,7 +138,7 @@
     "states": [
         {
             "name": "offen",
-            "label": "offen",
+            "label": "offen *",
             "color": "blue"
         },
         {
@@ -158,8 +158,8 @@
         },
         {
             "name": "offen.storniert",
-            "label": "storniere...",
-            "color": "yellow"
+            "label": "austragen",
+            "color": "blue"
         },
         {
             "name": "geschlossen.storniert",
@@ -173,7 +173,7 @@
         },
         {
             "name": "geschlossen",
-            "label": "geschlossen",
+            "label": "geschlossen *",
             "color": "green"
         }
     ]

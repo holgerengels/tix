@@ -263,7 +263,7 @@
     "states": [
         {
             "name": "offen",
-            "label": "offen",
+            "label": "offen *",
             "color": "blue"
         },
         {
@@ -293,7 +293,7 @@
         },
         {
             "name": "geschlossen",
-            "label": "geschlossen",
+            "label": "geschlossen *",
             "color": "green"
         }
     ]
