@@ -190,7 +190,7 @@
     "states": [
         {
             "name": "offen.*",
-            "label": "offen *",
+            "label": "offen (alle)",
             "color": "blue"
         },
         {
