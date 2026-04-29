@@ -4,11 +4,6 @@
     "template": "{{ticket.dateFrom}} - {{ticket.dateUntil}}",
     "fields": [
         {
-            "name": "title",
-            "default": "Krankmeldung",
-            "readonly": true
-        },
-        {
             "name": "dateFrom",
             "label": "Datum von",
             "type": "Date",
@@ -176,7 +171,7 @@
     "states": [
         {
             "name": "offen",
-            "label": "offen",
+            "label": "offen (alle)",
             "color": "blue"
         },
         {

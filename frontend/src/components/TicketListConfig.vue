@@ -174,8 +174,8 @@ const availableTypes = computed(() => {
 
 const stateTranslations = computed(() => {
     const translations = {
-      'offen.*': 'offen',
-      'geschlossen.*': 'geschlossen'
+      'offen.*': 'offen (alle)',
+      'geschlossen.*': 'geschlossen (alle)'
     };
     if (config.value) {
         Object.values(config.value).forEach(wf => {
