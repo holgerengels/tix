@@ -387,7 +387,17 @@ const saveCurrentFilter = async () => {
         cols: visibleColumns.value.map(c => c.id).join(',')
     };
 
-    savedFilters.value.push(newFilter);
+    const existingIndex = savedFilters.value.findIndex(f => f.name === name);
+    if (existingIndex >= 0) {
+        if (await confirm(`Eine Ansicht mit dem Namen "${name}" existiert bereits. Überschreiben?`)) {
+            savedFilters.value[existingIndex] = newFilter;
+        } else {
+            return;
+        }
+    } else {
+        savedFilters.value.push(newFilter);
+    }
+
     const key = `vin_saved_filters_${currentFilter.value}`;
     localStorage.setItem(key, JSON.stringify(savedFilters.value));
 };
