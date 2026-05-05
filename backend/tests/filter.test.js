@@ -28,10 +28,10 @@ describe('Ticket Filtering via Status', () => {
     beforeEach(async () => {
         // Create test tickets directly in DB to bypass workflow restrictions for testing
         await Ticket.create([
-            { type: 'Hausmeisterauftrag', title: 'Ticket 1', creator: 'lehrer1', state: 'offen.neu' },
-            { type: 'Hausmeisterauftrag', title: 'Ticket 2', creator: 'lehrer1', state: 'offen.inArbeit' },
-            { type: 'IT-Ticket', title: 'Ticket 3', creator: 'lehrer1', state: 'offen.neu' },
-            { type: 'Hausmeisterauftrag', title: 'Ticket 4', creator: 'lehrer1', state: 'geschlossen.ok' }
+            { id: 'TEST-1', type: 'Hausmeisterauftrag', title: 'Ticket 1', creator: 'lehrer1', state: 'offen.neu' },
+            { id: 'TEST-2', type: 'Hausmeisterauftrag', title: 'Ticket 2', creator: 'lehrer1', state: 'offen.inArbeit' },
+            { id: 'TEST-3', type: 'IT-Ticket', title: 'Ticket 3', creator: 'lehrer1', state: 'offen.neu' },
+            { id: 'TEST-4', type: 'Hausmeisterauftrag', title: 'Ticket 4', creator: 'lehrer1', state: 'geschlossen.ok' }
         ]);
     });
 

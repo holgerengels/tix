@@ -15,16 +15,20 @@ try {
     console.warn(`[DB] Warning: Error reading settings file: ${err.message}`);
 }
 
-const MONGO_URI = settings.database && settings.database.url
+let MONGO_URI = settings.database && settings.database.url
     ? settings.database.url
     : 'mongodb://admin:password@localhost:27017/tickets?authSource=admin';
+
+if (process.env.NODE_ENV === 'test') {
+    MONGO_URI = MONGO_URI.replace('/tickets?', '/tickets_test?');
+}
 
 const connectDB = async () => {
     try {
         mongoose.connection.on('disconnected', () => {
             console.error('❌ [DB] MongoDB disconnected! (Verbindung zur Datenbank verloren)');
         });
-        
+
         mongoose.connection.on('error', (err) => {
             console.error('❌ [DB] MongoDB Fehler:', err.message);
         });
