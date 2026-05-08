@@ -73,8 +73,8 @@
         {
             "name": "create",
             "groups": [
-                "Netzwerkteam",
-                "Schulleitung"
+                "Lehrkräfte",
+                "Sekretariat"
             ]
         },
         {
