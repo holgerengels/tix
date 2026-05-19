@@ -167,6 +167,11 @@
             "color": "red"
         },
         {
+            "name": "geschlossen.ok",
+            "label": "ok",
+            "color": "green"
+        },
+        {
             "name": "geschlossen.*",
             "label": "geschlossen (alle)",
             "color": "green"
