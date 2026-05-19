@@ -142,7 +142,7 @@ describe('Workflow: Krankmeldung', () => {
             });
 
         expect(resDone.status).toBe(200);
-        expect(resDone.body.state).toBe('offen.erledigt');
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
 
         // Publisher check
         await Log.updateMany({}, { timestamp: new Date(Date.now() - 60000) });
@@ -159,21 +159,7 @@ describe('Workflow: Krankmeldung', () => {
         expect(notifs.some(n => n.targetUser === 'stundenplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
         clearTestNotifications();
 
-        // --- 3. lehrer1 acknowledges t1 via "ok" ---
-        const lehrer1User = { username: 'lehrer1', groups: ['Lehrkräfte'] };
-        const lehrer1ActionsForT1 = getActionsForTicket(t1, lehrer1User, 'my');
-        // Actually, "ok" shouldn't be optional? Let's check config: ok is NOT optional. It's a required action for creator on offen.erledigt.
-        // Wait, 'ok' in Krankmeldung config: optional is NOT true. It's just a regular action.
-        const lehrerActionAssigned = getActionsForTicket(resDone.body, lehrer1User, 'all');
-        expect(lehrerActionAssigned.map(a => a.name)).toContain('ok');
 
-        const resOk = await request(app)
-            .post(`/api/tickets/${resDone.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
 
         // --- 4. lehrer1 cancels t2 via "stornieren" ---
         const resCancel = await request(app)

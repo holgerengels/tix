@@ -73,16 +73,7 @@ describe('Workflow: Stundenplan-Ticket', () => {
             });
 
         expect(resErledigt.status).toBe(200);
-        expect(resErledigt.body.state).toBe('offen.erledigt');
-
-        // --- 4. creator acknowledges ---
-        const resOk = await request(app)
-            .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resErledigt.body.state).toBe('geschlossen.erledigt');
     });
 
     it('should allow stundenplaner to reject a ticket', async () => {
@@ -99,16 +90,7 @@ describe('Workflow: Stundenplan-Ticket', () => {
             .send({ actionName: 'ablehnen' });
 
         expect(resReject.status).toBe(200);
-        expect(resReject.body.state).toBe('offen.abgelehnt');
-
-        // Creator acknowledges rejection
-        const resOk = await request(app)
-            .post(`/api/tickets/${res.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resReject.body.state).toBe('geschlossen.abgelehnt');
     });
 
     it('should deny creation by unauthorized groups', async () => {

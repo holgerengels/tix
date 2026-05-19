@@ -92,15 +92,6 @@ describe('Workflow: Hausmeisterauftrag', () => {
             });
 
         expect(resDone.status).toBe(200);
-        expect(resDone.body.state).toBe('offen.erledigt');
-
-        // --- 3. Schulleiter acknowledges ---
-        const resOk = await request(app)
-            .post(`/api/tickets/${resDone.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.schulleiter}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
     });
 });

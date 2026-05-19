@@ -27,17 +27,17 @@ describe('Security and Authorization', () => {
     let ticketId;
 
     beforeEach(async () => {
-        // Create an IT-Ticket as lehrer1
+        // Create a Stundenplan-Ticket as stundenplaner
         const res = await request(app)
             .post('/api/tickets')
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
             .send({
-                type: 'IT-Ticket',
+                type: 'Stundenplan-Ticket',
                 title: 'Security Test Ticket',
                 description: 'Testticket',
-                category: 'Hardware',
-                location: 'Raum 100',
-                device: 'PC'
+                day: 'Montag',
+                dateFrom: '2025-01-01',
+                lessons: { min: 1, max: 2 }
             });
         
         expect(res.status).toBe(201);
@@ -45,15 +45,15 @@ describe('Security and Authorization', () => {
     });
 
     it('should prevent reading and writing tickets for unauthorized users', async () => {
-        // First verify that authorized user (lehrer1) CAN read the ticket in the list.
+        // First verify that authorized user (stundenplaner) CAN read the ticket in the list.
         const readAuthorizedRes = await request(app)
             .get(`/api/tickets`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`);
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`);
         expect(readAuthorizedRes.status).toBe(200);
         const authorizedTickets = readAuthorizedRes.body.tickets || readAuthorizedRes.body;
         expect(authorizedTickets.some(t => t._id === ticketId)).toBe(true);
 
-        // An IT-Ticket created by lehrer1 shouldn't be accessible by hausmeister
+        // A Stundenplan-Ticket created by stundenplaner shouldn't be accessible by hausmeister
         // Test reading the ticket in the list
         const readRes = await request(app)
             .get(`/api/tickets`)
@@ -73,25 +73,25 @@ describe('Security and Authorization', () => {
     });
 
     it('should prevent performing unauthorized actions on tickets', async () => {
-        // To process (bearbeiten) an IT-Ticket, the user must be in Netzwerkteam (or administration)
+        // To process (bearbeiten) a Stundenplan-Ticket, the user must be in Stundenplanung
         // hausmeister shouldn't be able to process it
         const actionRes = await request(app)
             .post(`/api/tickets/${ticketId}/action`)
             .set('Authorization', `Bearer ${tokens.hausmeister}`)
             .send({
                 actionName: 'bearbeiten',
-                formData: { assignee: 'netzwerker' }
+                formData: { assignee: 'stundenplaner' }
             });
             
         expect(actionRes.status).toBe(403);
 
-        // verify that netzwerker can process it
+        // verify that stundenplaner can process it
         const actionAuthorizedRes = await request(app)
             .post(`/api/tickets/${ticketId}/action`)
-            .set('Authorization', `Bearer ${tokens.netzwerker}`)
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
             .send({
                 actionName: 'bearbeiten',
-                formData: { assignee: 'netzwerker' }
+                formData: { assignee: 'stundenplaner' }
             });
             
         expect(actionAuthorizedRes.status).toBe(200);

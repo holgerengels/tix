@@ -9,9 +9,9 @@ Ein IT-Ticket wird verwendet, um Störungen, Reparaturen oder Support-Anfragen a
 
 ### Prozess
 
-[neu] → [in Arbeit] → [erledigt] → [geschlossen]
+[neu] → [in Arbeit] → [erledigt]
 
-[neu] → [abgelehnt] → [abgelehnt]
+[neu] → [abgelehnt]
 
 [neu] / [in Arbeit] → [storniert]
 
