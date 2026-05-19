@@ -1,5 +1,15 @@
 
 
+jest.mock('../../src/ki', () => ({
+    askKI: jest.fn(async (prompt) => {
+        if (prompt.includes('extrem frustriert')) return 'ESKALIERT';
+        if (prompt.includes('Raum oder Ort')) return 'Raum 101';
+        return 'OK';
+    }),
+    askKIWithMessages: jest.fn(async () => 'OK'),
+    getClient: jest.fn(async () => ({}))
+}));
+
 const request = require('supertest');
 const app = require('../../src/server'); // This will start connecting to DB asynchronously
 const mongoose = require('mongoose');
@@ -23,13 +33,7 @@ beforeAll(async () => {
     }
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Dynamically spy on askKI
-    jest.spyOn(ki, 'askKI').mockImplementation(async (prompt) => {
-        console.log("KI SPY CALLED:", prompt);
-        if (prompt.includes('extrem frustriert')) return 'ESKALIERT';
-        if (prompt.includes('Raum oder Ort')) return 'Raum 101';
-        return 'OK';
-    });
+
 
     tokens = getTokens();
     loadBots();
@@ -124,15 +128,6 @@ describe('Workflow: IT-Ticket', () => {
             });
 
         expect(resDone.status).toBe(200);
-        expect(resDone.body.state).toBe('offen.erledigt');
-
-        // 4. Lehrer1 acknowledges
-        const resOk = await request(app)
-            .post(`/api/tickets/${resDone.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
     });
 });

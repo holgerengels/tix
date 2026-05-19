@@ -12,6 +12,6 @@ Ein Stundenplan-Ticket wird verwendet, um langfristige Stundenplanänderungen zu
 
 ### Prozess
 
-[neu] → [in Arbeit] → [erledigt] → [ok]
+[neu] → [in Arbeit] → [erledigt]
 
 * Die Bearbeitung erfolgt durch das Stundenplanteam

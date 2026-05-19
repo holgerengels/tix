@@ -11,8 +11,8 @@ Ein Hausmeister-Ticket wird verwendet, um Arbeitsaufträge an den Hausmeister zu
 
 ### Prozess
 
-[neu] → [genehmigt] → [in Arbeit] → [erledigt] → [ok]
+[neu] → [genehmigt] → [in Arbeit] → [erledigt]
 
-[neu] → [abgelehnt] → [ok]
+[neu] → [abgelehnt]
 
-* Die Genehigung erfolgt durch die Schulleitung
+* Die Genehmigung erfolgt durch die Schulleitung
