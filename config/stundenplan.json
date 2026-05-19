@@ -64,7 +64,7 @@
                         "Schulleitung",
                         "Stundenplanung"
                     ],
-                    "script": "ticket.state = 'offen.abgelehnt'"
+                    "script": "ticket.state = 'geschlossen.abgelehnt'"
                 },
                 {
                     "name": "an Vertretungsplanung",
@@ -88,21 +88,6 @@
                     ],
                     "optional": true,
                     "script": "ticket.state = 'geschlossen.storniert'"
-                }
-            ]
-        },
-        {
-            "states": [
-                "offen.erledigt",
-                "offen.abgelehnt"
-            ],
-            "actions": [
-                {
-                    "name": "ok",
-                    "groups": [
-                        "@creator"
-                    ],
-                    "script": "ticket.state = 'geschlossen.ok'"
                 }
             ]
         }
@@ -174,11 +159,11 @@
             "actions": [
                 {
                     "name": "abgelehnt",
-                    "script": "ticket.state = 'offen.abgelehnt'"
+                    "script": "ticket.state = 'geschlossen.abgelehnt'"
                 },
                 {
                     "name": "erledigt",
-                    "script": "ticket.state = 'offen.erledigt'"
+                    "script": "ticket.state = 'geschlossen.erledigt'"
                 },
                 {
                     "name": "in Arbeit",
@@ -204,28 +189,18 @@
             "color": "yellow"
         },
         {
-            "name": "offen.erledigt",
+            "name": "geschlossen.erledigt",
             "label": "erledigt",
             "color": "green"
         },
         {
-            "name": "offen.abgelehnt",
+            "name": "geschlossen.abgelehnt",
             "label": "abgelehnt",
             "color": "red"
         },
         {
             "name": "geschlossen.storniert",
             "label": "storniert",
-            "color": "red"
-        },
-        {
-            "name": "geschlossen.ok",
-            "label": "ok",
-            "color": "green"
-        },
-        {
-            "name": "geschlossen.abgelehnt",
-            "label": "abgelehnt",
             "color": "red"
         },
         {

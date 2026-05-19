@@ -9,9 +9,9 @@ Ein Abwesenheitsantrag wird für Dienstgeschäfte, Fortbildungen und andere Abwe
 
 ### Prozess
 
-[neu] → [genehmigt] → [in Arbeit] → [erledigt] → [ok]
+[neu] → [genehmigt] → [in Arbeit] → [erledigt]
 
-[neu] → [abgelehnt] → [ok]
+[neu] → [abgelehnt]
 
 * Die Genehmigung erfolgt durch die Schulleitung
 * Die Bearbeitung erfolgt durch das Vertretungsplanteam

@@ -130,9 +130,9 @@ describe('getVisibleTicketTypes', () => {
     });
 
     it('should exclude types the user group cannot create', () => {
-        // Hausmeister group should not be able to create IT-Ticket
+        // Hausmeister group should not be able to create Stundenplan-Ticket
         const types = getVisibleTicketTypes(['Hausmeister']);
-        expect(types).not.toContain('IT-Ticket');
+        expect(types).not.toContain('Stundenplan-Ticket');
         expect(types).not.toContain('Abwesenheitsantrag');
     });
 

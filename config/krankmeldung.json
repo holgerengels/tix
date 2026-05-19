@@ -91,20 +91,6 @@
                     "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]
-        },
-        {
-            "states": [
-                "offen.erledigt"
-            ],
-            "actions": [
-                {
-                    "name": "ok",
-                    "groups": [
-                        "@creator"
-                    ],
-                    "script": "ticket.state = 'geschlossen.ok'"
-                }
-            ]
         }
     ],
     "access": [
@@ -159,7 +145,7 @@
             "actions": [
                 {
                     "name": "erledigt",
-                    "script": "ticket.state = 'offen.erledigt'"
+                    "script": "ticket.state = 'geschlossen.erledigt'"
                 },
                 {
                     "name": "in Arbeit",
@@ -185,7 +171,7 @@
             "color": "yellow"
         },
         {
-            "name": "offen.erledigt",
+            "name": "geschlossen.erledigt",
             "label": "erledigt",
             "color": "green"
         },
@@ -195,13 +181,8 @@
             "color": "red"
         },
         {
-            "name": "geschlossen.ok",
-            "label": "ok",
-            "color": "green"
-        },
-        {
-            "name": "geschlossen",
-            "label": "geschlossen",
+            "name": "geschlossen.*",
+            "label": "geschlossen (alle)",
             "color": "green"
         }
     ]

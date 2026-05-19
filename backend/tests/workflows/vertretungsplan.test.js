@@ -75,16 +75,7 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
             });
 
         expect(resErledigt.status).toBe(200);
-        expect(resErledigt.body.state).toBe('offen.erledigt');
-
-        // --- 4. lehrer1 (creator) acknowledges ---
-        const resOk = await request(app)
-            .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resErledigt.body.state).toBe('geschlossen.erledigt');
     });
 
     it('should allow creator to cancel their ticket', async () => {
@@ -118,7 +109,7 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
             .send({ actionName: 'ablehnen' });
 
         expect(resReject.status).toBe(200);
-        expect(resReject.body.state).toBe('offen.abgelehnt');
+        expect(resReject.body.state).toBe('geschlossen.abgelehnt');
     });
 
     it('should deny actions by unauthorized users', async () => {

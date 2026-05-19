@@ -2,8 +2,8 @@
 
 Ein Bewirtungsauftrag wird verwendet, um die Bewirtung für eine Veranstaltung zu bestellen.
 
-[neu] → [genehmigt] → [in Arbeit] → [erledigt] → [ok]
+[neu] → [genehmigt] → [in Arbeit] → [erledigt]
 
-[neu] → [abgelehnt] → [ok]
+[neu] → [abgelehnt]
 
-* Die Genehigung erfolgt durch die Schulleitung
+* Die Genehmigung erfolgt durch die Schulleitung

@@ -88,16 +88,7 @@ describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
             });
 
         expect(resDone.status).toBe(200);
-        expect(resDone.body.state).toBe('offen.erledigt');
-
-        // --- 4. Creator (lehrer1) acknowledges ---
-        const resOk = await request(app)
-            .post(`/api/tickets/${resDone.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
     });
 
     it('should allow Abteilungsleitung to reject the ticket', async () => {
@@ -114,15 +105,6 @@ describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
             .send({ actionName: 'ablehnen', comment: 'Bitte anderes Datum wählen.' });
 
         expect(resReject.status).toBe(200);
-        expect(resReject.body.state).toBe('offen.abgelehnt');
-
-        // Creator acknowledges rejection
-        const resOk = await request(app)
-            .post(`/api/tickets/${resReject.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-
-        expect(resOk.status).toBe(200);
-        expect(resOk.body.state).toBe('geschlossen.ok');
+        expect(resReject.body.state).toBe('geschlossen.abgelehnt');
     });
 });

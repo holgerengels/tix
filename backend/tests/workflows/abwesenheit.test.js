@@ -209,7 +209,7 @@ describe('Workflow: Abwesenheit', () => {
             .send({ actionName: 'ablehnen', comment: 'Nein' });
 
         expect(resReject.status).toBe(200);
-        expect(resReject.body.state).toBe('offen.abgelehnt');
+        expect(resReject.body.state).toBe('geschlossen.abgelehnt');
 
         await Log.updateMany({}, { timestamp: new Date(Date.now() - 60000) });
         await checkUnpublishedLogs();
@@ -235,22 +235,13 @@ describe('Workflow: Abwesenheit', () => {
         const myT2_afterSL = resMy.body.find(t => t.id === t2.id);
 
         expect(myT1_afterSL.state).toBe('offen.genehmigt');
-        expect(myT2_afterSL.state).toBe('offen.abgelehnt');
+        expect(myT2_afterSL.state).toBe('geschlossen.abgelehnt');
 
         // stornieren is still optional for genehmigt, but NO optional actions for abgelehnt
         const myT1Actions_afterSL = getActionsForTicket(myT1_afterSL, { username: 'lehrer1', groups: ['Lehrkräfte'] }, 'my');
         const myT2Actions = getActionsForTicket(myT2_afterSL, { username: 'lehrer1', groups: ['Lehrkräfte'] }, 'my');
         expect(myT1Actions_afterSL.map(a => a.name)).toEqual(['stornieren']);
         expect(myT2Actions.map(a => a.name)).toEqual([]);
-
-        // lehrer1 should see "ok" for the rejected ticket in "Mir Zugewiesen"
-        let resAssignedL1 = await request(app)
-            .get('/api/tickets?filter=assigned')
-            .set('Authorization', `Bearer ${tokens.lehrer1}`);
-        const assignedT2_L1 = resAssignedL1.body.find(t => t.id === t2.id);
-        expect(assignedT2_L1).toBeDefined();
-        const l1AssignedActions = getActionsForTicket(assignedT2_L1, { username: 'lehrer1', groups: ['Lehrkräfte'] }, 'assigned');
-        expect(l1AssignedActions.map(a => a.name)).toEqual(['ok']);
 
 
         // --- 4. stundenplaner sees approved ticket and assigns to himself ---
@@ -284,7 +275,7 @@ describe('Workflow: Abwesenheit', () => {
             .send({ actionName: 'bearbeiten', formButtonName: 'erledigt' });
 
         expect(resDone.status).toBe(200);
-        expect(resDone.body.state).toBe('offen.erledigt');
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
 
         // Publisher check
         await Log.updateMany({}, { timestamp: new Date(Date.now() - 60000) });
@@ -294,33 +285,7 @@ describe('Workflow: Abwesenheit', () => {
         expect(notifs.filter(n => n.targetUser === 'lehrer1').length).toBeGreaterThan(0);
         clearTestNotifications();
 
-        // --- 6. lehrer1 acknowledges (ok) t1 and t2 ---
-        resAssignedL1 = await request(app)
-            .get('/api/tickets?filter=assigned')
-            .set('Authorization', `Bearer ${tokens.lehrer1}`);
 
-        const assignedT1_final = resAssignedL1.body.find(t => t.id === t1.id);
-        const assignedT2_final = resAssignedL1.body.find(t => t.id === t2.id);
-
-        // Both should now have "ok" action in assigned
-        const assignedT1FinalActions = getActionsForTicket(assignedT1_final, { username: 'lehrer1', groups: ['Lehrkräfte'] }, 'assigned');
-        const assignedT2FinalActions = getActionsForTicket(assignedT2_final, { username: 'lehrer1', groups: ['Lehrkräfte'] }, 'assigned');
-        expect(assignedT1FinalActions.map(a => a.name)).toEqual(['ok']);
-        expect(assignedT2FinalActions.map(a => a.name)).toEqual(['ok']);
-
-        const resOk1 = await request(app)
-            .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-        expect(resOk1.status).toBe(200);
-        expect(resOk1.body.state).toBe('geschlossen.ok');
-
-        const resOk2 = await request(app)
-            .post(`/api/tickets/${t2._id}/action`)
-            .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ actionName: 'ok' });
-        expect(resOk2.status).toBe(200);
-        expect(resOk2.body.state).toBe('geschlossen.ok');
     });
 
     it('should correctly restrict access to actions according to workflow groups', async () => {
