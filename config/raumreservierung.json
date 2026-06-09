@@ -69,6 +69,16 @@
                     ],
                     "optional": true,
                     "form": "verschieben"
+                },
+                {
+                    "name": "Subticket erstellen",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "subTickets": [
+                        "Bewirtungsauftrag"
+                    ]
                 }
             ]
         }
