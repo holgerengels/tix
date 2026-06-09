@@ -3,7 +3,7 @@
     "abbreviation": "RES",
     "subTickets": {
         "allowedTypes": [
-            "Bewirtung"
+            "Bewirtungsauftrag"
         ],
         "logStatusToParent": true
     },
