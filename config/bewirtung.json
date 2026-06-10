@@ -65,7 +65,7 @@
         },
         {
             "name": "breakfastTime",
-            "label": "Bereitstellung bis:",
+            "label": "Bereitstellung bis",
             "type": "Time",
             "readonly": "{{ticket.breakfast === false}}",
             "required": "{{ticket.breakfast === true}}"
@@ -83,7 +83,7 @@
         },
         {
             "name": "lunchTime",
-            "label": "Uhrzeit:",
+            "label": "Uhrzeit",
             "type": "Time",
             "readonly": "{{ticket.lunch === false}}",
             "required": "{{ticket.lunch === true}}"
@@ -113,10 +113,18 @@
         },
         {
             "name": "afternoonTime",
-            "label": "Bereitstellung bis:",
+            "label": "Bereitstellung bis",
             "type": "Time",
             "readonly": "{{ticket.afternoon === false}}",
             "required": "{{ticket.afternoon === true}}"
+        },
+        {
+            "name": "endTime",
+            "label": "Ende der Veranstaltung",
+            "help": "Wann darf aufgeräumt werden?",
+            "type": "Time",
+            "readonly": "{{ticket.breakfast === false && ticket.afternoon === false}}",
+            "required": "{{ticket.breakfast === true || ticket.afternoon === true}}"
         }
     ],
     "grid": [
@@ -127,6 +135,7 @@
         "breakfast bfDrinksAndFood bfDrinksAndFood breakfastTime",
         "lunch lunchReservation lunchReservation lunchTime",
         "afternoon afDrinksAndFood afDrinksAndFood afternoonTime",
+        "endTime endTime endTime endTime",
         "description description description description"
     ],
     "workflow": [
