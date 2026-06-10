@@ -266,6 +266,11 @@
             "color": "blue"
         },
         {
+            "name": "offen.genehmigt",
+            "label": "genehmigt",
+            "color": "yellow"
+        },
+        {
             "name": "offen.inArbeit",
             "label": "in Arbeit",
             "color": "yellow"
