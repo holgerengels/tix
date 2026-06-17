@@ -192,25 +192,25 @@ router.get('/tickets', verifyToken, async (req, res) => {
         if (baseQuery.$or) delete baseQuery.$or;
 
     } else if (filter === 'all' || !filter) {
-        const conditions = [];
-        const allWorkflows = workflowEngine.getWorkflows();
-        Object.values(allWorkflows).forEach(wf => {
-            const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-            const groups = [];
-            if (readAccess) groups.push(...readAccess.groups);
-            if (groups.some(g => user.groups.includes(g))) {
-                conditions.push({ type: wf.type });
-            }
-        });
-
-        const accessOr = [];
-        if (conditions.length > 0) accessOr.push(...conditions);
-        accessOr.push({ creator: user.username });
-        accessOr.push({ assignee: user.username });
-
-        if (baseQuery.$or) {
-            baseQuery.$or = accessOr;
+        if (user.groups.includes('Administration')) {
+            // Administrators have global read access to all tickets
         } else {
+            const conditions = [];
+            const allWorkflows = workflowEngine.getWorkflows();
+            Object.values(allWorkflows).forEach(wf => {
+                const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
+                const groups = [];
+                if (readAccess) groups.push(...readAccess.groups);
+                if (groups.some(g => user.groups.includes(g))) {
+                    conditions.push({ type: wf.type });
+                }
+            });
+
+            const accessOr = [];
+            if (conditions.length > 0) accessOr.push(...conditions);
+            accessOr.push({ creator: user.username });
+            accessOr.push({ assignee: user.username });
+
             baseQuery.$or = accessOr;
         }
     }
@@ -744,23 +744,28 @@ router.get('/logs', verifyToken, async (req, res) => {
             ticketBaseQuery.type = type;
         }
 
-        const accessOr = [];
-        Object.values(wfConfig).forEach(wf => {
-            const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
-            if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
-                accessOr.push({ type: wf.type });
-            }
-        });
+        let finalTicketQuery;
+        if (user.groups.includes('Administration')) {
+            finalTicketQuery = ticketBaseQuery;
+        } else {
+            const accessOr = [];
+            Object.values(wfConfig).forEach(wf => {
+                const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
+                if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                    accessOr.push({ type: wf.type });
+                }
+            });
 
-        accessOr.push({ creator: user.username });
-        accessOr.push({ assignee: user.username });
+            accessOr.push({ creator: user.username });
+            accessOr.push({ assignee: user.username });
 
-        const finalTicketQuery = {
-            $and: [
-                ticketBaseQuery,
-                { $or: accessOr }
-            ]
-        };
+            finalTicketQuery = {
+                $and: [
+                    ticketBaseQuery,
+                    { $or: accessOr }
+                ]
+            };
+        }
 
         // Fetch only the _id field using lean projection to prevent Out-Of-Memory crashes
         const accessibleDocs = await Ticket.find(finalTicketQuery).select('_id').lean();

@@ -316,7 +316,8 @@ async function fetchCalendarEvents(calendarHref, targetDateStr) {
                                 events.push({
                                     start: effectiveStart.padStart(4, '0'),
                                     end: effectiveEnd.padStart(4, '0'),
-                                    status: 'occupied'
+                                    status: 'occupied',
+                                    ticketId: evt.uid && evt.uid.startsWith('TIX-') ? evt.uid.substring(4) : null
                                 });
                             }
                         }

@@ -1,53 +1,61 @@
 <template>
-  <div class="array-field-editor" 
-       :class="[
-         field.layout === 'columns' ? 'layout-row' : 'layout-column',
-         { 'responsive-grid': !!field.minWidth }
-       ]"
-       :style="field.minWidth ? { '--item-min-width': field.minWidth } : {}">
+  <div class="array-field-editor" :style="field.minWidth ? { '--item-min-width': field.minWidth } : {}">
     <div class="label" v-if="field.label">{{ field.label }}</div>
     
-    <div 
-        v-for="(row, index) in internalList" 
-        :key="row.id" 
-        class="array-row"
-        :class="{ 'is-skeleton': row.isSkeleton }"
-        :draggable="!field.readonly"
-        @dragstart="onDragStart($event, index)"
-        @dragover.prevent
-        @drop="onDrop($event, index)"
+    <draggable
+        v-model="internalList"
+        item-key="id"
+        handle=".drag-handle"
+        :disabled="field.readonly || field.disabled"
+        :filter="'.is-skeleton'"
+        :preventOnFilter="true"
+        class="array-field-list"
+        :class="[
+          field.layout === 'columns' ? 'layout-row' : 'layout-column',
+          { 'responsive-grid': !!field.minWidth }
+        ]"
+        @change="emitUpdate"
     >
-      <!-- Drag Handle -->
-      <div class="drag-handle" draggable="true" @dragstart.stop="onDragStart($event, index)" v-if="!field.readonly">
-        <wa-icon name="grip-vertical"></wa-icon>
-      </div>
+      <template #item="{ element: row, index }">
+        <div 
+            class="array-row"
+            :class="{ 'is-skeleton': row.isSkeleton }"
+        >
+          <!-- Drag Handle -->
+          <div class="drag-handle" v-if="!field.readonly && !field.disabled && !row.isSkeleton">
+            <wa-icon name="grip-vertical"></wa-icon>
+          </div>
+          <div class="drag-handle-spacer" v-else-if="!field.readonly && !field.disabled && row.isSkeleton"></div>
 
-      <!-- Field Content -->
-      <div class="row-content">
-        <FormField 
-            :field="itemField"
-            :modelValue="row.value"
-            @update:modelValue="updateRow(index, $event)"
-        />
-      </div>
+          <!-- Field Content -->
+          <div class="row-content">
+            <FormField 
+                :field="itemField"
+                :modelValue="row.value"
+                @update:modelValue="updateRow(index, $event)"
+            />
+          </div>
 
-      <!-- Actions -->
-      <wa-button 
-        v-if="!row.isSkeleton && !field.readonly" 
-        appearance="plain" 
-        size="small" 
-        class="delete-btn"
-        @click="deleteRow(index)"
-      >
-        <wa-icon name="x-lg"></wa-icon>
-      </wa-button>
-      <div class="action-spacer" v-else-if="row.isSkeleton && !field.readonly"></div>
-    </div>
+          <!-- Actions -->
+          <wa-button 
+            v-if="!row.isSkeleton && !field.readonly && !field.disabled" 
+            appearance="plain" 
+            size="small" 
+            class="delete-btn"
+            @click="deleteRow(index)"
+          >
+            <wa-icon name="x-lg"></wa-icon>
+          </wa-button>
+          <div class="action-spacer" v-else-if="row.isSkeleton && !field.readonly && !field.disabled"></div>
+        </div>
+      </template>
+    </draggable>
   </div>
 </template>
 
 <script setup>
 import { defineProps, defineEmits, ref, watch, computed } from 'vue';
+import draggable from 'vuedraggable';
 import FormField from './FormField.vue';
 
 const props = defineProps({
@@ -95,20 +103,13 @@ const createSkeleton = () => ({
     isSkeleton: true
 });
 
-// Watch for external model changes (optional, might conflict with local updates if not careful)
-// For now we init once. If two-way binding is strict, we might need deep watch.
-// But usually form updates come from here. To support external reset, we watch prop length maybe?
 watch(() => props.modelValue, (newVal) => {
-    // Basic sync: if empty and internal has only skeleton, fine.
-    // If visible items differ from internal non-skeletons, re-init.
-    // Also init if internal list is completely empty (first run).
     const currentValues = internalList.value.filter(i => !i.isSkeleton).map(i => i.value);
     
     if (internalList.value.length === 0 || JSON.stringify(newVal) !== JSON.stringify(currentValues)) {
         initList();
     }
 }, { immediate: true });
-
 
 const updateRow = (index, newValue) => {
     const row = internalList.value[index];
@@ -137,48 +138,33 @@ const emitUpdate = () => {
         .map(row => row.value);
     emit('update:modelValue', values);
 };
-
-// Drag and Drop
-const onDragStart = (event, index) => {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', index);
-};
-
-const onDrop = (event, index) => {
-    const fromIndex = parseInt(event.dataTransfer.getData('text/plain'));
-    const toIndex = index;
-    
-    if (fromIndex === toIndex) return;
-    
-    // Prevent dropping on skeleton? Maybe allow reordering to end (before skeleton)?
-    // If dropped on skeleton, insert before it.
-    
-    const item = internalList.value[fromIndex];
-    internalList.value.splice(fromIndex, 1);
-    internalList.value.splice(toIndex, 0, item);
-    
-    emitUpdate();
-};
 </script>
 
 <style scoped>
 .array-field-editor {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.array-field-editor.layout-column {
+.array-field-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.array-field-list.layout-column {
     flex-direction: column;
 }
 
-.array-field-editor.layout-row {
+.array-field-list.layout-row {
     flex-direction: row;
     align-items: flex-start;
 }
 
 /* Responsive Grid Layout when minWidth is set */
-.array-field-editor.responsive-grid {
+.array-field-list.responsive-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--item-min-width), 1fr));
     align-items: stretch;
@@ -205,7 +191,7 @@ const onDrop = (event, index) => {
 }
 
 /* In grid layout, items fill the cell */
-.array-field-editor.responsive-grid .array-row {
+.array-field-list.responsive-grid .array-row {
     width: auto;
 }
 

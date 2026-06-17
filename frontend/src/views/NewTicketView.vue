@@ -44,7 +44,9 @@
 
 
         
-        <wa-button slot="footer-actions" size="small"variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
+        <wa-button slot="footer-actions" v-if="newTicketType" size="small" variant="neutral" appearance="filled" @click="cancelCreation">Abbrechen</wa-button>
+        <wa-divider slot="footer-actions" v-if="newTicketType" orientation="vertical"></wa-divider>
+        <wa-button slot="footer-actions" size="small" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
     </wa-card>
   </div>
 </template>
@@ -144,6 +146,16 @@ watch(newTicketType, (newType) => {
 const resetForm = () => {
     newTicketData.value = {};
     setTimeout(() => { isDirty.value = false; }, 0);
+};
+
+const cancelCreation = async () => {
+    if (isDirty.value) {
+        const answer = await confirm('Änderungen gehen verloren. Willst du die Seite wirklich verlassen?');
+        if (!answer) return;
+    }
+    newTicketType.value = '';
+    resetForm();
+    router.replace({ path: '/tickets/new', query: {} });
 };
 
 const createTicket = async () => {

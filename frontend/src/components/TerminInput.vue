@@ -21,63 +21,70 @@
         Termine werden geladen...
       </div>
 
-      <div v-else class="termin-calendars">
-        <div v-for="room in calendars" :key="room" class="calendar-row">
-        <div class="calendar-name">{{ room }}</div>
-        
-        <div class="timeline-track" 
-             @click="onTrackClick($event, room)"
-             @touchend.prevent="onTrackTap($event, room)"
-             :data-room="room"
-             ref="tracks">
-             
-          <!-- Render occupied blocks (red) -->
-          <div v-for="(block, idx) in filteredAvailability[room]" :key="'occ-'+idx"
-               class="timeline-block occupied"
-               :style="{ left: getPositionPercent(block.startMin) + '%', width: getWidthPercent(block.startMin, block.endMin) + '%' }"
-               :title="`Belegt: ${minutesToTime(block.startMin)} - ${minutesToTime(block.endMin)}`">
+      <div v-else class="termin-calendars-wrapper">
+        <div class="termin-calendars" ref="scrollContainer" @wheel="onScrollWheel">
+          <div v-for="room in calendars" :key="room" class="calendar-row">
+            <div class="calendar-name">{{ room }}</div>
+            
+            <div class="timeline-track" 
+                 @click="onTrackClick($event, room)"
+                 @touchend.prevent="onTrackTap($event, room)"
+                 :data-room="room"
+                 ref="tracks">
+                 
+              <!-- Render occupied blocks (red) -->
+              <div v-for="(block, idx) in filteredAvailability[room]" :key="'occ-'+idx"
+                   class="timeline-block occupied"
+                   :style="{ left: getPositionPercent(block.startMin) + '%', width: getWidthPercent(block.startMin, block.endMin) + '%' }"
+                   :title="`Belegt: ${minutesToTime(block.startMin)} - ${minutesToTime(block.endMin)}${block.ticketId ? ' (Ticket: ' + block.ticketId + ')' : ''}`">
+                   <div class="occupied-time" v-if="block.ticketId">
+                     {{ block.ticketId }}
+                   </div>
+              </div>
+              
+              <!-- Render interactive selection block (green) -->
+              <div v-if="selection && selection.room === room"
+                   class="timeline-block selection"
+                   :style="{ left: getPositionPercent(selection.startMin) + '%', width: getWidthPercent(selection.startMin, selection.endMin) + '%' }"
+                   @mousedown.left.stop="startDrag($event)"
+                   @touchstart.stop.prevent="startDrag($event)"
+                   @click.stop>
+                   
+                   <div class="selection-time">
+                     {{ minutesToTime(selection.startMin) }} - {{ minutesToTime(selection.endMin) }}
+                   </div>
+                   
+                   <!-- Right edge resize handle -->
+                   <div class="resize-handle" @mousedown.left.stop="startResize($event)" @touchstart.stop.prevent="startResize($event)"></div>
+              </div>
+              
+              <!-- Render explicit requested marker ticks (behind everything) -->
+              <div v-for="(marker, index) in visualMarkers"
+                   :key="'tick-'+index"
+                   class="timeline-tick"
+                   :style="{ left: marker.position + '%' }"
+                   :title="marker.time">
+              </div>
+            </div>
           </div>
           
-          <!-- Render interactive selection block (green) -->
-          <div v-if="selection && selection.room === room"
-               class="timeline-block selection"
-               :style="{ left: getPositionPercent(selection.startMin) + '%', width: getWidthPercent(selection.startMin, selection.endMin) + '%' }"
-               @mousedown.left.stop="startDrag($event)"
-               @touchstart.stop.prevent="startDrag($event)"
-               @click.stop>
-               
-               <div class="selection-time">
-                 {{ minutesToTime(selection.startMin) }} - {{ minutesToTime(selection.endMin) }}
-               </div>
-               
-               <!-- Right edge resize handle -->
-               <div class="resize-handle" @mousedown.left.stop="startResize($event)" @touchstart.stop.prevent="startResize($event)"></div>
-          </div>
-          
-          <!-- Render explicit requested marker ticks (behind everything) -->
-          <div v-for="(marker, index) in visualMarkers"
-               :key="'tick-'+index"
-               class="timeline-tick"
-               :style="{ left: marker.position + '%' }"
-               :title="marker.time">
+          <!-- Labels aligned under the timeline tracks -->
+          <div class="timeline-labels-row">
+            <div class="calendar-name-spacer"></div>
+            <div class="timeline-labels-container">
+              <span class="timeline-label-item left" style="left: 0%;">{{ minutesToTime(MIN_START) }}</span>
+              <span v-for="(marker, index) in visualMarkers"
+                    :key="'label-'+index"
+                    class="timeline-label-item"
+                    :class="marker.align"
+                    :style="{ left: marker.position + '%' }">
+                {{ marker.time }}
+              </span>
+              <span class="timeline-label-item right" style="left: 100%;">{{ minutesToTime(MAX_END) }}</span>
+            </div>
           </div>
         </div>
       </div>
-      
-      <!-- Labels aligned under the timeline tracks -->
-      <div class="timeline-labels-container">
-        <span class="timeline-label-item left" style="left: 0%;">07:50</span>
-        <span v-for="(marker, index) in visualMarkers"
-              :key="'label-'+index"
-              class="timeline-label-item"
-              :class="marker.align"
-              :style="{ left: marker.position + '%' }">
-          {{ marker.time }}
-        </span>
-        <span class="timeline-label-item right" style="left: 100%;">15:05</span>
-      </div>
-      
-    </div>
     </template>
   </div>
 </template>
@@ -95,7 +102,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const MIN_START = 7 * 60 + 50; // 07:50
-const MAX_END = 15 * 60 + 5;   // 15:05
+const MAX_END = 20 * 60;       // 20:00
 const TOTAL_MINUTES = MAX_END - MIN_START;
 const DEFAULT_DURATION = 45; // Minutes
 const SNAP_MINUTES = 5;
@@ -105,6 +112,7 @@ const loading = ref(false);
 const availability = ref({});
 const selection = ref(null); // { room, startMin, endMin }
 const tracks = ref([]); 
+const scrollContainer = ref(null);
 const initialValue = ref(null); // Stores the initial modelValue to exclude own event from availability
 
 // Filter out the block matching the initial (existing) booking so the own event is not treated as occupied
@@ -339,49 +347,76 @@ const onTrackTap = (e, room) => {
   }
 };
 
+// --- Horizontal Scroll conversion ---
+const onScrollWheel = (e) => {
+  if (e.deltaY !== 0) {
+    e.preventDefault();
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollLeft += e.deltaY;
+    }
+  }
+};
+
 // --- Drag and Drop (Custom JS) ---
 let isDragging = false;
 let dragOffsetMins = 0;
 let dragDuration = 0;
 
-const startDrag = (e) => {
-  if (e.target.closest('.resize-handle')) return;
-  
-  isDragging = true;
-  dragDuration = selection.value.endMin - selection.value.startMin;
-  
-  const { clientX } = getClientXY(e);
-  const trackRect = e.currentTarget.parentElement.getBoundingClientRect();
-  const clickPercent = (clientX - trackRect.left) / trackRect.width;
-  const clickMins = MIN_START + (clickPercent * TOTAL_MINUTES);
-  dragOffsetMins = clickMins - selection.value.startMin;
-  
-  document.addEventListener('mousemove', onDragMove);
-  document.addEventListener('mouseup', onDragEndCustom);
-  document.addEventListener('touchmove', onDragMove, { passive: false });
-  document.addEventListener('touchend', onDragEndCustom);
-  document.body.style.userSelect = 'none';
+let scrollInterval = null;
+let lastPointerEvent = null;
+
+const startAutoScroll = (direction) => {
+  if (scrollInterval) return;
+  scrollInterval = setInterval(() => {
+    if (!scrollContainer.value) return;
+    scrollContainer.value.scrollLeft += direction * 8;
+    
+    // Trigger updates while scrolling with fixed pointer
+    if (lastPointerEvent) {
+      if (isDragging) {
+        const elements = document.elementsFromPoint(lastPointerEvent.clientX, lastPointerEvent.clientY);
+        const trackEl = elements.find(el => el.classList && el.classList.contains('timeline-track'));
+        let targetRoom = selection.value.room;
+        if (trackEl) {
+          targetRoom = trackEl.dataset.room;
+        }
+        updateDragPosition(lastPointerEvent.clientX, targetRoom);
+      } else if (isResizing) {
+        updateResizePosition(lastPointerEvent.clientX);
+      }
+    }
+  }, 16);
 };
 
-const onDragMove = (e) => {
-  if (!isDragging || !selection.value) return;
-  if (e.cancelable) e.preventDefault(); // Prevent scrolling during drag
-  
-  const { clientX, clientY } = getClientXY(e);
-  const elements = document.elementsFromPoint(clientX, clientY);
-  const trackEl = elements.find(el => el.classList && el.classList.contains('timeline-track'));
-  
-  let targetRoom = selection.value.room;
-  let trackRect;
-  
-  if (trackEl) {
-    targetRoom = trackEl.dataset.room;
-    trackRect = trackEl.getBoundingClientRect();
-  } else {
-    const currentTrackEl = tracks.value.find(t => t.dataset && t.dataset.room === selection.value.room) || tracks.value[0];
-    if (!currentTrackEl) return;
-    trackRect = currentTrackEl.getBoundingClientRect();
+const stopAutoScroll = () => {
+  if (scrollInterval) {
+    clearInterval(scrollInterval);
+    scrollInterval = null;
   }
+};
+
+const checkAutoScroll = (clientX) => {
+  if (!scrollContainer.value) return;
+  const rect = scrollContainer.value.getBoundingClientRect();
+  const stickyWidth = 100; // room name sticky column width
+  const threshold = 50;
+  
+  const leftEdge = rect.left + stickyWidth;
+  const rightEdge = rect.right;
+  
+  if (clientX > rightEdge - threshold) {
+    startAutoScroll(1);
+  } else if (clientX < leftEdge + threshold) {
+    startAutoScroll(-1);
+  } else {
+    stopAutoScroll();
+  }
+};
+
+const updateDragPosition = (clientX, targetRoom) => {
+  const currentTrackEl = tracks.value.find(t => t.dataset && t.dataset.room === selection.value.room) || tracks.value[0];
+  if (!currentTrackEl) return;
+  const trackRect = currentTrackEl.getBoundingClientRect();
   
   const x = clientX - trackRect.left;
   const percent = x / trackRect.width;
@@ -399,9 +434,54 @@ const onDragMove = (e) => {
   }
 };
 
+const startDrag = (e) => {
+  if (e.target.closest('.resize-handle')) return;
+  if (e.cancelable) e.preventDefault();
+  
+  isDragging = true;
+  dragDuration = selection.value.endMin - selection.value.startMin;
+  
+  const { clientX, clientY } = getClientXY(e);
+  lastPointerEvent = { clientX, clientY };
+  
+  const currentTrackEl = tracks.value.find(t => t.dataset && t.dataset.room === selection.value.room) || tracks.value[0];
+  if (!currentTrackEl) return;
+  const trackRect = currentTrackEl.getBoundingClientRect();
+  const clickPercent = (clientX - trackRect.left) / trackRect.width;
+  const clickMins = MIN_START + (clickPercent * TOTAL_MINUTES);
+  dragOffsetMins = clickMins - selection.value.startMin;
+  
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEndCustom);
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('touchend', onDragEndCustom);
+  document.body.style.userSelect = 'none';
+};
+
+const onDragMove = (e) => {
+  if (!isDragging || !selection.value) return;
+  if (e.cancelable) e.preventDefault(); // Prevent scrolling during drag
+  
+  const { clientX, clientY } = getClientXY(e);
+  lastPointerEvent = { clientX, clientY };
+  
+  const elements = document.elementsFromPoint(clientX, clientY);
+  const trackEl = elements.find(el => el.classList && el.classList.contains('timeline-track'));
+  
+  let targetRoom = selection.value.room;
+  if (trackEl) {
+    targetRoom = trackEl.dataset.room;
+  }
+  
+  updateDragPosition(clientX, targetRoom);
+  checkAutoScroll(clientX);
+};
+
 const onDragEndCustom = () => {
   if (isDragging) {
     isDragging = false;
+    stopAutoScroll();
+    lastPointerEvent = null;
     document.removeEventListener('mousemove', onDragMove);
     document.removeEventListener('mouseup', onDragEndCustom);
     document.removeEventListener('touchmove', onDragMove);
@@ -413,38 +493,17 @@ const onDragEndCustom = () => {
 
 // --- Resizing ---
 let isResizing = false;
-let startResizeX = 0;
-let initialEndMin = 0;
 
-const startResize = (e) => {
-  isResizing = true;
-  const { clientX } = getClientXY(e);
-  startResizeX = clientX;
-  initialEndMin = selection.value.endMin;
-  document.addEventListener('mousemove', onResizeMove);
-  document.addEventListener('mouseup', onResizeEnd);
-  document.addEventListener('touchmove', onResizeMove, { passive: false });
-  document.addEventListener('touchend', onResizeEnd);
-};
-
-const onResizeMove = (e) => {
-  if (!isResizing || !selection.value) return;
-  if (e.cancelable) e.preventDefault(); // Prevent scrolling during resize
+const updateResizePosition = (clientX) => {
+  const currentTrackEl = tracks.value.find(t => t.dataset && t.dataset.room === selection.value.room) || tracks.value[0];
+  if (!currentTrackEl) return;
+  const trackRect = currentTrackEl.getBoundingClientRect();
   
-  // Find track width to convert pixels to minutes
-  const trackElement = tracks.value[0]; // All tracks have same width
-  if (!trackElement) return;
+  const x = clientX - trackRect.left;
+  const percent = x / trackRect.width;
+  const rawMins = MIN_START + (percent * TOTAL_MINUTES);
   
-  const rect = trackElement.getBoundingClientRect();
-  const pixelsPerMinute = rect.width / TOTAL_MINUTES;
-  
-  const { clientX } = getClientXY(e);
-  const deltaX = clientX - startResizeX;
-  const deltaMins = deltaX / pixelsPerMinute;
-  
-  let intendedEndMin = initialEndMin + deltaMins;
-  // Snap
-  intendedEndMin = Math.round(intendedEndMin / SNAP_MINUTES) * SNAP_MINUTES;
+  let intendedEndMin = Math.round(rawMins / SNAP_MINUTES) * SNAP_MINUTES;
   
   // Constrain to MAX_END and at least 5 mins duration
   intendedEndMin = Math.min(MAX_END, Math.max(selection.value.startMin + SNAP_MINUTES, intendedEndMin));
@@ -464,9 +523,34 @@ const onResizeMove = (e) => {
   selection.value.endMin = intendedEndMin;
 };
 
+const startResize = (e) => {
+  isResizing = true;
+  if (e.cancelable) e.preventDefault();
+  const { clientX, clientY } = getClientXY(e);
+  lastPointerEvent = { clientX, clientY };
+  
+  document.addEventListener('mousemove', onResizeMove);
+  document.addEventListener('mouseup', onResizeEnd);
+  document.addEventListener('touchmove', onResizeMove, { passive: false });
+  document.addEventListener('touchend', onResizeEnd);
+};
+
+const onResizeMove = (e) => {
+  if (!isResizing || !selection.value) return;
+  if (e.cancelable) e.preventDefault(); // Prevent scrolling during resize
+  
+  const { clientX, clientY } = getClientXY(e);
+  lastPointerEvent = { clientX, clientY };
+  
+  updateResizePosition(clientX);
+  checkAutoScroll(clientX);
+};
+
 const onResizeEnd = () => {
   if (isResizing) {
     isResizing = false;
+    stopAutoScroll();
+    lastPointerEvent = null;
     document.removeEventListener('mousemove', onResizeMove);
     document.removeEventListener('mouseup', onResizeEnd);
     document.removeEventListener('touchmove', onResizeMove);
@@ -524,16 +608,30 @@ const onResizeEnd = () => {
   font-size: 0.9em;
 }
 
+.termin-calendars-wrapper {
+  border: 1px solid var(--wa-color-neutral-70);
+  border-radius: var(--wa-border-radius-medium);
+  background: var(--wa-color-neutral-95);
+  overflow: hidden;
+}
+
 .termin-calendars {
+  overflow-x: auto;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  scroll-behavior: smooth;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 .calendar-row {
   display: flex;
   align-items: center;
   gap: 1rem;
+  width: max-content;
 }
 
 .calendar-name {
@@ -545,16 +643,22 @@ const onResizeEnd = () => {
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  background: var(--wa-color-neutral-95);
+  z-index: 15;
+  padding-right: 0.5rem;
 }
 
 .timeline-track {
   position: relative;
-  flex: 1;
+  width: 1200px;
   height: 28px;
   background-color: var(--wa-color-neutral-80);
   border-radius: 4px;
   border: 1px solid var(--wa-color-neutral-70);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .timeline-block {
@@ -565,11 +669,23 @@ const onResizeEnd = () => {
 }
 
 .timeline-block.occupied {
-  background-color: var(--wa-color-green-70); /* Same as timeline free surprisingly based on naming, wait, user said red was occupied, TimelineDisplay mapped 'occupied' to Red */
-  /* Re-check: TimelineDisplay.vue says: .free { green }, .occupied { red } in its comments but maps to red/green vars differently. Let's use standard red/green hex or wa vars. */
   background-color: rgba(239, 68, 68, 0.4); /* Red */
   border: 1px solid rgba(239, 68, 68, 0.8);
   pointer-events: none; /* Let clicks pass through */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.occupied-time {
+  font-size: 0.6rem;
+  color: rgba(185, 28, 28, 0.95); /* Darker red for good readability */
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 
 .timeline-block.selection {
@@ -634,12 +750,28 @@ const onResizeEnd = () => {
   pointer-events: none;
 }
 
+.timeline-labels-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: max-content;
+}
+
+.calendar-name-spacer {
+  width: 100px;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  background: var(--wa-color-neutral-95);
+  z-index: 15;
+}
+
 .timeline-labels-container {
   position: relative;
+  width: 1200px;
   height: 16px;
   margin-top: 2px;
-  margin-left: 100px; /* Offset for calendar name width + gap */
-  padding-left: 1rem; /* gap offset */
+  flex-shrink: 0;
 }
 
 .timeline-label-item {

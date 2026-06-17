@@ -55,7 +55,8 @@ describe('Workflow: Bewirtungsauftrag', () => {
         description: 'Testticket für Konferenzbewirtung',
         breakfast: true,
         bfDrinksAndFood: ['Kaffee', 'Brezeln'],
-        breakfastTime: '08:00'
+        breakfastTime: '08:00',
+        endTime: '12:00'
     };
 
     it('should auto-approve Bewirtungsauftrag if creator is in Schulleitung', async () => {
