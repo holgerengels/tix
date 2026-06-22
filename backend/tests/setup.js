@@ -35,6 +35,7 @@ const getTokens = () => {
 const clearDatabase = async () => {
     const collections = mongoose.connection.collections;
     for (const key in collections) {
+        if (key === 'users') continue;
         const collection = collections[key];
         await collection.deleteMany({});
     }

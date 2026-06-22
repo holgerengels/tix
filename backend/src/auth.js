@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const ldap = require('ldapjs');
 const fs = require('fs');
 const path = require('path');
+const User = require('./models/user');
 
 const escapeLDAP = (str) => {
     if (!str) return '';
@@ -65,6 +66,23 @@ const login = async (username, password, isPwa) => {
         const user = MOCK_USERS.find(u => u.username === username && u.password === password);
         if (user) {
             console.log(`[Auth] Mock login successful for ${username}`);
+            
+            // Auto create/update in MongoDB
+            try {
+                await User.findOneAndUpdate(
+                    { username: user.username },
+                    {
+                        username: user.username,
+                        displayName: user.displayName,
+                        groups: user.groups,
+                        lastSeenInLdap: new Date()
+                    },
+                    { upsert: true }
+                );
+            } catch (err) {
+                console.error(`[Auth] Error auto-creating mock user ${user.username} in Mongo:`, err.message);
+            }
+
             const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
             const result = { token, user: { username: user.username, groups: user.groups } };
             if (isPwa) result.refreshToken = generateRefreshToken(user.username, user.groups);
@@ -105,7 +123,7 @@ const login = async (username, password, isPwa) => {
             const opts = {
                 filter: filter,
                 scope: 'sub',
-                attributes: ['dn', 'memberOf']
+                attributes: ['dn', 'memberOf', 'givenName', 'sn', 'givenname']
             };
 
             client.search(ldapConfig.basedn, opts, (err, searchRes) => {
@@ -151,9 +169,8 @@ const login = async (username, password, isPwa) => {
 
                     // C. Verify Password (Bind as User)
                     const userClient = ldap.createClient({ url: ldapConfig.url });
-
                     const bindDn = decodeDN(userEntry.dn);
-                    userClient.bind(bindDn, password, (err) => {
+                    userClient.bind(bindDn, password, async (err) => {
                         if (err) {
                             console.log(`[Auth] Password check failed for ${username}`);
                             userClient.unbind();
@@ -186,7 +203,30 @@ const login = async (username, password, isPwa) => {
                             });
                         }
 
+                        // Resolve displayName
+                        let givenName = userEntry.givenName || userEntry.givenname || '';
+                        let sn = userEntry.sn || '';
+                        if (Array.isArray(givenName)) givenName = givenName[0];
+                        if (Array.isArray(sn)) sn = sn[0];
+                        const displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+
                         console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
+
+                        // Auto create/update in MongoDB
+                        try {
+                            await User.findOneAndUpdate(
+                                { username: username },
+                                {
+                                    username: username,
+                                    displayName: displayName,
+                                    groups: groups,
+                                    lastSeenInLdap: new Date()
+                                },
+                                { upsert: true }
+                            );
+                        } catch (mongoErr) {
+                            console.error(`[Auth] Error auto-creating LDAP user ${username} in Mongo:`, mongoErr.message);
+                        }
 
                         const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
                         const result = { token, user: { username: username, groups: groups } };
@@ -216,158 +256,145 @@ const verifyToken = (req, res, next) => {
     });
 };
 
-let cachedUsers = null;
-let lastUsersFetch = 0;
+const getUsers = async (filterGroups = [], forceFetch = false) => {
+    // 1. LDAP direct fetch if requested (forceFetch = true) and not in DevMode
+    if (forceFetch && !settings.devmode && settings.server && settings.server.ldap) {
+        const ldapConfig = settings.server.ldap;
+        try {
+            return await new Promise((resolve, reject) => {
+                const client = ldap.createClient({ url: ldapConfig.url });
 
-const getUsers = async (filterGroups = []) => {
-    const now = Date.now();
-    if (cachedUsers && now - lastUsersFetch < 5 * 60 * 1000) {
-        let users = cachedUsers;
-        if (filterGroups && filterGroups.length > 0) {
-            users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
-        }
-        return users;
-    }
+                client.on('error', (err) => {
+                    console.error('[Auth] LDAP Client Error (getUsers forceFetch):', err);
+                    resolve([]);
+                });
 
-    let users = [];
-
-    // 1. DevMode: Start with mock users
-    if (settings.devmode || !settings.server || !settings.server.ldap) {
-        users = MOCK_USERS.map(({ password, ...u }) => u);
-        cachedUsers = users;
-        lastUsersFetch = now;
-        if (filterGroups && filterGroups.length > 0) {
-            users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
-        }
-        return users;
-    }
-
-    // 2. LDAP
-    const ldapConfig = settings.server.ldap;
-
-    try {
-        const ldapUsers = await new Promise((resolve, reject) => {
-            const client = ldap.createClient({ url: ldapConfig.url });
-
-            client.on('error', (err) => {
-                console.error('[Auth] LDAP Client Error (getUsers):', err);
-                resolve([]);
-            });
-
-            client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
-                if (err) {
-                    client.unbind();
-                    console.error('[Auth] LDAP Bind Error (getUsers):', err);
-                    return resolve([]); // Gracefully return empty list on bind error
-                }
-
-                // Search for all users
-                const opts = {
-                    filter: ldapConfig.userfilter, // e.g. (&(objectclass=person))
-                    scope: 'sub',
-                    attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn']
-                };
-
-                client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
                     if (err) {
                         client.unbind();
-                        console.error('[Auth] LDAP Search Error (getUsers):', err);
+                        console.error('[Auth] LDAP Bind Error (getUsers forceFetch):', err);
                         return resolve([]);
                     }
 
-                    const foundUsers = [];
-                    console.log(`[Auth] LDAP Search started. Base: ${ldapConfig.basedn}, Filter: ${opts.filter}`);
+                    const opts = {
+                        filter: ldapConfig.userfilter,
+                        scope: 'sub',
+                        attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn']
+                    };
 
-                    searchRes.on('searchEntry', (entry) => {
-                        let username = '';
-                        let groups = [];
-                        let displayName = '';
-
-                        // console.log('[Auth] LDAP Entry found:', entry.objectName.toString());
-
-                        let userAttributes = entry.object;
-
-                        if (!userAttributes) {
-                            // Fallback: Parse attributes manually if entry.object is missing
-                            userAttributes = {};
-                            if (entry.attributes) {
-                                entry.attributes.forEach(attr => {
-                                    const values = attr.values;
-                                    // Handle single value vs array? ldapjs usually gives array in values
-                                    userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
-                                    // Ensure sAMAccountName is accessible as property even if array?
-                                    if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
-                                        userAttributes.sAMAccountName = values[0];
-                                    }
-                                });
-                            }
+                    client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                        if (err) {
+                            client.unbind();
+                            console.error('[Auth] LDAP Search Error (getUsers forceFetch):', err);
+                            return resolve([]);
                         }
 
-                        if (userAttributes) {
-                            // Normalize username
-                            username = userAttributes.sAMAccountName || userAttributes.samaccountname;
-                            if (Array.isArray(username)) username = username[0];
-                            username = username.toLowerCase();
+                        const foundUsers = [];
+                        searchRes.on('searchEntry', (entry) => {
+                            let username = '';
+                            let groups = [];
+                            let displayName = '';
 
-                            // Build displayName from givenName + sn
-                            let givenName = userAttributes.givenName || userAttributes.givenname || '';
-                            let sn = userAttributes.sn || '';
-                            if (Array.isArray(givenName)) givenName = givenName[0];
-                            if (Array.isArray(sn)) sn = sn[0];
-                            displayName = [givenName, sn].filter(Boolean).join(' ') || username;
-
-                            // Normalize memberOf
-                            let rawGroups = userAttributes.memberOf || userAttributes.memberof;
-                            if (rawGroups) {
-                                if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
-
-                                const prefix = ldapConfig.groupprefix || '';
-                                rawGroups.forEach(groupDn => {
-                                    const match = groupDn.match(/^CN=([^,]+)/i);
-                                    if (match) {
-                                        const cn = match[1];
-                                        if (cn.startsWith(prefix)) {
-                                            groups.push(cn.substring(prefix.length));
+                            let userAttributes = entry.object;
+                            if (!userAttributes) {
+                                userAttributes = {};
+                                if (entry.attributes) {
+                                    entry.attributes.forEach(attr => {
+                                        const values = attr.values;
+                                        userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
+                                        if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
+                                            userAttributes.sAMAccountName = values[0];
                                         }
-                                    }
-                                });
+                                    });
+                                }
                             }
-                        }
 
-                        if (username) {
-                            foundUsers.push({ username, groups, displayName });
-                        }
-                    });
+                            if (userAttributes) {
+                                username = userAttributes.sAMAccountName || userAttributes.samaccountname;
+                                if (Array.isArray(username)) username = username[0];
+                                username = username.toLowerCase();
 
-                    searchRes.on('end', () => {
-                        console.log(`[Auth] LDAP Search finished. Found ${foundUsers.length} users.`);
-                        client.unbind();
-                        resolve(foundUsers);
-                    });
+                                let givenName = userAttributes.givenName || userAttributes.givenname || '';
+                                let sn = userAttributes.sn || '';
+                                if (Array.isArray(givenName)) givenName = givenName[0];
+                                if (Array.isArray(sn)) sn = sn[0];
+                                displayName = [givenName, sn].filter(Boolean).join(' ') || username;
 
-                    searchRes.on('error', (err) => {
-                        client.unbind();
-                        console.error('[Auth] LDAP Search Stream Error:', err);
-                        resolve([]);
+                                let rawGroups = userAttributes.memberOf || userAttributes.memberof;
+                                if (rawGroups) {
+                                    if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
+                                    const prefix = ldapConfig.groupprefix || '';
+                                    rawGroups.forEach(groupDn => {
+                                        const match = groupDn.match(/^CN=([^,]+)/i);
+                                        if (match) {
+                                            const cn = match[1];
+                                            if (cn.startsWith(prefix)) {
+                                                groups.push(cn.substring(prefix.length));
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+
+                            if (username) {
+                                foundUsers.push({ username, groups, displayName });
+                            }
+                        });
+
+                        searchRes.on('end', () => {
+                            client.unbind();
+                            resolve(foundUsers);
+                        });
+
+                        searchRes.on('error', (err) => {
+                            client.unbind();
+                            console.error('[Auth] LDAP Search Stream Error:', err);
+                            resolve([]);
+                        });
                     });
                 });
             });
-        });
-
-        // Merge users avoiding duplicates (LDAP users appended if not exist)
-        for (const lUser of ldapUsers) {
-            if (!users.find(u => u.username === lUser.username)) {
-                users.push(lUser);
-            }
+        } catch (err) {
+            console.error('[Auth] General Error in getUsers forceFetch:', err);
+            return [];
         }
-    } catch (err) {
-        console.error('[Auth] General Error in getUsers:', err);
     }
 
-    cachedUsers = users;
-    lastUsersFetch = Date.now();
+    // 2. Default: Load from MongoDB
+    let users = [];
+    try {
+        const dbUsers = await User.find({}).lean();
+        users = dbUsers.map(u => ({
+            username: u.username,
+            displayName: u.displayName || u.username,
+            groups: u.groups || []
+        }));
+    } catch (err) {
+        console.error('[Auth] Error fetching users from MongoDB:', err.message);
+    }
 
-    // 3. Filter by groups if provided
+    // 3. In DevMode, merge with MOCK_USERS to ensure they are always visible
+    if (settings.devmode) {
+        MOCK_USERS.forEach(mockUser => {
+            const existing = users.find(u => u.username === mockUser.username);
+            if (existing) {
+                if (!existing.displayName || existing.displayName === existing.username) {
+                    existing.displayName = mockUser.displayName;
+                }
+                if (!existing.groups || existing.groups.length === 0) {
+                    existing.groups = mockUser.groups;
+                }
+            } else {
+                users.push({
+                    username: mockUser.username,
+                    displayName: mockUser.displayName,
+                    groups: mockUser.groups
+                });
+            }
+        });
+    }
+
+    // 4. Apply group filtering
     if (filterGroups && filterGroups.length > 0) {
         users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
     }
@@ -378,7 +405,25 @@ const getUsers = async (filterGroups = []) => {
 const getUser = async (username) => {
     username = username.toLowerCase();
 
-    // 1. DevMode / Mock Check
+    // 1. Try to find in MongoDB first
+    try {
+        const mongoUser = await User.findOne({ username });
+        if (mongoUser) {
+            let displayName = mongoUser.displayName || mongoUser.username;
+            if (settings.devmode && displayName === mongoUser.username) {
+                const mockUser = MOCK_USERS.find(u => u.username === username);
+                if (mockUser) displayName = mockUser.displayName;
+            }
+            return {
+                username: mongoUser.username,
+                displayName
+            };
+        }
+    } catch (err) {
+        console.error(`[Auth] Error finding user ${username} in MongoDB:`, err.message);
+    }
+
+    // 2. DevMode / Mock Check
     if (settings.devmode || !settings.server || !settings.server.ldap) {
         const user = MOCK_USERS.find(u => u.username === username);
         if (user) {
@@ -387,9 +432,8 @@ const getUser = async (username) => {
         return { username, displayName: username };
     }
 
-    // 2. LDAP
+    // 3. LDAP fallback
     const ldapConfig = settings.server.ldap;
-
     try {
         return await new Promise((resolve, reject) => {
             const client = ldap.createClient({ url: ldapConfig.url });
@@ -495,152 +539,36 @@ const extendAccessToken = (username, groups) => {
 const isDevMode = () => !!settings.devmode;
 
 
-// In-memory store for devmode settings
-const devSettingsStore = {};
-
 const getUserSettings = async (username) => {
-    // 1. DevMode Check
-    if (settings.devmode || !settings.server || !settings.server.ldap) {
-        // Fallback to devstore if no LDAP or in DevMode
-        return devSettingsStore[username] || { notificationUri: '' };
+    username = username.toLowerCase();
+    try {
+        const user = await User.findOne({ username });
+        return {
+            notificationUri: user ? user.notificationUri || '' : ''
+        };
+    } catch (err) {
+        console.error(`[Auth] Error fetching user settings for ${username}:`, err.message);
+        return { notificationUri: '' };
     }
-    const ldapConfig = settings.server.ldap;
-
-    return new Promise((resolve, reject) => {
-        const client = ldap.createClient({ url: ldapConfig.url });
-        client.on('error', (err) => {
-            console.error('[Auth] LDAP Client Error (getSettings):', err);
-            resolve({});
-        });
-
-        client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
-            if (err) {
-                console.error('[Auth] LDAP Bind Error (getSettings):', err);
-                client.unbind();
-                return resolve({});
-            }
-
-            const escapedUsername = escapeLDAP(username);
-            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
-            const opts = {
-                filter: filter,
-                scope: 'sub',
-                attributes: ['otherMailbox']
-            };
-
-            client.search(ldapConfig.basedn, opts, (err, searchRes) => {
-                if (err) {
-                    client.unbind();
-                    return resolve({});
-                }
-
-                let notificationUri = '';
-
-                searchRes.on('searchEntry', (entry) => {
-                    if (entry.object && entry.object.otherMailbox) {
-                        notificationUri = entry.object.otherMailbox;
-                    } else if (entry.attributes) {
-                        const attr = entry.attributes.find(a => a.type === 'otherMailbox');
-                        if (attr && attr.values && attr.values.length > 0) {
-                            notificationUri = attr.values[0];
-                        }
-                    }
-                });
-
-                searchRes.on('end', () => {
-                    client.unbind();
-                    resolve({ notificationUri });
-                });
-
-                searchRes.on('error', () => {
-                    client.unbind();
-                    resolve({});
-                });
-            });
-        });
-    });
 };
 
 const updateUserSettings = async (username, newSettings) => {
-    // 1. DevMode Check
-    if (settings.devmode || !settings.server || !settings.server.ldap) {
-        // Fallback to devstore
-        devSettingsStore[username] = { ...devSettingsStore[username], ...newSettings };
-        console.log(`[Auth] No LDAP mapping/DevMode. Settings updated for ${username}:`, devSettingsStore[username]);
-        return;
+    username = username.toLowerCase();
+    try {
+        const update = {};
+        if (newSettings.notificationUri !== undefined) {
+            update.notificationUri = newSettings.notificationUri;
+        }
+        await User.findOneAndUpdate(
+            { username },
+            { $set: update },
+            { upsert: true }
+        );
+        console.log(`[Auth] Settings updated in Mongo for ${username}:`, newSettings);
+    } catch (err) {
+        console.error(`[Auth] Error updating user settings for ${username}:`, err.message);
+        throw err;
     }
-    const ldapConfig = settings.server.ldap;
-
-    return new Promise((resolve, reject) => {
-        const client = ldap.createClient({ url: ldapConfig.url });
-        client.on('error', (err) => {
-            console.error('[Auth] LDAP Client Error (updateSettings):', err);
-            reject(err);
-        });
-
-        client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
-            if (err) {
-                console.error('[Auth] LDAP Bind Error (updateSettings):', err);
-                client.unbind();
-                return reject(err);
-            }
-
-            // Find DN first
-            const escapedUsername = escapeLDAP(username);
-            const filter = `(&${ldapConfig.userfilter}(sAMAccountName=${escapedUsername}))`;
-            const opts = {
-                filter: filter,
-                scope: 'sub',
-                attributes: ['dn']
-            };
-
-            client.search(ldapConfig.basedn, opts, (err, searchRes) => {
-                if (err) {
-                    client.unbind();
-                    return reject(err);
-                }
-
-                let userDn = null;
-
-                searchRes.on('searchEntry', (entry) => {
-                    if (entry.objectName) userDn = entry.objectName.toString();
-                    else if (entry.object && entry.object.dn) userDn = entry.object.dn;
-                });
-
-                searchRes.on('end', (result) => {
-                    if (!userDn) {
-                        client.unbind();
-                        return reject(new Error('User not found'));
-                    }
-
-                    // Prepare Modification
-                    // We only support notificationUri -> otherMailbox for now
-                    if (newSettings.notificationUri !== undefined) {
-                        const change = new ldap.Change({
-                            operation: 'replace',
-                            modification: {
-                                type: 'otherMailbox',
-                                values: [newSettings.notificationUri]
-                            }
-                        });
-
-                        client.modify(userDn, change, (err) => {
-                            client.unbind();
-                            if (err) {
-                                console.error('[Auth] LDAP Modify Error:', err);
-                                return reject(err);
-                            }
-                            console.log(`[Auth] LDAP Settings updated for ${username}`);
-                            resolve();
-                        });
-                    } else {
-                        client.unbind();
-                        resolve();
-                    }
-                });
-            });
-        });
-    });
 };
 
 module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, refreshAccessToken, extendAccessToken };

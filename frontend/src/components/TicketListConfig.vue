@@ -126,6 +126,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 import { useWorkflowStore } from '../stores/workflow';
 import { format, subDays, subMonths } from 'date-fns';
 import { prompt, confirm } from '../composables/useToast';
@@ -353,15 +354,15 @@ const initFiltersFromRoute = () => {
     }
 };
 
-const loadSavedFilters = () => {
-    const key = `vin_saved_filters_${currentFilter.value}`;
+const allSavedFilters = ref({});
+
+const loadSavedFilters = async () => {
     try {
-        const saved = localStorage.getItem(key);
-        if (saved) {
-            savedFilters.value = JSON.parse(saved);
-        } else {
-            savedFilters.value = [];
-        }
+        const res = await axios.get('/api/settings/filters', {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        allSavedFilters.value = res.data || {};
+        savedFilters.value = allSavedFilters.value[currentFilter.value] || [];
     } catch (e) {
         console.error('Error loading saved filters:', e);
         savedFilters.value = [];
@@ -387,26 +388,45 @@ const saveCurrentFilter = async () => {
         cols: visibleColumns.value.map(c => c.id).join(',')
     };
 
-    const existingIndex = savedFilters.value.findIndex(f => f.name === name);
+    if (!allSavedFilters.value[currentFilter.value]) {
+        allSavedFilters.value[currentFilter.value] = [];
+    }
+
+    const currentFilters = allSavedFilters.value[currentFilter.value];
+    const existingIndex = currentFilters.findIndex(f => f.name === name);
     if (existingIndex >= 0) {
         if (await confirm(`Eine Ansicht mit dem Namen "${name}" existiert bereits. Überschreiben?`)) {
-            savedFilters.value[existingIndex] = newFilter;
+            currentFilters[existingIndex] = newFilter;
         } else {
             return;
         }
     } else {
-        savedFilters.value.push(newFilter);
+        currentFilters.push(newFilter);
     }
 
-    const key = `vin_saved_filters_${currentFilter.value}`;
-    localStorage.setItem(key, JSON.stringify(savedFilters.value));
+    savedFilters.value = [...currentFilters];
+
+    try {
+        await axios.post('/api/settings/filters', allSavedFilters.value, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+    } catch (e) {
+        console.error('Error saving filter to backend:', e);
+    }
 };
 
 const deleteSavedFilter = async (index) => {
     if (await confirm('Soll die Ansicht wirklich gelöscht werden?')) {
-        savedFilters.value.splice(index, 1);
-        const key = `vin_saved_filters_${currentFilter.value}`;
-        localStorage.setItem(key, JSON.stringify(savedFilters.value));
+        const currentFilters = allSavedFilters.value[currentFilter.value] || [];
+        currentFilters.splice(index, 1);
+        savedFilters.value = [...currentFilters];
+        try {
+            await axios.post('/api/settings/filters', allSavedFilters.value, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        } catch (e) {
+            console.error('Error deleting filter from backend:', e);
+        }
     }
 };
 
@@ -445,7 +465,7 @@ onMounted(() => {
 
 watch(currentFilter, () => {
     initFiltersFromRoute();
-    loadSavedFilters();
+    savedFilters.value = allSavedFilters.value[currentFilter.value] || [];
     emitUpdate();
     emitFetch();
 });

@@ -23,6 +23,9 @@ const SUBSCRIPTION_SCHEDULE = (settings.scheduler && settings.scheduler.subscrip
 const PUBLISHER_INTERVAL = (settings.scheduler && settings.scheduler.publisherInterval)
     ? settings.scheduler.publisherInterval * 1000 : 60 * 1000; // 60s
 
+const USER_PRUNING_SCHEDULE = (settings.server && settings.server.usersync && settings.server.usersync.pruningSchedule)
+    ? settings.server.usersync.pruningSchedule : '0 3 * * *'; // default to daily at 3 AM
+
 // We no longer loop bots globally here; they have their own cron schedules in `bots.js`.
 
 function scheduleSubscriptions() {
@@ -38,6 +41,23 @@ function scheduleSubscriptions() {
         });
     } else {
         console.error(`[Scheduler] Invalid cron schedule for subscriptions: ${SUBSCRIPTION_SCHEDULE}`);
+    }
+}
+
+function scheduleUserPruning() {
+    if (cron.validate(USER_PRUNING_SCHEDULE)) {
+        console.log(`[Scheduler] Scheduling user pruning with cron: ${USER_PRUNING_SCHEDULE}`);
+        cron.schedule(USER_PRUNING_SCHEDULE, async () => {
+            console.log('[Scheduler] Running scheduled user pruning check');
+            try {
+                const { runUserPruningCheck } = require('./userPruningWorker');
+                await runUserPruningCheck();
+            } catch (err) {
+                console.error('[Scheduler] Error running user pruning:', err);
+            }
+        });
+    } else {
+        console.error(`[Scheduler] Invalid cron schedule for user pruning: ${USER_PRUNING_SCHEDULE}`);
     }
 }
 
@@ -69,6 +89,7 @@ function startScheduler() {
     // Start schedules
     scheduleBots();
     scheduleSubscriptions();
+    scheduleUserPruning();
     setTimeout(schedulePublisher, 7000);
 }
 

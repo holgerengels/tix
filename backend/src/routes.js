@@ -100,6 +100,32 @@ router.post('/settings', verifyToken, async (req, res) => {
     }
 });
 
+router.get('/settings/filters', verifyToken, async (req, res) => {
+    try {
+        const User = require('./models/user');
+        const user = await User.findOne({ username: req.user.username.toLowerCase() });
+        res.json(user && user.savedFilters ? user.savedFilters : {});
+    } catch (err) {
+        console.error('Error fetching saved filters:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/settings/filters', verifyToken, async (req, res) => {
+    try {
+        const User = require('./models/user');
+        await User.findOneAndUpdate(
+            { username: req.user.username.toLowerCase() },
+            { $set: { savedFilters: req.body } },
+            { upsert: true }
+        );
+        res.json({ message: 'Saved filters updated' });
+    } catch (err) {
+        console.error('Error updating saved filters:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Config Docs
 router.get('/config/:type/doc', verifyToken, async (req, res) => {
     try {
