@@ -196,7 +196,8 @@
                     "groups": [
                         "@assignee",
                         "Schulleitung",
-                        "Netzwerkteam"
+                        "Netzwerkteam",
+                        "IT-Support"
                     ],
                     "form": "aufgabe.bearbeiten"
                 },
@@ -212,7 +213,8 @@
                 {
                     "name": "zuweisen",
                     "groups": [
-                        "Netzwerkteam"
+                        "Netzwerkteam",
+                        "IT-Support"
                     ],
                     "inline": "assign"
                 },
