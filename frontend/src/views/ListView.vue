@@ -5,6 +5,17 @@
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
         </wa-button>
         <h2>{{ pageTitle }}</h2>
+        <div class="search-box">
+            <wa-icon name="search" class="search-icon"></wa-icon>
+            <input
+                v-model="searchTerm"
+                type="text"
+                class="search-input"
+                placeholder="Suchen…"
+                @keydown.escape="searchTerm = ''"
+            />
+            <wa-icon v-if="searchTerm" name="x-circle" class="search-clear" @click="searchTerm = ''"></wa-icon>
+        </div>
     </div>
 
     <div class="ticket-list-container">
@@ -122,6 +133,7 @@ const { getStatusColor, getStatusLabel, getActions: _getRawActions } = useTicket
 const fetchParams = ref({});
 const visibleColumns = ref([]);
 const sort = ref('');
+const searchTerm = ref('');
 
 const executingActionId = ref(null);
 const ticketConfigRef = ref(null);
@@ -197,6 +209,8 @@ const sortedTickets = computed(() => {
 
 
 
+
+
 const currentFilter = computed(() => route.query.filter || 'my');
 
 let lastRequestId = 0;
@@ -225,6 +239,8 @@ const fetchTickets = async () => {
                 filter: currentFilter.value,
                 ...fetchParams.value
             };
+            const term = searchTerm.value.trim();
+            if (term) params.search = term;
 
             const res = await axios.get('/api/tickets', {
                 params: params,
@@ -422,6 +438,12 @@ watch(currentFilter, () => {
     // Current filter is handled by TicketView now. TicketView will emit @fetch when it detects a change.
 });
 
+let searchDebounce = null;
+watch(searchTerm, () => {
+    if (searchDebounce) clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => fetchTickets(), 300);
+});
+
 onMounted(async () => {
     await workflow.fetchConfig();
     // Tickets are fetched by TicketView emitting @fetch on mount
@@ -443,6 +465,48 @@ onMounted(async () => {
 }
 .header h2 {
     margin: 0;
+}
+.search-box {
+    margin-left: auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.search-icon {
+    position: absolute;
+    left: 0.6rem;
+    font-size: 1rem;
+    color: var(--wa-color-neutral-50);
+    pointer-events: none;
+}
+.search-input {
+    padding: 0.4rem 2rem 0.4rem 2rem;
+    border: 1px solid var(--wa-color-neutral-80);
+    border-radius: var(--wa-border-radius-medium);
+    font-size: 0.9rem;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s, width 0.3s, box-shadow 0.2s;
+    background: white;
+}
+.search-input:focus {
+    border-color: var(--wa-color-brand-50);
+    box-shadow: 0 0 0 2px var(--wa-color-brand-90);
+    width: 260px;
+}
+.search-input::placeholder {
+    color: var(--wa-color-neutral-60);
+}
+.search-clear {
+    position: absolute;
+    right: 0.5rem;
+    font-size: 1rem;
+    color: var(--wa-color-neutral-50);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.search-clear:hover {
+    color: var(--wa-color-neutral-20);
 }
 .ticket-list-container {
     display: flex;
