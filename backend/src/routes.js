@@ -11,6 +11,20 @@ const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
 const vm = require('vm');
 const { runBotsForTicket } = require('./bots');
+const { evaluateTemplate } = require('./validation');
+
+// Compute summary string from workflow template for search purposes
+function computeSummary(ticketData, wf) {
+    if (!wf || !wf.template) return undefined;
+    try {
+        const data = typeof ticketData.toObject === 'function' ? ticketData.toObject() : ticketData;
+        const result = evaluateTemplate(wf.template, data);
+        return typeof result === 'string' ? result.trim() : String(result || '').trim();
+    } catch (e) {
+        console.warn('[computeSummary] Error:', e.message);
+        return undefined;
+    }
+}
 
 // Auth
 router.post('/login', async (req, res) => {
@@ -162,7 +176,7 @@ router.get('/config/:type/doc', verifyToken, async (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter, type, status, creator, assignee, dateFrom, dateTo, badge, assignmentType } = req.query; // 'my', 'assigned', 'all' AND granular filters
+    const { filter, type, status, creator, assignee, dateFrom, dateTo, badge, assignmentType, search } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     let baseQuery = {};
@@ -313,6 +327,38 @@ router.get('/tickets', verifyToken, async (req, res) => {
     if (badge) {
         const badges = Array.isArray(badge) ? badge : [badge];
         sensitiveFilters.push({ badges: { $in: badges } });
+    }
+
+    // Fulltext search across key fields
+    if (search) {
+        const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchConditions = [
+            { title: { $regex: escapedSearch, $options: 'i' } },
+            { id: { $regex: escapedSearch, $options: 'i' } },
+            { description: { $regex: escapedSearch, $options: 'i' } },
+            { creator: { $regex: escapedSearch, $options: 'i' } },
+            { assignee: { $regex: escapedSearch, $options: 'i' } },
+            { badges: { $regex: escapedSearch, $options: 'i' } },
+            { summary: { $regex: escapedSearch, $options: 'i' } }
+        ];
+
+        // Also match by user display names
+        try {
+            const { getUsers } = require('./auth');
+            const allUsers = await getUsers();
+            const searchRegex = new RegExp(escapedSearch, 'i');
+            const matchedUsernames = allUsers
+                .filter(u => searchRegex.test(u.displayName))
+                .map(u => u.username);
+            if (matchedUsernames.length > 0) {
+                searchConditions.push({ creator: { $in: matchedUsernames } });
+                searchConditions.push({ assignee: { $in: matchedUsernames } });
+            }
+        } catch (e) {
+            // Ignore display name resolution errors
+        }
+
+        sensitiveFilters.push({ $or: searchConditions });
     }
 
     if (sensitiveFilters.length > 0) {
@@ -466,6 +512,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         }
 
         const newTicket = new Ticket(ticketData);
+        newTicket.summary = computeSummary(newTicket, wf) || '';
         await newTicket.save();
 
         // Run bots immediately
@@ -632,6 +679,9 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         if (ticket.isModified()) {
+            const currentWfForSummary = workflowEngine.getWorkflowForType(ticket.type);
+            const newSummary = computeSummary(ticket, currentWfForSummary);
+            if (newSummary !== undefined) ticket.summary = newSummary;
             await ticket.save();
         }
 

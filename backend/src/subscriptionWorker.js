@@ -126,6 +126,7 @@ async function runSubscriptionCheck() {
             // Fetch matching tickets
             console.log(`[SubscriptionWorker] Query for ${sub.userId} / ${sub.name}:`, JSON.stringify(query));
             const tickets = await Ticket.find(query, { _id: 1, id: 1, state: 1, title: 1 });
+            console.log(`[SubscriptionWorker] Found ${tickets.length} matching tickets for '${sub.name}' (User: ${sub.userId}, previous: ${sub.lastMatchingTickets.length})`);
 
             // Format current result
             const currentTickets = tickets.map(t => ({ id: t.id, state: t.state, title: t.title }));
@@ -181,6 +182,8 @@ async function runSubscriptionCheck() {
                     { _id: sub._id },
                     { $set: { lastMatchingTickets: sub.lastMatchingTickets } }
                 );
+            } else {
+                console.log(`[SubscriptionWorker] No changes for subscription '${sub.name}' (User: ${sub.userId}), skipping notification`);
             }
         }
     } catch (error) {

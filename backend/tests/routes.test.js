@@ -122,6 +122,13 @@ describe('API Routes', () => {
             expect(Array.isArray(tickets)).toBe(true);
         });
 
+        it('should compute summary from template on creation', async () => {
+            const ticket = await Ticket.findById(ticketId);
+            // IT-Ticket template: "{{location}} {{ticket.category}}"
+            // location: 'Raum 100 (Textilarbeit / Werken)', category: 'Hardware'
+            expect(ticket.summary).toBe('Raum 100 (Textilarbeit / Werken) Hardware');
+        });
+
         it('should add comment to ticket', async () => {
             const res = await request(app)
                 .post(`/api/tickets/${ticketId}/comments`)

@@ -84,3 +84,51 @@ describe('Ticket Filtering via Status', () => {
         expect(tickets[0].title).toBe('Ticket 1');
     });
 });
+
+describe('Ticket Fulltext Search', () => {
+    beforeEach(async () => {
+        await Ticket.create([
+            { id: 'ITT-1', type: 'IT-Ticket', title: 'Drucker defekt', creator: 'lehrer1', state: 'offen.neu', summary: 'Raum 142 Hardware', location: 'Raum 142' },
+            { id: 'ITT-2', type: 'IT-Ticket', title: 'Beamer flackert', creator: 'lehrer2', state: 'offen.neu', summary: 'Raum 301 Medien', location: 'Raum 301' },
+            { id: 'HM-1', type: 'Hausmeisterauftrag', title: 'Fenster klemmt', creator: 'lehrer1', state: 'offen.neu', summary: '' }
+        ]);
+    });
+
+    it('should find tickets by title', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&search=Drucker')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(1);
+        expect(res.body[0].id).toBe('ITT-1');
+    });
+
+    it('should find tickets by summary (dynamic data)', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&search=Raum 301')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(1);
+        expect(res.body[0].id).toBe('ITT-2');
+    });
+
+    it('should combine search with other filters', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&type=IT-Ticket&search=Raum')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(2);
+        const ids = res.body.map(t => t.id);
+        expect(ids).toContain('ITT-1');
+        expect(ids).toContain('ITT-2');
+        expect(ids).not.toContain('HM-1');
+    });
+
+    it('should return empty results for non-matching search', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&search=Xylophon')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(0);
+    });
+});
