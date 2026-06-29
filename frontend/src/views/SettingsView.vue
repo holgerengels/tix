@@ -17,7 +17,7 @@
         <wa-input 
           label="Benachrichtigungskanal" 
           :value.prop="notificationUri"
-          @change="notificationUri = $event.target.value; save()"
+          @change="notificationUri = normalizeNotificationUri($event.target.value); save()"
           :disabled="loading"
           hint="Z.B. nctalk:h.engels oder mailto:h.engels@valckenburgschule.de"
         >
@@ -84,7 +84,22 @@ onMounted(async () => {
     }
 });
 
+function normalizeNotificationUri(uri) {
+    if (!uri) return '';
+    return uri.split(',')
+        .map(item => {
+            const trimmed = item.trim();
+            const colonIndex = trimmed.indexOf(':');
+            if (colonIndex === -1) return trimmed;
+            const protocol = trimmed.substring(0, colonIndex).toLowerCase();
+            const address = trimmed.substring(colonIndex + 1);
+            return `${protocol}:${address}`;
+        })
+        .join(', ');
+}
+
 const save = async () => {
+    notificationUri.value = normalizeNotificationUri(notificationUri.value);
     loading.value = true;
     try {
         await axios.post('/api/settings', {

@@ -552,12 +552,26 @@ const getUserSettings = async (username) => {
     }
 };
 
+function normalizeNotificationUri(uri) {
+    if (!uri) return '';
+    return uri.split(',')
+        .map(item => {
+            const trimmed = item.trim();
+            const colonIndex = trimmed.indexOf(':');
+            if (colonIndex === -1) return trimmed;
+            const protocol = trimmed.substring(0, colonIndex).toLowerCase();
+            const address = trimmed.substring(colonIndex + 1);
+            return `${protocol}:${address}`;
+        })
+        .join(', ');
+}
+
 const updateUserSettings = async (username, newSettings) => {
     username = username.toLowerCase();
     try {
         const update = {};
         if (newSettings.notificationUri !== undefined) {
-            update.notificationUri = newSettings.notificationUri;
+            update.notificationUri = normalizeNotificationUri(newSettings.notificationUri);
         }
         await User.findOneAndUpdate(
             { username },
