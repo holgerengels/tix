@@ -96,4 +96,52 @@ describe('Security and Authorization', () => {
             
         expect(actionAuthorizedRes.status).toBe(200);
     });
+
+    it('should enforce security on attachment downloads', async () => {
+        // 1. Upload attachment as stundenplaner
+        const uploadRes = await request(app)
+            .post('/api/attachments')
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('x-filename', encodeURIComponent('test.txt'))
+            .set('x-content-type', 'text/plain')
+            .set('content-length', '12')
+            .send('test content');
+
+        expect(uploadRes.status).toBe(201);
+        const fileId = uploadRes.body.fileId;
+
+        // 2. Unassociated file access checks
+        // Uploader can access
+        const dlUploaderRes = await request(app)
+            .get(`/api/attachments/${fileId}`)
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`);
+        expect(dlUploaderRes.status).toBe(200);
+        expect(dlUploaderRes.text).toBe('test content');
+
+        // Other non-admin user cannot access
+        const dlOtherRes = await request(app)
+            .get(`/api/attachments/${fileId}`)
+            .set('Authorization', `Bearer ${tokens.hausmeister}`);
+        expect(dlOtherRes.status).toBe(403);
+
+        // 3. Associate attachment with the ticket
+        const Ticket = require('../src/models/ticket');
+        await Ticket.findByIdAndUpdate(ticketId, {
+            $push: { attachments: { fileId, filename: 'test.txt' } }
+        });
+
+        // 4. Ticket-associated file access checks
+        // User who can read ticket can download attachment
+        const dlAuthorizedRes = await request(app)
+            .get(`/api/attachments/${fileId}`)
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`);
+        expect(dlAuthorizedRes.status).toBe(200);
+        expect(dlAuthorizedRes.text).toBe('test content');
+
+        // User who cannot read ticket cannot download attachment
+        const dlUnauthorizedRes = await request(app)
+            .get(`/api/attachments/${fileId}`)
+            .set('Authorization', `Bearer ${tokens.hausmeister}`);
+        expect(dlUnauthorizedRes.status).toBe(403);
+    });
 });

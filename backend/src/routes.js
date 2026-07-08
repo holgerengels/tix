@@ -238,10 +238,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
             const conditions = [];
             const allWorkflows = workflowEngine.getWorkflows();
             Object.values(allWorkflows).forEach(wf => {
-                const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-                const groups = [];
-                if (readAccess) groups.push(...readAccess.groups);
-                if (groups.some(g => user.groups.includes(g))) {
+                if (workflowEngine.canRead(wf.type, user.groups)) {
                     conditions.push({ type: wf.type });
                 }
             });
@@ -826,8 +823,7 @@ router.get('/logs', verifyToken, async (req, res) => {
         } else {
             const accessOr = [];
             Object.values(wfConfig).forEach(wf => {
-                const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
-                if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                if (workflowEngine.canRead(wf.type, user.groups)) {
                     accessOr.push({ type: wf.type });
                 }
             });

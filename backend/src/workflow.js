@@ -103,6 +103,15 @@ const canDelete = (type, userGroups) => {
     return rule.groups.some(g => userGroups.includes(g));
 };
 
+const canRead = (type, userGroups) => {
+    if (userGroups.includes('Administration')) return true;
+    const wf = workflows[type];
+    if (!wf) return false;
+    const rule = wf.access.find(z => z.name === 'read');
+    if (!rule) return false;
+    return rule.groups.some(g => userGroups.includes(g));
+};
+
 module.exports = {
     getWorkflows,
     getWorkflowForType,
@@ -110,5 +119,7 @@ module.exports = {
     loadWorkflows,
     canComment,
     canEdit,
-    canDelete
+    canDelete,
+    canRead
 };
+
