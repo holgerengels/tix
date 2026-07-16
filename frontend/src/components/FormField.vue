@@ -224,7 +224,7 @@ const fetchUsers = async () => {
     
     try {
         const groups = props.field.groups || [];
-        users.value = await usersStore.fetchUsersByGroup(groups);
+        users.value = await usersStore.fetchUsersByGroup(groups, false);
     } catch (err) {
         console.error("Failed to fetch users", err);
     }

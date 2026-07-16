@@ -63,7 +63,8 @@ router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
     // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin
     const groups = req.query.groups ? req.query.groups.split(',').filter(g => g.trim()) : [];
-    res.json(await getUsers(groups));
+    const forceFetch = req.query.forceFetch === 'true';
+    res.json(await getUsers(groups, forceFetch));
 });
 
 router.get('/users/:username', verifyToken, async (req, res) => {

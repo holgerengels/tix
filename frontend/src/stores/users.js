@@ -49,11 +49,11 @@ export const useUsersStore = defineStore('users', () => {
      * Fetch users by groups (for User form fields).
      * Caches all returned users and returns the full array.
      */
-    async function fetchUsersByGroup(groups = []) {
+    async function fetchUsersByGroup(groups = [], forceFetch = false) {
         try {
             const groupsParam = groups.join(',')
             const res = await axios.get('/api/users', {
-                params: { groups: groupsParam },
+                params: { groups: groupsParam, forceFetch: forceFetch ? 'true' : 'false' },
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             })
             const users = res.data
