@@ -11,20 +11,9 @@ const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
 const vm = require('vm');
 const { runBotsForTicket } = require('./bots');
-const { evaluateTemplate } = require('./validation');
+const { evaluateTemplate, computeSummary } = require('./validation');
 
-// Compute summary string from workflow template for search purposes
-function computeSummary(ticketData, wf) {
-    if (!wf || !wf.template) return undefined;
-    try {
-        const data = typeof ticketData.toObject === 'function' ? ticketData.toObject() : ticketData;
-        const result = evaluateTemplate(wf.template, data);
-        return typeof result === 'string' ? result.trim() : String(result || '').trim();
-    } catch (e) {
-        console.warn('[computeSummary] Error:', e.message);
-        return undefined;
-    }
-}
+
 
 // Auth
 router.post('/login', async (req, res) => {
@@ -1067,6 +1056,11 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
 
         // Force the state specifically if it wasn't captured correctly? 
         // dataBefore should have the old state.
+
+        // Recompute summary after restoring data
+        const undoWf = workflowEngine.getWorkflowForType(ticket.type);
+        const newSummary = computeSummary(ticket, undoWf);
+        if (newSummary !== undefined) ticket.summary = newSummary;
 
         await ticket.save();
 

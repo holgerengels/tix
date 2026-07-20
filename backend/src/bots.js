@@ -5,6 +5,8 @@ const cron = require('node-cron');
 const Ticket = require('./models/ticket');
 const Log = require('./models/log');
 const ki = require('./ki');
+const workflowEngine = require('./workflow');
+const { computeSummary } = require('./validation');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
@@ -135,6 +137,9 @@ async function runBots() {
                     await bot.run(ticket);
 
                     if (ticket.isModified()) {
+                        const wf = workflowEngine.getWorkflowForType(ticket.type);
+                        const newSummary = computeSummary(ticket, wf);
+                        if (newSummary !== undefined) ticket.summary = newSummary;
                         await ticket.save();
                         console.log(`Ticket ${ticket.id} updated by bot ${bot.name}`);
                     }
@@ -169,6 +174,9 @@ async function runBotsForTicket(ticket) {
             await bot.run(ticket);
 
             if (ticket.isModified()) {
+                const wf = workflowEngine.getWorkflowForType(ticket.type);
+                const newSummary = computeSummary(ticket, wf);
+                if (newSummary !== undefined) ticket.summary = newSummary;
                 await ticket.save();
                 console.log(`Ticket ${ticket.id} updated by sync bot ${bot.name}`);
             }
@@ -197,6 +205,9 @@ async function runBotsForTicket(ticket) {
                 await bot.run(asyncTicket);
 
                 if (asyncTicket.isModified()) {
+                    const wf = workflowEngine.getWorkflowForType(asyncTicket.type);
+                    const newSummary = computeSummary(asyncTicket, wf);
+                    if (newSummary !== undefined) asyncTicket.summary = newSummary;
                     await asyncTicket.save();
                     console.log(`Ticket ${asyncTicket.id} updated by async bot ${bot.name}`);
                 }
@@ -232,6 +243,9 @@ function scheduleBots() {
                             try {
                                 await bot.run(t);
                                 if (t.isModified()) {
+                                    const wf = workflowEngine.getWorkflowForType(t.type);
+                                    const newSummary = computeSummary(t, wf);
+                                    if (newSummary !== undefined) t.summary = newSummary;
                                     await t.save();
                                 }
                             } catch (err) {
