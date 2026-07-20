@@ -53,19 +53,43 @@ router.post('/attachments', verifyToken, async (req, res) => {
 // Download: GridFS → Response stream
 router.get('/attachments/:fileId', verifyToken, async (req, res) => {
     try {
-        const fileId = new ObjectId(req.params.fileId);
+        const fileId = req.params.fileId;
+        const fileObjectId = new ObjectId(fileId);
 
-        const files = await bucket.find({ _id: fileId }).toArray();
+        const files = await bucket.find({ _id: fileObjectId }).toArray();
         if (!files || files.length === 0) {
             return res.status(404).json({ message: 'File not found' });
         }
 
         const file = files[0];
+
+        // Check read permission
+        const Ticket = require('./models/ticket');
+        const ticket = await Ticket.findOne({ 'attachments.fileId': fileId });
+        const userGroups = req.user.groups || [];
+
+        let hasAccess = false;
+        if (ticket) {
+            const { canRead } = require('./workflow');
+            const isCreator = ticket.creator === req.user.username;
+            const isAssignee = ticket.assignee === req.user.username;
+            hasAccess = isCreator || isAssignee || canRead(ticket.type, userGroups);
+        } else {
+            // Unassociated file - only uploader or administrator can access
+            const isUploader = file.metadata?.uploadedBy === req.user.username;
+            const isAdmin = userGroups.includes('Administration');
+            hasAccess = isUploader || isAdmin;
+        }
+
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Not authorized to access this attachment' });
+        }
+
         res.set('Content-Type', file.contentType || 'application/octet-stream');
         res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
         res.set('Content-Length', file.length);
 
-        const downloadStream = bucket.openDownloadStream(fileId);
+        const downloadStream = bucket.openDownloadStream(fileObjectId);
         downloadStream.pipe(res);
 
         downloadStream.on('error', (err) => {

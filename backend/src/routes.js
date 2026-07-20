@@ -52,7 +52,8 @@ router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
     // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin
     const groups = req.query.groups ? req.query.groups.split(',').filter(g => g.trim()) : [];
-    res.json(await getUsers(groups));
+    const forceFetch = req.query.forceFetch === 'true';
+    res.json(await getUsers(groups, forceFetch));
 });
 
 router.get('/users/:username', verifyToken, async (req, res) => {
@@ -227,10 +228,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
             const conditions = [];
             const allWorkflows = workflowEngine.getWorkflows();
             Object.values(allWorkflows).forEach(wf => {
-                const readAccess = wf.access ? wf.access.find(z => z.name === 'read') : null;
-                const groups = [];
-                if (readAccess) groups.push(...readAccess.groups);
-                if (groups.some(g => user.groups.includes(g))) {
+                if (workflowEngine.canRead(wf.type, user.groups)) {
                     conditions.push({ type: wf.type });
                 }
             });
@@ -815,8 +813,7 @@ router.get('/logs', verifyToken, async (req, res) => {
         } else {
             const accessOr = [];
             Object.values(wfConfig).forEach(wf => {
-                const readAccess = wf.access ? wf.access.find(a => a.name === 'read') : null;
-                if (readAccess && readAccess.groups.some(g => user.groups.includes(g))) {
+                if (workflowEngine.canRead(wf.type, user.groups)) {
                     accessOr.push({ type: wf.type });
                 }
             });

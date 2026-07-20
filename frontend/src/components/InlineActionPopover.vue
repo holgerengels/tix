@@ -125,17 +125,15 @@ const fetchAssignees = async () => {
     if (availableAssignees.value.length > 0) return;
     loadingUsers.value = true;
     try {
-        let users = await usersStore.fetchUsersByGroup([]);
         const config = workflow.config;
+        let groups = [];
         if (config && config[props.ticket.type] && config[props.ticket.type].fields) {
             const assigneeField = config[props.ticket.type].fields.find(f => f.name === 'assignee');
-            if (assigneeField && assigneeField.groups && assigneeField.groups.length > 0) {
-                users = users.filter(u => {
-                    if (!u.groups) return false;
-                    return u.groups.some(g => assigneeField.groups.includes(g));
-                });
+            if (assigneeField && assigneeField.groups) {
+                groups = assigneeField.groups;
             }
         }
+        let users = await usersStore.fetchUsersByGroup(groups, false);
         availableAssignees.value = users;
     } catch (err) {
         console.error('Error fetching users:', err);

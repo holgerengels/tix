@@ -256,23 +256,37 @@ const verifyToken = (req, res, next) => {
     });
 };
 
+const ldapCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const getUsers = async (filterGroups = [], forceFetch = false) => {
-    // 1. LDAP direct fetch if requested (forceFetch = true) and not in DevMode
-    if (forceFetch && !settings.devmode && settings.server && settings.server.ldap) {
+    const hasFilter = filterGroups && filterGroups.length > 0;
+
+    // 1. LDAP query with caching if there is a filter OR if forceFetch is requested
+    if ((hasFilter || forceFetch) && !settings.devmode && settings.server && settings.server.ldap) {
+        const cacheKey = filterGroups.sort().join(',');
+        const cached = ldapCache.get(cacheKey);
+        const now = Date.now();
+
+        if (!forceFetch && cached && (now - cached.timestamp < CACHE_TTL)) {
+            console.log(`[Auth] Returning cached LDAP users for groups: ${cacheKey}`);
+            return cached.users;
+        }
+
         const ldapConfig = settings.server.ldap;
         try {
-            return await new Promise((resolve, reject) => {
+            const ldapUsers = await new Promise((resolve, reject) => {
                 const client = ldap.createClient({ url: ldapConfig.url });
 
                 client.on('error', (err) => {
-                    console.error('[Auth] LDAP Client Error (getUsers forceFetch):', err);
+                    console.error('[Auth] LDAP Client Error (getUsers):', err);
                     resolve([]);
                 });
 
                 client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
                     if (err) {
                         client.unbind();
-                        console.error('[Auth] LDAP Bind Error (getUsers forceFetch):', err);
+                        console.error('[Auth] LDAP Bind Error (getUsers):', err);
                         return resolve([]);
                     }
 
@@ -285,7 +299,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                     client.search(ldapConfig.basedn, opts, (err, searchRes) => {
                         if (err) {
                             client.unbind();
-                            console.error('[Auth] LDAP Search Error (getUsers forceFetch):', err);
+                            console.error('[Auth] LDAP Search Error (getUsers):', err);
                             return resolve([]);
                         }
 
@@ -343,7 +357,11 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
 
                         searchRes.on('end', () => {
                             client.unbind();
-                            resolve(foundUsers);
+                            let result = foundUsers;
+                            if (filterGroups && filterGroups.length > 0) {
+                                result = result.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
+                            }
+                            resolve(result);
                         });
 
                         searchRes.on('error', (err) => {
@@ -354,8 +372,16 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                     });
                 });
             });
+
+            // Cache the result
+            ldapCache.set(cacheKey, {
+                users: ldapUsers,
+                timestamp: now
+            });
+
+            return ldapUsers;
         } catch (err) {
-            console.error('[Auth] General Error in getUsers forceFetch:', err);
+            console.error('[Auth] General Error in getUsers:', err);
             return [];
         }
     }
@@ -552,12 +578,26 @@ const getUserSettings = async (username) => {
     }
 };
 
+function normalizeNotificationUri(uri) {
+    if (!uri) return '';
+    return uri.split(',')
+        .map(item => {
+            const trimmed = item.trim();
+            const colonIndex = trimmed.indexOf(':');
+            if (colonIndex === -1) return trimmed;
+            const protocol = trimmed.substring(0, colonIndex).toLowerCase();
+            const address = trimmed.substring(colonIndex + 1);
+            return `${protocol}:${address}`;
+        })
+        .join(', ');
+}
+
 const updateUserSettings = async (username, newSettings) => {
     username = username.toLowerCase();
     try {
         const update = {};
         if (newSettings.notificationUri !== undefined) {
-            update.notificationUri = newSettings.notificationUri;
+            update.notificationUri = normalizeNotificationUri(newSettings.notificationUri);
         }
         await User.findOneAndUpdate(
             { username },

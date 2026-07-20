@@ -96,6 +96,20 @@ describe('User Persistence & Pruning', () => {
         });
     });
 
+    describe('API Users Route', () => {
+        it('should return only users in the requested groups', async () => {
+            const getRes = await request(app)
+                .get('/api/users?groups=Netzwerkteam')
+                .set('Authorization', `Bearer ${tokens.admin}`);
+
+            expect(getRes.status).toBe(200);
+            const users = getRes.body;
+            expect(users.every(u => u.groups.includes('Netzwerkteam'))).toBe(true);
+            expect(users.some(u => u.username === 'netzwerker')).toBe(true);
+            expect(users.some(u => u.username === 'hausmeister')).toBe(false);
+        });
+    });
+
     describe('LDAP Pruning background job', () => {
         let authModule;
 
