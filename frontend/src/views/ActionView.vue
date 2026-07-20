@@ -106,11 +106,13 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useUsersStore } from '../stores/users';
+import { useWorkflowStore } from '../stores/workflow';
 import { useTicketAccess } from '../composables/useTicketAccess';
 import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 const usersStore = useUsersStore();
+const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import { validateTicket } from '../utils/evaluation';
@@ -118,7 +120,7 @@ import { validateTicket } from '../utils/evaluation';
 const route = useRoute();
 const router = useRouter();
 const ticket = ref(null);
-const config = ref({});
+const config = computed(() => workflow.config);
 const actionDef = ref(null);
 const currentFormDef = ref(null);
 const loading = ref(true);
@@ -149,15 +151,13 @@ const fetchData = async () => {
     loading.value = true;
     error.value = null;
     try {
-        const configRes = await axios.get('/api/config', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        config.value = configRes.data;
-
-        const ticketRes = await axios.get('/api/tickets', {
-            params: { id: route.params.id },
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        const [_, ticketRes] = await Promise.all([
+            workflow.fetchConfig(),
+            axios.get('/api/tickets', {
+                params: { id: route.params.id },
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            })
+        ]);
         
         if (ticketRes.data && ticketRes.data.length > 0) {
             ticket.value = ticketRes.data[0];
@@ -175,7 +175,7 @@ const fetchData = async () => {
 };
 
 const prepareAction = () => {
-    if (!ticket.value || !config.value[ticket.value.type]) return;
+    if (!ticket.value || !config.value || !config.value[ticket.value.type]) return;
     
     const actionName = route.params.action;
     const wf = config.value[ticket.value.type];

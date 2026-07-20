@@ -242,10 +242,13 @@ const fetchTickets = async () => {
             const term = searchTerm.value.trim();
             if (term) params.search = term;
 
-            const res = await axios.get('/api/tickets', {
-                params: params,
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const [_, res] = await Promise.all([
+                workflow.fetchConfig(),
+                axios.get('/api/tickets', {
+                    params: params,
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                })
+            ]);
             
             if (requestId === lastRequestId) {
                 tickets.value = res.data;
@@ -444,10 +447,8 @@ watch(searchTerm, () => {
     searchDebounce = setTimeout(() => fetchTickets(), 300);
 });
 
-onMounted(async () => {
-    await workflow.fetchConfig();
-    // Tickets are fetched by TicketView emitting @fetch on mount
-});
+// Config loading and ticket fetching are handled by fetchTickets() via Promise.all
+// TicketListConfig emits @fetch on mount, which triggers fetchTickets()
 </script>
 
 <style scoped>
