@@ -146,7 +146,7 @@ async function stornieren(ticket) {
 /**
  * Bot: syncDate
  * Triggered insync whenever the conference ticket is saved in offen.eingetragen.
- * Propagates date changes to all open sub-tickets.
+ * Propagates date, room, catering, and attendee changes to all open sub-tickets and CalDAV.
  */
 async function syncDate(ticket) {
     if (ticket.state !== 'offen.eingetragen') return;
@@ -156,8 +156,9 @@ async function syncDate(ticket) {
 
     const timeStart = ticket.get('timeStart');
     const timeEnd = ticket.get('timeEnd');
+    const termin = ticket.get('termin');
 
-    // Update event on creator's personal calendar
+    // Update event on creator's personal calendar (including updated attendees & times)
     try {
         const { attendees, creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
         if (creatorEmail && timeStart && timeEnd) {
@@ -185,16 +186,66 @@ async function syncDate(ticket) {
     const { runBotsForTicket } = require('./bots');
 
     for (const sub of subTickets) {
-        const subDate = sub.get('date');
-        if (subDate !== date) {
+        let changed = false;
+
+        // Date sync
+        if (sub.get('date') !== date) {
             sub.set('date', date);
             sub.markModified('date');
-            if (sub.type === 'Raumreservierung' && sub.state === 'offen.eingetragen') {
+            changed = true;
+        }
+
+        // Raumreservierung specific sync
+        if (sub.type === 'Raumreservierung') {
+            if (termin && JSON.stringify(sub.get('termin')) !== JSON.stringify(termin)) {
+                sub.set('termin', termin);
+                sub.markModified('termin');
+                changed = true;
+            }
+            if (changed && sub.state === 'offen.eingetragen') {
                 sub.state = 'offen.verschoben';
             }
+        }
+
+        // Bewirtungsauftrag specific sync
+        if (sub.type === 'Bewirtungsauftrag') {
+            const cateringTime = ticket.get('cateringTime') || timeStart;
+            const cateringPersons = ticket.get('cateringPersons') || 0;
+            const cateringDrinks = ticket.get('cateringDrinks') || [];
+            const cateringDesc = ticket.get('cateringDescription') || '';
+            const room = termin ? termin.room : '';
+
+            if (cateringTime && sub.get('breakfastTime') !== cateringTime) {
+                sub.set('breakfastTime', cateringTime);
+                sub.markModified('breakfastTime');
+                changed = true;
+            }
+            if (cateringPersons && sub.get('numberOfPersons') !== cateringPersons) {
+                sub.set('numberOfPersons', cateringPersons);
+                sub.markModified('numberOfPersons');
+                changed = true;
+            }
+            if (cateringDrinks && JSON.stringify(sub.get('bfDrinksAndFood')) !== JSON.stringify(cateringDrinks)) {
+                sub.set('bfDrinksAndFood', cateringDrinks);
+                sub.markModified('bfDrinksAndFood');
+                changed = true;
+            }
+            if (room && sub.get('room') !== room) {
+                sub.set('room', room);
+                sub.markModified('room');
+                changed = true;
+            }
+            if (sub.get('description') !== cateringDesc) {
+                sub.set('description', cateringDesc);
+                sub.markModified('description');
+                changed = true;
+            }
+        }
+
+        if (changed) {
             await sub.save();
             await runBotsForTicket(sub);
-            console.log(`[Konferenz] Datum von Subticket ${sub.id} (${sub.type}) synchronisiert auf ${date}.`);
+            console.log(`[Konferenz] Subticket ${sub.id} (${sub.type}) synchronisiert.`);
         }
     }
 }

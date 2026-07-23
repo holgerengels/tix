@@ -36,8 +36,6 @@
             "name": "participants",
             "label": "Teilnehmer*innen",
             "type": "ObjectArray",
-            "fixedLength": "{{ ticket.state && ticket.state !== 'offen.neu' }}",
-            "fixedOrder": "{{ ticket.state && ticket.state !== 'offen.neu' }}",
             "items": {
                 "fields": [
                     {
@@ -47,8 +45,7 @@
                         "groups": [
                             "Lehrkräfte"
                         ],
-                        "required": true,
-                        "readonly": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+                        "required": true
                     },
                     {
                         "name": "status",
@@ -61,7 +58,7 @@
                             "abwesend"
                         ],
                         "default": "eingeladen",
-                        "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+                        "visible": "{{ ticket.state === 'geschlossen.ok' }}"
                     }
                 ]
             }
@@ -171,10 +168,21 @@
             ],
             "actions": [
                 {
+                    "name": "ändern",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "form": "aendern"
+                },
+                {
                     "name": "protokollieren",
                     "groups": [
                         "@creator",
-                        "Schulleitung"
+                        "Schulleitung",
+                        "Netzwerkteam"
                     ],
                     "form": "protokollieren"
                 },
@@ -182,7 +190,8 @@
                     "name": "stornieren",
                     "groups": [
                         "@creator",
-                        "Schulleitung"
+                        "Schulleitung",
+                        "Netzwerkteam"
                     ],
                     "optional": true,
                     "script": "ticket.state = 'offen.storniert'"
@@ -194,34 +203,39 @@
         {
             "name": "create",
             "groups": [
-                "Schulleitung"
+                "Schulleitung",
+                "Netzwerkteam"
             ]
         },
         {
             "name": "read",
             "groups": [
                 "@creator",
-                "Schulleitung"
+                "Schulleitung",
+                "Netzwerkteam"
             ]
         },
         {
             "name": "edit",
             "groups": [
                 "@creator",
-                "Schulleitung"
+                "Schulleitung",
+                "Netzwerkteam"
             ]
         },
         {
             "name": "delete",
             "groups": [
-                "Schulleitung"
+                "Schulleitung",
+                "Netzwerkteam"
             ]
         },
         {
             "name": "comment",
             "groups": [
                 "@creator",
-                "Schulleitung"
+                "Schulleitung",
+                "Netzwerkteam"
             ]
         }
     ],
@@ -269,13 +283,46 @@
     ],
     "forms": [
         {
+            "name": "aendern",
+            "title": "Konferenzangaben ändern",
+            "actions": [
+                {
+                    "name": "Änderungen speichern",
+                    "script": "ticket.state = 'offen.eingetragen'"
+                }
+            ]
+        },
+        {
             "name": "protokollieren",
             "title": "Konferenz protokollieren",
             "fields": [
                 {
                     "name": "participants",
                     "label": "Anwesenheit prüfen",
-                    "required": true
+                    "required": true,
+                    "fixedLength": true,
+                    "fixedOrder": true,
+                    "items": {
+                        "fields": [
+                            {
+                                "name": "name",
+                                "readonly": true
+                            },
+                            {
+                                "name": "status",
+                                "label": "Status",
+                                "type": "Select",
+                                "options": [
+                                    "eingeladen",
+                                    "anwesend",
+                                    "entschuldigt",
+                                    "abwesend"
+                                ],
+                                "default": "eingeladen",
+                                "visible": true
+                            }
+                        ]
+                    }
                 },
                 {
                     "name": "protocol",
