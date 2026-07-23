@@ -42,14 +42,14 @@ try {
 console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 
 const MOCK_USERS = [
-    { username: 'admin', password: 'password', groups: ['Administration'], displayName: 'Holger Engels' },
-    { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'], displayName: 'Max Mustermann' },
-    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte', 'Mensateam'], displayName: 'Sabine Keller' },
-    { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'], displayName: 'Thomas Braun' },
-    { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'], displayName: 'Claudia Richter' },
-    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'], displayName: 'Stefan Hoffmann' },
-    { username: 'hausmeister', password: 'password', groups: ['Hausmeister'], displayName: 'Max Grau' },
-    { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'], displayName: 'Jens Schreiber' },
+    { username: 'admin', password: 'password', groups: ['Administration'], displayName: 'Holger Engels', employeeId: 'h.engels' },
+    { username: 'lehrer1', password: 'password', groups: ['Lehrkräfte'], displayName: 'Max Mustermann', employeeId: 'm.mustermann' },
+    { username: 'lehrer2', password: 'password', groups: ['Lehrkräfte', 'Mensateam'], displayName: 'Sabine Keller', employeeId: 's.keller' },
+    { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'], displayName: 'Thomas Braun', employeeId: 't.braun' },
+    { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'], displayName: 'Claudia Richter', employeeId: 'c.richter' },
+    { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'], displayName: 'Stefan Hoffmann', employeeId: 's.hoffmann' },
+    { username: 'hausmeister', password: 'password', groups: ['Hausmeister'], displayName: 'Max Grau', employeeId: 'm.grau' },
+    { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'], displayName: 'Jens Schreiber', employeeId: 'j.schreiber' },
 ];
 
 const SECRET_KEY = 'supersecretkey'; // In prod, use .env
@@ -74,6 +74,7 @@ const login = async (username, password, isPwa) => {
                     {
                         username: user.username,
                         displayName: user.displayName,
+                        employeeId: user.employeeId || '',
                         groups: user.groups,
                         lastSeenInLdap: new Date()
                     },
@@ -123,7 +124,7 @@ const login = async (username, password, isPwa) => {
             const opts = {
                 filter: filter,
                 scope: 'sub',
-                attributes: ['dn', 'memberOf', 'givenName', 'sn', 'givenname']
+                attributes: ['dn', 'memberOf', 'givenName', 'sn', 'givenname', 'employeeID']
             };
 
             client.search(ldapConfig.basedn, opts, (err, searchRes) => {
@@ -182,6 +183,9 @@ const login = async (username, password, isPwa) => {
                         userClient.unbind();
                         client.unbind();
 
+                        let employeeId = userEntry.employeeID || userEntry.employeeid || '';
+                        if (Array.isArray(employeeId)) employeeId = employeeId[0];
+
                         const groups = [];
                         const rawGroups = Array.isArray(userEntry.memberOf) ? userEntry.memberOf : [userEntry.memberOf];
 
@@ -219,6 +223,7 @@ const login = async (username, password, isPwa) => {
                                 {
                                     username: username,
                                     displayName: displayName,
+                                    employeeId: employeeId,
                                     groups: groups,
                                     lastSeenInLdap: new Date()
                                 },
@@ -293,7 +298,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                     const opts = {
                         filter: ldapConfig.userfilter,
                         scope: 'sub',
-                        attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn']
+                        attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn', 'employeeID']
                     };
 
                     client.search(ldapConfig.basedn, opts, (err, searchRes) => {
@@ -308,6 +313,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                             let username = '';
                             let groups = [];
                             let displayName = '';
+                            let employeeId = '';
 
                             let userAttributes = entry.object;
                             if (!userAttributes) {
@@ -334,6 +340,10 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                                 if (Array.isArray(sn)) sn = sn[0];
                                 displayName = [givenName, sn].filter(Boolean).join(' ') || username;
 
+                                let empId = userAttributes.employeeID || userAttributes.employeeid || '';
+                                if (Array.isArray(empId)) empId = empId[0];
+                                employeeId = empId || '';
+
                                 let rawGroups = userAttributes.memberOf || userAttributes.memberof;
                                 if (rawGroups) {
                                     if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
@@ -351,7 +361,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                             }
 
                             if (username) {
-                                foundUsers.push({ username, groups, displayName });
+                                foundUsers.push({ username, groups, displayName, employeeId });
                             }
                         });
 
@@ -393,6 +403,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
         users = dbUsers.map(u => ({
             username: u.username,
             displayName: u.displayName || u.username,
+            employeeId: u.employeeId || '',
             groups: u.groups || []
         }));
     } catch (err) {
@@ -410,10 +421,12 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                 if (!existing.groups || existing.groups.length === 0) {
                     existing.groups = mockUser.groups;
                 }
+                existing.employeeId = mockUser.employeeId || '';
             } else {
                 users.push({
                     username: mockUser.username,
                     displayName: mockUser.displayName,
+                    employeeId: mockUser.employeeId || '',
                     groups: mockUser.groups
                 });
             }
@@ -442,7 +455,8 @@ const getUser = async (username) => {
             }
             return {
                 username: mongoUser.username,
-                displayName
+                displayName,
+                employeeId: mongoUser.employeeId || ''
             };
         }
     } catch (err) {
@@ -453,9 +467,9 @@ const getUser = async (username) => {
     if (settings.devmode || !settings.server || !settings.server.ldap) {
         const user = MOCK_USERS.find(u => u.username === username);
         if (user) {
-            return { username: user.username, displayName: user.displayName || user.username };
+            return { username: user.username, displayName: user.displayName || user.username, employeeId: user.employeeId || '' };
         }
-        return { username, displayName: username };
+        return { username, displayName: username, employeeId: '' };
     }
 
     // 3. LDAP fallback
@@ -466,14 +480,14 @@ const getUser = async (username) => {
 
             client.on('error', (err) => {
                 console.error('[Auth] LDAP Client Error (getUser):', err);
-                resolve({ username, displayName: username });
+                resolve({ username, displayName: username, employeeId: '' });
             });
 
             client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
                 if (err) {
                     client.unbind();
                     console.error('[Auth] LDAP Bind Error (getUser):', err);
-                    return resolve({ username, displayName: username });
+                    return resolve({ username, displayName: username, employeeId: '' });
                 }
 
                 const escapedUsername = escapeLDAP(username);
@@ -481,16 +495,16 @@ const getUser = async (username) => {
                 const opts = {
                     filter: filter,
                     scope: 'sub',
-                    attributes: ['sAMAccountName', 'givenName', 'sn']
+                    attributes: ['sAMAccountName', 'givenName', 'sn', 'employeeID']
                 };
 
                 client.search(ldapConfig.basedn, opts, (err, searchRes) => {
                     if (err) {
                         client.unbind();
-                        return resolve({ username, displayName: username });
+                        return resolve({ username, displayName: username, employeeId: '' });
                     }
 
-                    let result = { username, displayName: username };
+                    let result = { username, displayName: username, employeeId: '' };
 
                     searchRes.on('searchEntry', (entry) => {
                         let userAttributes = entry.object;
@@ -509,6 +523,10 @@ const getUser = async (username) => {
                         if (Array.isArray(givenName)) givenName = givenName[0];
                         if (Array.isArray(sn)) sn = sn[0];
                         result.displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+                        
+                        let empId = userAttributes.employeeID || userAttributes.employeeid || '';
+                        if (Array.isArray(empId)) empId = empId[0];
+                        result.employeeId = empId || '';
                     });
 
                     searchRes.on('end', () => {

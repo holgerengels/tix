@@ -3,11 +3,93 @@ const path = require('path');
 const vm = require('vm');
 const cron = require('node-cron');
 const Ticket = require('./models/ticket');
+const Counter = require('./models/counter');
 const Log = require('./models/log');
 const ki = require('./ki');
 
 const CONFIG_DIR = path.join(__dirname, '../../config');
 const BOTS = [];
+
+// Lazy-load workflow engine to avoid circular dependency
+let _workflowEngine;
+function getWorkflowEngine() {
+    if (!_workflowEngine) _workflowEngine = require('./workflow');
+    return _workflowEngine;
+}
+
+/**
+ * Generic helper to create a sub-ticket from within a bot script.
+ * Handles ID generation (Counter), saving, logging, and triggering bots on the new ticket.
+ *
+ * @param {Object} parentTicket - The parent ticket (Mongoose document)
+ * @param {string} type - The ticket type to create (e.g. 'Raumreservierung')
+ * @param {Object} data - Field data for the new ticket
+ * @param {string} [creator='System'] - The creator username
+ * @returns {Object} The saved sub-ticket (Mongoose document)
+ */
+async function createSubTicket(parentTicket, type, data, creator = 'System') {
+    const wf = getWorkflowEngine().getWorkflowForType(type);
+    if (!wf) {
+        throw new Error(`[createSubTicket] Unknown ticket type: ${type}`);
+    }
+
+    const ticketData = {
+        type,
+        ...data,
+        parentTicket: parentTicket.id,
+        creator: creator,
+        created: new Date(),
+        state: 'offen.neu'
+    };
+
+    // Generate ID from abbreviation
+    if (wf.abbreviation) {
+        const counter = await Counter.findByIdAndUpdate(
+            wf.abbreviation,
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        ticketData.id = `${wf.abbreviation}-${counter.seq}`;
+    }
+
+    const newTicket = new Ticket(ticketData);
+
+    // Compute summary if template exists
+    if (wf.template) {
+        try {
+            const { evaluateTemplate } = require('./validation');
+            newTicket.summary = evaluateTemplate(wf.template, newTicket.toObject()) || '';
+        } catch (e) {
+            console.warn(`[createSubTicket] Failed to compute summary for ${type}:`, e.message);
+        }
+    }
+
+    await newTicket.save();
+
+    // Log creation
+    await new Log({
+        ticket: newTicket._id,
+        editor: creator,
+        action: `Subticket erstellt (von ${parentTicket.id})`,
+        timestamp: new Date(),
+        dataAfter: newTicket.toObject()
+    }).save();
+
+    // Log on parent ticket
+    await new Log({
+        ticket: parentTicket._id,
+        editor: creator,
+        action: `Subticket ${newTicket.id} (${type}) erstellt`,
+        timestamp: new Date()
+    }).save();
+
+    console.log(`[createSubTicket] Created ${newTicket.id} (${type}) as subticket of ${parentTicket.id}`);
+
+    // Run bots for the new ticket (e.g. Raumreservierung's eintragen bot)
+    await runBotsForTicket(newTicket);
+
+    return newTicket;
+}
 
 function loadBots() {
     console.log('Loading bots...');
@@ -42,7 +124,8 @@ function loadBots() {
                         setInterval: setInterval,
                         clearTimeout: clearTimeout,
                         clearInterval: clearInterval,
-                        askKI: ki.askKI
+                        askKI: ki.askKI,
+                        createSubTicket: createSubTicket
                     };
                     sandbox.module.exports = sandbox.exports;
 
@@ -70,6 +153,7 @@ function loadBots() {
                                         clearTimeout: clearTimeout,
                                         clearInterval: clearInterval,
                                         askKI: ki.askKI,
+                                        createSubTicket: createSubTicket,
                                         ticket: ticket
                                     };
 
@@ -257,4 +341,4 @@ function scheduleBots() {
     });
 }
 
-module.exports = { loadBots, runBots, runBotsForTicket, scheduleBots };
+module.exports = { loadBots, runBots, runBotsForTicket, scheduleBots, createSubTicket };

@@ -143,6 +143,15 @@
         @update:modelValue="updateValue"
       />
 
+      <!-- ObjectArray -->
+      <ObjectArrayEditor
+        v-else-if="field.type === 'ObjectArray'"
+        :field="field"
+        :context="context"
+        :modelValue="modelValue || []"
+        @update:modelValue="updateValue"
+      />
+
       <!-- Array -->
       <ArrayFieldEditor
         v-else-if="field.type === 'Array'"
@@ -196,6 +205,7 @@ import RichTextEditor from './RichTextEditor.vue';
 import WAAutocomplete from './WAAutocomplete.vue';
 import BadgeEditor from './BadgeEditor.vue';
 import ArrayFieldEditor from './ArrayFieldEditor.vue';
+import ObjectArrayEditor from './ObjectArrayEditor.vue';
 import TimelineDisplay from './TimelineDisplay.vue';
 import TerminInput from './TerminInput.vue';
 import FileAttachments from './FileAttachments.vue';

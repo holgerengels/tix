@@ -5,16 +5,17 @@ const fs = require('fs');
 const path = require('path');
 
 // Load config dynamically or from settings
-const getCaldavSettings = () => {
+const getCaldavSettings = (ownerEmail = null) => {
     const settingsPath = path.join(__dirname, '../../config/settings.json');
     if (fs.existsSync(settingsPath)) {
         const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
         if (settings.calendar && settings.calendar.server) {
             let serverUrl = settings.calendar.server;
             if (!serverUrl.endsWith('/')) serverUrl += '/';
+            const userPart = ownerEmail || settings.calendar.login;
             return {
                 // SOGo typically serves a user's calendars at /SOGo/dav/email@domain.com/Calendar/
-                url: `${serverUrl}${settings.calendar.login}/Calendar/`,
+                url: `${serverUrl}${userPart}/Calendar/`,
                 username: settings.calendar.login,
                 password: settings.calendar.password
             };
@@ -28,8 +29,8 @@ const getCaldavSettings = () => {
 };
 
 // Helper to create an axios instance with auth
-const getClient = () => {
-    const config = getCaldavSettings();
+const getClient = (ownerEmail = null) => {
+    const config = getCaldavSettings(ownerEmail);
     if (!config) throw new Error("CalDAV settings not found in config.");
 
     const axiosConfig = {
@@ -64,11 +65,11 @@ function getXmlKey(obj, baseKey) {
  * Fetches all available calendars (rooms) from the CalDAV server.
  * Returns an array of objects: { name: "Raum 101", href: "/path/to/calendar/" }
  */
-async function getCalendars(allowedRooms = null) {
-    const config = getCaldavSettings();
+async function getCalendars(allowedRooms = null, ownerEmail = null) {
+    const config = getCaldavSettings(ownerEmail);
     if (!config) return [];
 
-    const client = getClient();
+    const client = getClient(ownerEmail);
 
     // WebDAV PROPFIND to list calendars
     const propfindXml = `
@@ -357,13 +358,15 @@ async function getAllAvailability(dateStr, allowedRooms = null) {
  * @param {string} startHHMM - Start time in HH:MM or HHMM.
  * @param {string} endHHMM - End time in HH:MM or HHMM.
  * @param {string} description - The title/description of the event.
+ * @param {Array} attendees - Attendees to invite to the event.
+ * @param {string} ownerEmail - Owner's calendar email path (defaults to service account).
  */
-async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, description) {
-    const calendars = await getCalendars();
-    const calendar = calendars.find(c => c.name === calendarName);
+async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, description, attendees = [], ownerEmail = null) {
+    const calendars = await getCalendars(null, ownerEmail);
+    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
     if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
 
-    const client = getClient();
+    const client = getClient(ownerEmail);
     const targetDate = parseISO(dateStr);
 
     // Parse local dates directly without relying on Docker Node UTC Date
@@ -385,6 +388,14 @@ async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, des
 
     const uid = `TIX-${ticketId}`;
 
+    let attendeeLines = '';
+    if (Array.isArray(attendees) && attendees.length > 0) {
+        attendeeLines = attendees.map(att => {
+            const cnPart = att.cn ? `;CN=${att.cn}` : '';
+            return `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE${cnPart}:mailto:${att.email}`;
+        }).join('\n');
+    }
+
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Tix Ticket System//DE
@@ -395,8 +406,9 @@ ${dtStartProp}
 ${dtEndProp}
 SUMMARY:${description}
 DESCRIPTION:Tix Reservierung (Ticket ID: ${ticketId})
+${attendeeLines ? attendeeLines : ''}
 END:VEVENT
-END:VCALENDAR`;
+END:VCALENDAR`.replace(/\n+/g, '\n');
 
     const eventUrl = `${calendar.href}${uid}.ics`;
     const absoluteEventUrl = new URL(eventUrl, client.defaults.baseURL).href;
@@ -421,12 +433,12 @@ END:VCALENDAR`;
 /**
  * Deletes an event associated with a ticket.
  */
-async function deleteEvent(calendarName, ticketId) {
-    const calendars = await getCalendars();
-    const calendar = calendars.find(c => c.name === calendarName);
+async function deleteEvent(calendarName, ticketId, ownerEmail = null) {
+    const calendars = await getCalendars(null, ownerEmail);
+    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
     if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
 
-    const client = getClient();
+    const client = getClient(ownerEmail);
     const uid = `TIX-${ticketId}`;
     const eventUrl = `${calendar.href}${uid}.ics`;
     const absoluteEventUrl = new URL(eventUrl, client.defaults.baseURL).href;
@@ -487,10 +499,104 @@ async function deleteEventByTicketId(ticketId) {
     return true;
 }
 
+/**
+ * Unfolds folded iCalendar lines.
+ */
+function unfoldIcs(icsData) {
+    const lines = icsData.split(/\r?\n/);
+    const unfolded = [];
+    for (const line of lines) {
+        if (line.startsWith(' ') || line.startsWith('\t')) {
+            if (unfolded.length > 0) {
+                unfolded[unfolded.length - 1] += line.substring(1);
+            }
+        } else {
+            unfolded.push(line);
+        }
+    }
+    return unfolded;
+}
+
+/**
+ * Fetches the raw ICS file from a user's calendar.
+ */
+async function getEvent(calendarName, ticketId, ownerEmail = null) {
+    const calendars = await getCalendars(null, ownerEmail);
+    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
+    if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
+
+    const client = getClient(ownerEmail);
+    const uid = `TIX-${ticketId}`;
+    const eventUrl = `${calendar.href}${uid}.ics`;
+    const absoluteEventUrl = new URL(eventUrl, client.defaults.baseURL).href;
+
+    try {
+        const response = await client.request({
+            method: 'GET',
+            url: absoluteEventUrl,
+            headers: {
+                'Accept': 'text/calendar'
+            }
+        });
+        return response.data;
+    } catch (err) {
+        if (err.response && err.response.status === 404) {
+            console.log(`[CalDAV] Event ${uid} not found in ${calendarName}`);
+            return null;
+        }
+        console.error(`[CalDAV] Error fetching event from ${calendarName}:`, err.message);
+        throw err;
+    }
+}
+
+/**
+ * Queries attendees and their PARTSTAT from an event.
+ */
+async function getEventAttendees(calendarName, ticketId, ownerEmail = null) {
+    const icsContent = await getEvent(calendarName, ticketId, ownerEmail);
+    if (!icsContent) return [];
+
+    const unfolded = unfoldIcs(icsContent);
+    const events = [];
+    let currentEvent = null;
+
+    for (const line of unfolded) {
+        if (line.startsWith('BEGIN:VEVENT')) {
+            currentEvent = {};
+        } else if (line.startsWith('END:VEVENT')) {
+            if (currentEvent) events.push(currentEvent);
+            currentEvent = null;
+        } else if (currentEvent) {
+            if (line.startsWith('UID:')) {
+                currentEvent.uid = line.substring(4);
+            } else if (line.startsWith('ATTENDEE;')) {
+                if (!currentEvent.attendees) currentEvent.attendees = [];
+                const parts = line.split(':');
+                const propsPart = parts[0];
+                const mailtoPart = parts.slice(1).join(':');
+                let email = mailtoPart.toLowerCase().startsWith('mailto:') ? mailtoPart.substring(7) : mailtoPart;
+                const attendee = { email };
+                const props = propsPart.split(';');
+                for (const prop of props) {
+                    if (prop.startsWith('CN=')) attendee.cn = prop.substring(3);
+                    if (prop.startsWith('PARTSTAT=')) attendee.partstat = prop.substring(9);
+                }
+                currentEvent.attendees.push(attendee);
+            }
+        }
+    }
+
+    if (events.length > 0) {
+        return events[0].attendees || [];
+    }
+    return [];
+}
+
 module.exports = {
     getCalendars,
     getAllAvailability,
     addEvent,
     deleteEvent,
-    deleteEventByTicketId
+    deleteEventByTicketId,
+    getEventAttendees
 };

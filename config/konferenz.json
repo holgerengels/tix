@@ -1,0 +1,333 @@
+{
+    "type": "Konferenz",
+    "abbreviation": "KNF",
+    "subTickets": {
+        "allowedTypes": [
+            "Raumreservierung",
+            "Bewirtungsauftrag"
+        ],
+        "logStatusToParent": true
+    },
+    "template": "{{ticket.title}} - {{ticket.date}}",
+    "fields": [
+        {
+            "name": "date",
+            "label": "Datum",
+            "type": "Date",
+            "required": true,
+            "validation": {
+                "expression": "ticket.state || !ticket.date || ticket.date >= format(now, 'yyyy-MM-dd')",
+                "message": "Datum kann nicht in der Vergangenheit liegen"
+            }
+        },
+        {
+            "name": "timeStart",
+            "label": "Beginn",
+            "type": "Time",
+            "required": true
+        },
+        {
+            "name": "timeEnd",
+            "label": "Ende",
+            "type": "Time",
+            "required": true
+        },
+        {
+            "name": "participants",
+            "label": "Teilnehmer*innen",
+            "type": "ObjectArray",
+            "fixedLength": "{{ ticket.state && ticket.state !== 'offen.neu' }}",
+            "fixedOrder": "{{ ticket.state && ticket.state !== 'offen.neu' }}",
+            "items": {
+                "fields": [
+                    {
+                        "name": "name",
+                        "label": "Name",
+                        "type": "User",
+                        "groups": [
+                            "Lehrkräfte"
+                        ],
+                        "required": true,
+                        "readonly": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+                    },
+                    {
+                        "name": "status",
+                        "label": "Status",
+                        "type": "Select",
+                        "options": [
+                            "eingeladen",
+                            "anwesend",
+                            "entschuldigt",
+                            "abwesend"
+                        ],
+                        "default": "eingeladen",
+                        "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "agenda",
+            "label": "Tagesordnung",
+            "type": "RichText"
+        },
+        {
+            "name": "wantsRoom",
+            "label": "Raum im Kalender reservieren?",
+            "type": "Boolean",
+            "visible": "{{ !ticket.state || ticket.state === 'offen.neu' }}"
+        },
+        {
+            "name": "termin",
+            "label": "Termin & Raum",
+            "type": "Termin",
+            "rooms": [
+                "Raum 318 (Konferenz)",
+                "Raum 401 (Recherche)",
+                "Raum 513 (Besprechung)"
+            ],
+            "visible": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state === 'offen.neu') }}",
+            "required": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+        },
+        {
+            "name": "wantsCatering",
+            "label": "Bewirtung beauftragen?",
+            "type": "Boolean",
+            "visible": "{{ !ticket.state || ticket.state === 'offen.neu' }}"
+        },
+        {
+            "name": "cateringDrinks",
+            "label": "Getränke und Speisen",
+            "type": "Select",
+            "multiple": true,
+            "options": [
+                "Kaffee",
+                "Wasser",
+                "Orangensaft",
+                "Apfelsaft",
+                "Tee",
+                "Brezeln",
+                "Kuchen",
+                "Obst",
+                "Süße Stückle"
+            ],
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+        },
+        {
+            "name": "cateringTime",
+            "label": "Bereitstellung bis",
+            "type": "Time",
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+        },
+        {
+            "name": "cateringPersons",
+            "label": "Personenanzahl",
+            "type": "Integer",
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+        },
+        {
+            "name": "cateringDescription",
+            "label": "Besondere Wünsche",
+            "type": "Text",
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+        },
+        {
+            "name": "protocol",
+            "label": "Protokoll",
+            "type": "RichText",
+            "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+        },
+        {
+            "name": "attachments",
+            "label": "Anhänge",
+            "type": "Attachments",
+            "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+        },
+        {
+            "name": "description",
+            "visible": false
+        }
+    ],
+    "grid": [
+        "title title title title",
+        "date date timeStart timeEnd",
+        "participants participants participants participants",
+        "agenda agenda agenda agenda",
+        "wantsRoom wantsRoom . .",
+        "termin termin termin termin",
+        "wantsCatering wantsCatering . .",
+        "cateringDrinks cateringDrinks cateringTime cateringPersons",
+        "cateringDescription cateringDescription cateringDescription cateringDescription",
+        "protocol protocol protocol protocol",
+        "attachments attachments attachments attachments"
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.eingetragen"
+            ],
+            "actions": [
+                {
+                    "name": "protokollieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung"
+                    ],
+                    "form": "protokollieren"
+                },
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'offen.storniert'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "edit",
+            "groups": [
+                "@creator",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "@creator",
+                "Schulleitung"
+            ]
+        }
+    ],
+    "bots": [
+        {
+            "name": "eintragen",
+            "states": [
+                "offen.neu"
+            ],
+            "script": "await eintragen(ticket)"
+        },
+        {
+            "name": "stornieren",
+            "states": [
+                "offen.storniert"
+            ],
+            "script": "await stornieren(ticket)"
+        },
+        {
+            "name": "syncDate",
+            "states": [
+                "offen.eingetragen"
+            ],
+            "onChange": "insync",
+            "script": "await syncDate(ticket)"
+        },
+        {
+            "name": "abschliessen",
+            "states": [
+                "offen.eingetragen"
+            ],
+            "onChange": "async",
+            "schedule": "0 1 * * *",
+            "script": "await abschliessen(ticket)"
+        },
+        {
+            "name": "checkResponses",
+            "states": [
+                "offen.eingetragen"
+            ],
+            "onChange": "async",
+            "schedule": "*/15 * * * *",
+            "script": "await checkResponses(ticket)"
+        }
+    ],
+    "forms": [
+        {
+            "name": "protokollieren",
+            "title": "Konferenz protokollieren",
+            "fields": [
+                {
+                    "name": "participants",
+                    "label": "Anwesenheit prüfen",
+                    "required": true
+                },
+                {
+                    "name": "protocol",
+                    "required": true
+                },
+                {
+                    "name": "attachments"
+                }
+            ],
+            "actions": [
+                {
+                    "name": "Konferenz abschließen",
+                    "script": "ticket.state = 'geschlossen.ok'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen.*",
+            "label": "offen (alle)",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.eingetragen",
+            "label": "eingetragen",
+            "color": "green"
+        },
+        {
+            "name": "offen.storniert",
+            "label": "austragen",
+            "color": "blue"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "abgeschlossen",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.*",
+            "label": "geschlossen (alle)",
+            "color": "green"
+        }
+    ]
+}

@@ -91,7 +91,7 @@ export function evaluateFields(fields, ticketData) {
             if (typeof value === 'string' && value.includes('{{')) {
                 let val = evaluateTemplate(value, ticketData);
                 // Coerce boolean properties to handle undefined properly (e.g., v-if="undefined !== false" shows field)
-                if (['visible', 'readonly', 'required', 'optional'].includes(key)) {
+                if (['visible', 'readonly', 'required', 'optional', 'fixedLength', 'fixedOrder'].includes(key)) {
                     val = !!val;
                 }
                 evaluatedField[key] = val;
