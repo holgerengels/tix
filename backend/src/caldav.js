@@ -12,12 +12,14 @@ const getCaldavSettings = (ownerEmail = null) => {
         if (settings.calendar && settings.calendar.server) {
             let serverUrl = settings.calendar.server;
             if (!serverUrl.endsWith('/')) serverUrl += '/';
-            const userPart = ownerEmail || settings.calendar.login;
+            const username = settings.calendar.login;
+            const password = settings.calendar.password;
+            const userPart = ownerEmail || username;
             return {
                 // SOGo typically serves a user's calendars at /SOGo/dav/email@domain.com/Calendar/
                 url: `${serverUrl}${userPart}/Calendar/`,
-                username: settings.calendar.login,
-                password: settings.calendar.password
+                username,
+                password
             };
         } else {
             console.warn("[CalDAV] Warning: 'calendar' object or 'server' key is missing in config/settings.json.");
