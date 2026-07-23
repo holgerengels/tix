@@ -14,12 +14,14 @@ const getCaldavSettings = (ownerEmail = null) => {
             if (!serverUrl.endsWith('/')) serverUrl += '/';
             const username = settings.calendar.login;
             const password = settings.calendar.password;
+            const roomUser = settings.calendar.roomUser || 'raeume@valckenburgschule.de';
             const userPart = ownerEmail || username;
             return {
                 // SOGo typically serves a user's calendars at /SOGo/dav/email@domain.com/Calendar/
                 url: `${serverUrl}${userPart}/Calendar/`,
                 username,
-                password
+                password,
+                roomUser
             };
         } else {
             console.warn("[CalDAV] Warning: 'calendar' object or 'server' key is missing in config/settings.json.");
@@ -340,12 +342,15 @@ async function fetchCalendarEvents(calendarHref, targetDateStr, ownerEmail = nul
  * Returns: { "Raum 101": [{ start: '0900', end: '1000', status: 'occupied' }, ...], ... }
  */
 async function getAllAvailability(dateStr, allowedRooms = null, ownerEmail = null) {
-    const calendars = await getCalendars(allowedRooms, ownerEmail);
+    const calSettings = getCaldavSettings();
+    const targetOwner = ownerEmail || (calSettings ? calSettings.roomUser : 'raeume@valckenburgschule.de');
+
+    const calendars = await getCalendars(allowedRooms, targetOwner);
     const availability = {};
 
     // Fetch sequentially to avoid triggering concurrent connection limits on SOGo/Nginx
     for (const cal of calendars) {
-        const events = await fetchCalendarEvents(cal.href, dateStr, ownerEmail);
+        const events = await fetchCalendarEvents(cal.href, dateStr, targetOwner);
         availability[cal.name] = events;
     }
 
