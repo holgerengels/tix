@@ -72,7 +72,7 @@
             "name": "wantsRoom",
             "label": "Raum im Kalender reservieren?",
             "type": "Boolean",
-            "visible": "{{ !ticket.state || ticket.state === 'offen.neu' }}"
+            "visible": "{{ !ticket.state || ticket.state.startsWith('offen') }}"
         },
         {
             "name": "termin",
@@ -83,14 +83,14 @@
                 "Raum 401 (Recherche)",
                 "Raum 513 (Besprechung)"
             ],
-            "visible": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state === 'offen.neu') }}",
-            "required": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+            "visible": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
+            "required": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "wantsCatering",
             "label": "Bewirtung beauftragen?",
             "type": "Boolean",
-            "visible": "{{ !ticket.state || ticket.state === 'offen.neu' }}"
+            "visible": "{{ !ticket.state || ticket.state.startsWith('offen') }}"
         },
         {
             "name": "cateringDrinks",
@@ -108,28 +108,28 @@
                 "Obst",
                 "Süße Stückle"
             ],
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "cateringTime",
             "label": "Bereitstellung bis",
             "type": "Time",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "cateringPersons",
             "label": "Personenanzahl",
             "type": "Integer",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
+            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "cateringDescription",
             "label": "Besondere Wünsche",
             "type": "Text",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state === 'offen.neu') }}"
+            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "protocol",

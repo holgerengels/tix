@@ -10,7 +10,7 @@
         :key="subField.name"
         class="header-cell"
       >
-        {{ subField.label }}
+        {{ subField.label || subField.name }}
       </div>
       <div class="header-action-spacer" v-if="showDeleteButtons"></div>
     </div>
@@ -224,18 +224,22 @@ const emitUpdate = () => {
     display: flex;
     align-items: center;
     gap: 0rem;
-    padding: 0.25rem 0;
-    border-bottom: 1px solid var(--wa-color-neutral-70);
-    margin-bottom: 0.25rem;
+    padding: 0.35rem 0.25rem;
+    border-bottom: 2px solid var(--wa-color-neutral-70, #ccc);
+    margin-bottom: 0.35rem;
+    background-color: var(--wa-color-neutral-95, #f8f9fa);
+    border-radius: var(--wa-border-radius-small, 3px);
 }
 
 .header-cell {
     flex: 1;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--wa-color-neutral-30);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--wa-color-neutral-20, #333);
     min-width: 0;
-    padding: 0 0.25rem;
+    padding: 0 0.5rem;
 }
 
 .header-drag-spacer {
