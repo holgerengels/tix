@@ -56,9 +56,11 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import axios from 'axios';
 import { useUiStore } from '../stores/ui';
+import { useWorkflowStore } from '../stores/workflow';
 import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
+const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
 import { validateTicket } from '../utils/evaluation';
@@ -70,7 +72,7 @@ const getFieldLabel = (name) => {
 };
 
 const router = useRouter();
-const config = ref({});
+const config = computed(() => workflow.config || {});
 const newTicketType = ref('');
 const newTicketData = ref({});
 const creating = ref(false);
@@ -106,19 +108,16 @@ const availableTypes = computed(() => {
     });
 });
 
-const fetchConfig = async () => {
+onMounted(async () => {
     try {
-        const res = await axios.get('/api/config', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        config.value = res.data;
+        await workflow.fetchConfig();
     } catch (err) {
         console.error("Config fetch error", err);
         toast.error("Fehler beim Laden der Konfiguration.");
     } finally {
         loadingConfig.value = false;
     }
-};
+});
 
 const fetchWorkflowDoc = async (type) => {
     if (!type) {
@@ -196,7 +195,6 @@ onBeforeRouteLeave(async (to, from, next) => {
     }
 });
 
-onMounted(fetchConfig);
 </script>
 
 <style scoped>

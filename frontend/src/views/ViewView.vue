@@ -166,14 +166,14 @@ const fetchData = async () => {
     loading.value = true;
     error.value = null;
     try {
-        // Fetch Config first
-        await workflow.fetchConfig();
-
-        // Fetch Ticket
-        const ticketRes = await axios.get('/api/tickets', {
-            params: { id: route.params.id },
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        // Fetch Config and Ticket in parallel
+        const [_, ticketRes] = await Promise.all([
+            workflow.fetchConfig(),
+            axios.get('/api/tickets', {
+                params: { id: route.params.id },
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            })
+        ]);
         
         if (ticketRes.data && ticketRes.data.length > 0) {
             ticket.value = ticketRes.data[0];

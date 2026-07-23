@@ -61,6 +61,7 @@ import axios from 'axios';
 import { useAuthStore } from './stores/auth';
 import { useUiStore } from './stores/ui';
 import { useUsersStore } from './stores/users';
+import { useWorkflowStore } from './stores/workflow';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { toast } from './composables/useToast';
@@ -69,6 +70,7 @@ import { resubscribePush } from './utils/pushResubscribe';
 const auth = useAuthStore();
 const ui = useUiStore();
 const usersStore = useUsersStore();
+const workflow = useWorkflowStore();
 
 // PWA Update Logic — auto-update + toast notification after update
 useRegisterSW({
@@ -161,7 +163,8 @@ watch(() => auth.isAuthenticated, (newVal, oldVal) => {
         // Auto-re-subscribe push notifications if permission is granted but subscription was lost
         resubscribePush();
     } else if (oldVal) {
-        // User logged out — leave detail views and go to list
+        // User logged out — reset workflow config and go to list
+        workflow.reset();
         router.push('/');
     }
 }, { immediate: true });

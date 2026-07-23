@@ -39,12 +39,14 @@ const mockConfig = {
     }
 };
 
-// Mock Workflow State
+// Mock Workflow State — mutable so individual tests can override
+let _mockWorkflowConfig = mockConfig;
+
 vi.mock('../stores/workflow', () => {
     return {
         useWorkflowStore: () => ({
-            config: mockConfig,
-            fetchConfig: async () => { }
+            get config() { return _mockWorkflowConfig; },
+            fetchConfig: async () => _mockWorkflowConfig
         })
     };
 });
@@ -94,6 +96,7 @@ describe('View Logic & Constraints', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        _mockWorkflowConfig = mockConfig;
         // Default axios responses
         axios.get.mockImplementation(async (url) => {
             if (url === '/api/config') return { data: mockConfig };
@@ -189,6 +192,8 @@ describe('View Logic & Constraints', () => {
         };
 
         it('should combine fields from workflow and form without forcing readonly', async () => {
+            _mockWorkflowConfig = actionConfig;
+
             axios.get.mockImplementation(async (url) => {
                 if (url === '/api/config') return { data: actionConfig };
                 if (url === '/api/tickets') return { data: [mockTicket] };

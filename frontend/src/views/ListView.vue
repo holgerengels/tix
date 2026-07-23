@@ -65,14 +65,7 @@
                         <template v-else-if="col.id === 'assignee'">{{ ticket.assignee ? usersStore.getDisplayName(ticket.assignee) : '-' }}</template>
                         <template v-else-if="col.id === 'created'">{{ formatDate(ticket.created) }}</template>
                         <template v-else-if="col.id === 'data'">
-                            <div class="dynamic-data">
-                                <div v-if="hasTemplate(ticket)" class="template-data">
-                                    {{ getFormattedData(ticket) }}
-                                </div>
-                                <span v-else v-for="(val, key) in getDynamicFields(ticket)" :key="key" class="data-item">
-                                    <strong>{{ key }}:</strong> {{ val }}
-                                </span>
-                            </div>
+                            {{ ticket.summary }}
                         </template>
                         <template v-else-if="col.id === 'actions'">
                             <template v-for="action in getActions(ticket)" :key="action.name">
@@ -194,9 +187,8 @@ const sortedTickets = computed(() => {
             valA = a.created || '';
             valB = b.created || '';
         } else if (sortCol === 'data') {
-            // Sort by the rendered text representation
-            valA = hasTemplate(a) ? getFormattedData(a) : JSON.stringify(getDynamicFields(a));
-            valB = hasTemplate(b) ? getFormattedData(b) : JSON.stringify(getDynamicFields(b));
+            valA = a.summary || '';
+            valB = b.summary || '';
         }
         
         if (typeof valA === 'string' && typeof valB === 'string') {
@@ -242,10 +234,13 @@ const fetchTickets = async () => {
             const term = searchTerm.value.trim();
             if (term) params.search = term;
 
-            const res = await axios.get('/api/tickets', {
-                params: params,
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const [_, res] = await Promise.all([
+                workflow.fetchConfig(),
+                axios.get('/api/tickets', {
+                    params: params,
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                })
+            ]);
             
             if (requestId === lastRequestId) {
                 tickets.value = res.data;
@@ -296,77 +291,7 @@ const getBadgeVariant = (badge) => {
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
-const getDynamicFields = (ticket) => {
-    const { _id, __v, type, state, title, description, creator, created, updated, log, ...rest } = ticket;
-    return rest;
-};
 
-const hasTemplate = (ticket) => {
-    return config.value && config.value[ticket.type] && config.value[ticket.type].template;
-};
-
-const getFormattedData = (ticket) => {
-    if (!hasTemplate(ticket)) return '';
-    let template = config.value[ticket.type].template;
-    const fields = getDynamicFields(ticket);
-    const fieldDefs = config.value[ticket.type].fields || [];
-
-    // Helper for safe evaluation
-    const evaluateExpression = (expr, context, ticketData) => {
-        try {
-            const keys = Object.keys(context);
-            const values = Object.values(context);
-            // Add helper functions
-            keys.push('format');
-            values.push(format);
-            
-            // Add ticket object
-            keys.push('ticket');
-            values.push(ticketData);
-            
-            // Check for valid identifiers in context keys to avoid syntax errors
-            const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
-            const validValues = validKeys.map(k => {
-                const idx = keys.indexOf(k);
-                return values[idx];
-            });
-
-            const func = new Function(...validKeys, `return ${expr}`);
-            return func(...validValues);
-        } catch (e) {
-            console.error(`Error evaluating expression "${expr}":`, e);
-            return `{${expr}}`; // Return original on error equivalent
-        }
-    };
-
-    // Replace {{ expression }}
-    template = template.replace(/\{\{(.*?)\}\}/g, (match, expr) => {
-        // First check if it's a simple key that needs Date formatting
-        const key = expr.trim();
-        const val = fields[key];
-        const fieldDef = fieldDefs.find(f => f.name === key);
-        
-        if (fieldDef && fieldDef.type === 'Date' && val) {
-             try {
-                return format(new Date(val), 'dd.MM.yyyy');
-            } catch (e) {
-                return val;
-            }
-        }
-        
-        // If not a simple date field, try evaluating as expression
-        const result = evaluateExpression(key, fields, ticket);
-        if (result === undefined || result === null) return '';
-        if (typeof result === 'object' && result.min !== undefined && result.max !== undefined) {
-             // Implicit formatting for range objects if user just uses {{lessons}}
-             if (result.min === result.max) return result.min;
-             return `${result.min}..${result.max}`;
-        }
-        return result;
-    });
-
-    return template;
-};
 
 const getActions = (ticket) => {
     const authorizedActions = _getRawActions(ticket);
@@ -444,10 +369,8 @@ watch(searchTerm, () => {
     searchDebounce = setTimeout(() => fetchTickets(), 300);
 });
 
-onMounted(async () => {
-    await workflow.fetchConfig();
-    // Tickets are fetched by TicketView emitting @fetch on mount
-});
+// Config loading and ticket fetching are handled by fetchTickets() via Promise.all
+// TicketListConfig emits @fetch on mount, which triggers fetchTickets()
 </script>
 
 <style scoped>

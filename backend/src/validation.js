@@ -126,8 +126,25 @@ function validateTicket(ticketData, workflow, formFields = null, user = null) {
     };
 }
 
+/**
+ * Compute summary string from workflow template for search/display purposes.
+ * Should be called before every ticket.save() to keep summary in sync.
+ */
+function computeSummary(ticketData, wf) {
+    if (!wf || !wf.template) return undefined;
+    try {
+        const data = typeof ticketData.toObject === 'function' ? ticketData.toObject() : ticketData;
+        const result = evaluateTemplate(wf.template, data);
+        return typeof result === 'string' ? result.trim() : String(result || '').trim();
+    } catch (e) {
+        console.warn('[computeSummary] Error:', e.message);
+        return undefined;
+    }
+}
+
 module.exports = {
     evaluateTemplate,
     evaluateFields,
-    validateTicket
+    validateTicket,
+    computeSummary
 };

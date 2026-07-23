@@ -80,15 +80,17 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
+import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
 
 const ui = useUiStore();
+const workflow = useWorkflowStore();
 const usersStore = useUsersStore();
 
 const logs = ref([]);
 const loading = ref(true);
 const error = ref(null);
-const config = ref({});
+const config = computed(() => workflow.config || {});
 
 const filterType = ref('');
 const filterEditor = ref('');
@@ -102,16 +104,7 @@ const availableTypes = computed(() => {
     return config.value ? Object.keys(config.value) : [];
 });
 
-const fetchConfig = async () => {
-    try {
-        const res = await axios.get('/api/config', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        config.value = res.data;
-    } catch (err) {
-        console.error(err);
-    }
-};
+
 
 const fetchLogs = async () => {
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -172,8 +165,10 @@ const resetFilters = () => {
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 onMounted(async () => {
-    await fetchConfig();
-    fetchLogs();
+    await Promise.all([
+        workflow.fetchConfig(),
+        fetchLogs()
+    ]);
 });
 </script>
 
