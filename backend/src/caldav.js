@@ -167,9 +167,9 @@ function parseIcs(icsData) {
  * Fetch availability for a single calendar on a given date.
  * Returns array of { start (HHMM integer), end (HHMM integer), status: 'occupied' }
  */
-async function fetchCalendarEvents(calendarHref, targetDateStr) {
+async function fetchCalendarEvents(calendarHref, targetDateStr, ownerEmail = null) {
     console.log(`[CalDAV] Fetching events for: ${calendarHref}...`);
-    const client = getClient();
+    const client = getClient(ownerEmail);
     const targetDate = parseISO(targetDateStr);
 
     // Create a safe padded time range in UTC that overlaps the requested Berlin day entirely
@@ -339,13 +339,13 @@ async function fetchCalendarEvents(calendarHref, targetDateStr) {
  * Fetches availability for all calendars on a specific date.
  * Returns: { "Raum 101": [{ start: '0900', end: '1000', status: 'occupied' }, ...], ... }
  */
-async function getAllAvailability(dateStr, allowedRooms = null) {
-    const calendars = await getCalendars(allowedRooms);
+async function getAllAvailability(dateStr, allowedRooms = null, ownerEmail = null) {
+    const calendars = await getCalendars(allowedRooms, ownerEmail);
     const availability = {};
 
     // Fetch sequentially to avoid triggering concurrent connection limits on SOGo/Nginx
     for (const cal of calendars) {
-        const events = await fetchCalendarEvents(cal.href, dateStr);
+        const events = await fetchCalendarEvents(cal.href, dateStr, ownerEmail);
         availability[cal.name] = events;
     }
 
