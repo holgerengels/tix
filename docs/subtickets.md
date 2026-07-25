@@ -23,21 +23,35 @@ Subtickets are seamlessly embedded as "actions" into the workflow block of the r
 ```
 This configuration shows a subticket dropdown in the frontend for authorized users (`@assignee` or `Netzwerkteam`) when the ticket is in the `neu` or `inArbeit` state. It allows the creation of `IT-Ticket` subtickets.
 
-## 2. Log Shadow Copies (Parent Logging)
+## 2. Subticket Configuration (`subTickets`)
 
-Often, the main ticket should keep a global overview. Tix offers the `logStatusToParent` property, which is activated in the main block of the workflow configuration of a type.
+The `subTickets` property in the main config block defines allowed subticket types, optional field mapping, and per-type flags. It is an **array of objects**:
 
 ```json
-{
-    "type": "IT-Ticket",
-    "subTickets": {
+"subTickets": [
+    {
+        "type": "Bewirtungsauftrag",
+        "mapping": {
+            "date": "{{ ticket.date }}",
+            "room": "{{ ticket.termin ? ticket.termin.room : '' }}",
+            "numberOfPersons": "{{ (ticket.participants || []).length }}"
+        },
         "logStatusToParent": true
-    },
-    ...
-}
+    }
+]
 ```
 
-If this is `true`, the backend route for ticket actions (`POST /api/tickets/:id/action`) monitors every state change of a *subticket*. If the state changes, the system bot automatically writes a comment in the linked parent ticket (e.g., "Subticket ITT-5 is now in state offen.inArbeit"). This keeps the parent ticket up to date at all times without the actors having to report manually.
+### Field Mapping
+
+The `mapping` property defines a **generic field-to-expression mapping**. When a user creates a subticket from a parent ticket, the frontend evaluates each mapping expression against the parent ticket data and pre-fills the corresponding fields in the new ticket form.
+
+- Keys are target field names in the subticket (dot-notation supported, e.g., `termin.start`).
+- Values are `{{ }}` expressions evaluated against the parent ticket using the standard template engine.
+- Empty/null results are skipped (the user fills the field manually).
+
+### `logStatusToParent`
+
+If `logStatusToParent` is `true` for a subticket type, every state change of a subticket of that type automatically writes a comment in the linked parent ticket (e.g., "Subticket ITT-5 is now in state offen.inArbeit").
 
 ## 3. Data Model
 

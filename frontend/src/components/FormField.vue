@@ -24,6 +24,18 @@
         @change="updateValue($event.target.value)"
       ></wa-input>
 
+      <!-- Email -->
+      <wa-input 
+        v-else-if="field.type === 'Email'"
+        type="email"
+        :label="field.label"
+        :required="field.required === true"
+        :disabled="field.readonly === true"
+        :value.prop="modelValue || ''"
+        :hint="field.hint"
+        @change="updateValue($event.target.value)"
+      ></wa-input>
+
       <!-- Select -->
       <wa-select
         v-else-if="field.type === 'Select'"

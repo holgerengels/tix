@@ -1,5 +1,19 @@
 import { format, formatDistance, addDays, subDays } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { useUsersStore } from '../stores/users';
+
+// Lazy-initialized users store instance for lookupUserEmail helper
+let _usersStore = null;
+const getUsersStore = () => {
+    if (!_usersStore) {
+        try {
+            _usersStore = useUsersStore();
+        } catch (e) {
+            // May fail if called outside Vue/Pinia context
+        }
+    }
+    return _usersStore;
+};
 
 const createSafeEvaluator = (expr, ticketData) => {
     // We cannot just use Object.keys(ticketData) because Vue needs to track GET requests
@@ -34,6 +48,16 @@ const createSafeEvaluator = (expr, ticketData) => {
                     return null;
                 }
             }
+        },
+        lookupUserEmail: (username) => {
+            if (!username) return null;
+            const store = getUsersStore();
+            if (!store) return null;
+            const userData = store.getUserData(username);
+            if (userData && userData.employeeId) {
+                return `${userData.employeeId}@valckenburgschule.de`;
+            }
+            return null;
         }
     };
 
@@ -100,6 +124,34 @@ export function evaluateFields(fields, ticketData) {
 
         return evaluatedField;
     });
+}
+
+/**
+ * Evaluates 'fill' expressions on fields and returns derived values.
+ * Only returns values for fields where the fill expression evaluates to a non-empty result.
+ * The caller is responsible for only applying fills to currently empty fields.
+ *
+ * @param {Array} fields - Field definitions (may contain 'fill' properties with {{ }} expressions)
+ * @param {Object} context - The data context (ticket data or row data for ObjectArrays)
+ * @returns {Object} Map of { fieldName: derivedValue } for non-empty fill results
+ */
+export function computeFills(fields, context) {
+    if (!fields) return {};
+
+    const fills = {};
+    for (const field of fields) {
+        if (field.fill && typeof field.fill === 'string' && field.fill.includes('{{')) {
+            try {
+                const value = evaluateTemplate(field.fill, context);
+                if (value !== undefined && value !== null && value !== '') {
+                    fills[field.name] = value;
+                }
+            } catch (e) {
+                console.warn(`Failed to evaluate fill for field ${field.name}:`, e);
+            }
+        }
+    }
+    return fills;
 }
 
 export function validateTicket(ticketData, workflow, formFields = null) {

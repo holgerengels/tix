@@ -32,7 +32,7 @@ describe('Subtickets Integration', () => {
         const workflows = workflowEngine.getWorkflows();
         const originalItTicket = workflows['IT-Ticket'];
         const testWorkflow = JSON.parse(JSON.stringify(originalItTicket));
-        testWorkflow.subTickets = { logStatusToParent: true };
+        testWorkflow.subTickets = [{ type: 'IT-Ticket', logStatusToParent: true }];
         if (testWorkflow.workflow && testWorkflow.workflow.length > 0) {
             testWorkflow.workflow[0].actions.push({
                 name: "Subticket erstellen",

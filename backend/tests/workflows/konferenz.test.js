@@ -71,8 +71,8 @@ afterAll(async () => {
 
 describe('Workflow: Konferenz', () => {
 
-    it('should create a Konferenz with room reservation and catering sub-tickets', async () => {
-        // --- 1. Create Konferenz ticket with room and catering ---
+    it('should create a Konferenz without automatic sub-tickets', async () => {
+        // Create a Konferenz ticket (room/catering fields have been removed)
         const ticketPayload = {
             type: 'Konferenz',
             title: 'Gesamtkonferenz Q3',
@@ -82,18 +82,7 @@ describe('Workflow: Konferenz', () => {
             participants: [
                 { name: 'lehrer1', status: 'eingeladen' },
                 { name: 'lehrer2', status: 'eingeladen' }
-            ],
-            wantsRoom: true,
-            termin: {
-                room: 'Raum 318 (Konferenz)',
-                start: '14:00',
-                end: '16:00'
-            },
-            wantsCatering: true,
-            cateringDrinks: ['Kaffee', 'Wasser'],
-            cateringTime: '13:45',
-            cateringPersons: 15,
-            cateringDescription: 'Bitte auch Kuchen'
+            ]
         };
 
         const res = await request(app)
@@ -104,65 +93,17 @@ describe('Workflow: Konferenz', () => {
         expect(res.status).toBe(201);
         const knf = res.body;
 
-        // The "eintragen" bot runs, creates sub-tickets, and sets state to offen.eingetragen
+        // The "eintragen" bot runs and sets state to offen.eingetragen
         expect(knf.state).toBe('offen.eingetragen');
 
         // Wait for async bot processing
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // --- 2. Verify sub-tickets were created ---
+        // No sub-tickets should be created automatically
         const subTickets = await Ticket.find({ parentTicket: knf.id });
-        expect(subTickets.length).toBe(2);
-
-        const raumSub = subTickets.find(t => t.type === 'Raumreservierung');
-        const bewirtungSub = subTickets.find(t => t.type === 'Bewirtungsauftrag');
-
-        expect(raumSub).toBeTruthy();
-        expect(raumSub.get('date')).toBe(ticketPayload.date);
-        expect(raumSub.get('termin.room')).toBe('Raum 318 (Konferenz)');
-        // Raumreservierung bot should have run and created CalDAV event
-        expect(raumSub.state).toBe('offen.eingetragen');
-        expect(caldav.addEvent).toHaveBeenCalledWith(
-            'Raum 318 (Konferenz)',
-            raumSub.id,
-            ticketPayload.date,
-            '14:00',
-            '16:00',
-            expect.any(String)
-        );
-
-        expect(bewirtungSub).toBeTruthy();
-        expect(bewirtungSub.get('date')).toBe(ticketPayload.date);
-        expect(bewirtungSub.get('numberOfPersons')).toBe(15);
-    });
-
-    it('should create a Konferenz without optional sub-tickets', async () => {
-        const ticketPayload = {
-            type: 'Konferenz',
-            title: 'Fachkonferenz Mathe',
-            date: new Date().toISOString().split('T')[0],
-            timeStart: '10:00',
-            timeEnd: '11:00',
-            participants: [
-                { name: 'lehrer1', status: 'eingeladen' }
-            ],
-            wantsRoom: false,
-            wantsCatering: false
-        };
-
-        const res = await request(app)
-            .post('/api/tickets')
-            .set('Authorization', `Bearer ${tokens.schulleiter}`)
-            .send(ticketPayload);
-
-        expect(res.status).toBe(201);
-        expect(res.body.state).toBe('offen.eingetragen');
-
-        // No sub-tickets should be created
-        const subTickets = await Ticket.find({ parentTicket: res.body.id });
         expect(subTickets.length).toBe(0);
 
-        // CalDAV should only have been called for personal calendar, not a room
+        // CalDAV should only have been called for personal calendar
         expect(caldav.addEvent).toHaveBeenCalledTimes(1);
         expect(caldav.addEvent).toHaveBeenCalledWith(
             'personal',
@@ -176,8 +117,39 @@ describe('Workflow: Konferenz', () => {
         );
     });
 
+    it('should handle mixed participants: internal user, external email, attendance-only', async () => {
+        const ticketPayload = {
+            type: 'Konferenz',
+            title: 'Gemischte Teilnehmer',
+            date: new Date().toISOString().split('T')[0],
+            timeStart: '14:00',
+            timeEnd: '16:00',
+            participants: [
+                { name: 'lehrer1', email: 'lehrer1@valckenburgschule.de', status: 'eingeladen' },
+                { email: 'gast@extern.de', status: 'eingeladen' },
+                { name: 'Herr Müller', status: 'eingeladen' }
+            ]
+        };
+
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.state).toBe('offen.eingetragen');
+
+        // CalDAV should be called with attendees from participants with email
+        // lehrer1 has direct email, gast has direct email, Herr Müller has no email (skipped)
+        const attendeesArg = caldav.addEvent.mock.calls[0][6];
+        expect(attendeesArg).toBeDefined();
+        expect(attendeesArg.length).toBe(2);
+        expect(attendeesArg.find(a => a.email === 'lehrer1@valckenburgschule.de')).toBeTruthy();
+        expect(attendeesArg.find(a => a.email === 'gast@extern.de')).toBeTruthy();
+    });
+
     it('should cascade stornierung to sub-tickets', async () => {
-        // Create Konferenz with room
+        // Create Konferenz
         const res = await request(app)
             .post('/api/tickets')
             .set('Authorization', `Bearer ${tokens.schulleiter}`)
@@ -187,10 +159,7 @@ describe('Workflow: Konferenz', () => {
                 date: new Date().toISOString().split('T')[0],
                 timeStart: '09:00',
                 timeEnd: '10:00',
-                participants: [{ name: 'lehrer1', status: 'eingeladen' }],
-                wantsRoom: true,
-                termin: { room: 'Raum 318 (Konferenz)', start: '09:00', end: '10:00' },
-                wantsCatering: false
+                participants: [{ name: 'lehrer1', status: 'eingeladen' }]
             });
 
         expect(res.status).toBe(201);
@@ -198,7 +167,23 @@ describe('Workflow: Konferenz', () => {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Verify sub-ticket exists
+        // Manually create a Raumreservierung sub-ticket
+        const subRes = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send({
+                type: 'Raumreservierung',
+                title: 'Storno-Test Raum',
+                date: knf.date || new Date().toISOString().split('T')[0],
+                termin: { room: 'Raum 318 (Konferenz)', start: '09:00', end: '10:00' },
+                parentTicket: knf.id
+            });
+
+        expect(subRes.status).toBe(201);
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Verify sub-ticket exists and is eingetragen
         const subsBefore = await Ticket.find({ parentTicket: knf.id });
         expect(subsBefore.length).toBe(1);
         expect(subsBefore[0].state).toBe('offen.eingetragen');
@@ -237,9 +222,7 @@ describe('Workflow: Konferenz', () => {
                 participants: [
                     { name: 'lehrer1', status: 'eingeladen' },
                     { name: 'lehrer2', status: 'eingeladen' }
-                ],
-                wantsRoom: false,
-                wantsCatering: false
+                ]
             });
 
         expect(res.status).toBe(201);
@@ -309,9 +292,7 @@ describe('Workflow: Konferenz', () => {
             participants: [
                 { name: 'lehrer1', status: 'eingeladen' },
                 { name: 'lehrer2', status: 'eingeladen' }
-            ],
-            wantsRoom: false,
-            wantsCatering: false
+            ]
         };
 
         const res = await request(app)

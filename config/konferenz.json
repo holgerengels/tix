@@ -1,13 +1,29 @@
 {
     "type": "Konferenz",
     "abbreviation": "KNF",
-    "subTickets": {
-        "allowedTypes": [
-            "Raumreservierung",
-            "Bewirtungsauftrag"
-        ],
-        "logStatusToParent": true
-    },
+    "subTickets": [
+        {
+            "type": "Raumreservierung",
+            "mapping": {
+                "title": "{{ ticket.title }}",
+                "date": "{{ ticket.date }}",
+                "termin.start": "{{ ticket.timeStart }}",
+                "termin.end": "{{ ticket.timeEnd }}"
+            },
+            "logStatusToParent": true
+        },
+        {
+            "type": "Bewirtungsauftrag",
+            "mapping": {
+                "title": "{{ ticket.title }}",
+                "date": "{{ ticket.date }}",
+                "numberOfPersons": "{{ (ticket.participants || []).length }}",
+                "breakfastTime": "{{ ticket.timeStart }}",
+                "endTime": "{{ ticket.timeEnd }}"
+            },
+            "logStatusToParent": true
+        }
+    ],
     "template": "{{ticket.title}} - {{ticket.date}}",
     "fields": [
         {
@@ -44,8 +60,13 @@
                         "type": "User",
                         "groups": [
                             "Lehrkräfte"
-                        ],
-                        "required": true
+                        ]
+                    },
+                    {
+                        "name": "email",
+                        "label": "E-Mail",
+                        "type": "Email",
+                        "fill": "{{ lookupUserEmail(name) }}"
                     },
                     {
                         "name": "status",
@@ -60,76 +81,17 @@
                         "default": "eingeladen",
                         "visible": "{{ ticket.state === 'geschlossen.ok' }}"
                     }
-                ]
+                ],
+                "validation": {
+                    "expression": "name || email",
+                    "message": "Name oder E-Mail muss angegeben werden"
+                }
             }
         },
         {
             "name": "agenda",
             "label": "Tagesordnung",
             "type": "RichText"
-        },
-        {
-            "name": "wantsRoom",
-            "label": "Raum im Kalender reservieren?",
-            "type": "Boolean",
-            "visible": "{{ !ticket.state || ticket.state.startsWith('offen') }}"
-        },
-        {
-            "name": "termin",
-            "label": "Termin & Raum",
-            "type": "Termin",
-            "rooms": [
-                "Raum 318 (Konferenz)",
-                "Raum 401 (Recherche)",
-                "Raum 513 (Besprechung)"
-            ],
-            "visible": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
-            "required": "{{ ticket.wantsRoom === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
-        },
-        {
-            "name": "wantsCatering",
-            "label": "Bewirtung beauftragen?",
-            "type": "Boolean",
-            "visible": "{{ !ticket.state || ticket.state.startsWith('offen') }}"
-        },
-        {
-            "name": "cateringDrinks",
-            "label": "Getränke und Speisen",
-            "type": "Select",
-            "multiple": true,
-            "options": [
-                "Kaffee",
-                "Wasser",
-                "Orangensaft",
-                "Apfelsaft",
-                "Tee",
-                "Brezeln",
-                "Kuchen",
-                "Obst",
-                "Süße Stückle"
-            ],
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
-        },
-        {
-            "name": "cateringTime",
-            "label": "Bereitstellung bis",
-            "type": "Time",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
-        },
-        {
-            "name": "cateringPersons",
-            "label": "Personenanzahl",
-            "type": "Integer",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}",
-            "required": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
-        },
-        {
-            "name": "cateringDescription",
-            "label": "Besondere Wünsche",
-            "type": "Text",
-            "visible": "{{ ticket.wantsCatering === true && (!ticket.state || ticket.state.startsWith('offen')) }}"
         },
         {
             "name": "protocol",
@@ -153,11 +115,6 @@
         "date date timeStart timeEnd",
         "participants participants participants participants",
         "agenda agenda agenda agenda",
-        "wantsRoom wantsRoom . .",
-        "termin termin termin termin",
-        "wantsCatering wantsCatering . .",
-        "cateringDrinks cateringDrinks cateringTime cateringPersons",
-        "cateringDescription cateringDescription cateringDescription cateringDescription",
         "protocol protocol protocol protocol",
         "attachments attachments attachments attachments"
     ],
@@ -195,6 +152,18 @@
                     ],
                     "optional": true,
                     "script": "ticket.state = 'offen.storniert'"
+                },
+                {
+                    "name": "Subticket erstellen",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "subTickets": [
+                        "Raumreservierung",
+                        "Bewirtungsauftrag"
+                    ]
                 }
             ]
         }

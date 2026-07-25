@@ -648,6 +648,15 @@ const onResizeEnd = () => {
   background: var(--wa-color-neutral-95);
   z-index: 15;
   padding-right: 0.5rem;
+  background: rgba(248, 249, 250, 0.85);
+  background: color-mix(in srgb, var(--wa-color-neutral-95) 85%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.calendar-name:hover {
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .timeline-track {

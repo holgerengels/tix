@@ -63,7 +63,7 @@ const ui = useUiStore();
 const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
-import { validateTicket } from '../utils/evaluation';
+import { validateTicket, evaluateTemplate } from '../utils/evaluation';
 import { marked } from 'marked';
 
 const getFieldLabel = (name) => {
@@ -86,10 +86,66 @@ const loadingDoc = ref(false);
 
 const route = useRoute();
 const parentTicket = computed(() => route.query.parent);
+const parentTicketData = ref(null);
 
-onMounted(() => {
+/**
+ * Resolves dot-notation keys into nested objects.
+ * e.g. setNestedValue(obj, 'termin.start', '14:00') => obj.termin.start = '14:00'
+ */
+const setNestedValue = (obj, path, value) => {
+    const keys = path.split('.');
+    let current = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] === undefined) current[keys[i]] = {};
+        current = current[keys[i]];
+    }
+    current[keys[keys.length - 1]] = value;
+};
+
+/**
+ * Applies the subTickets mapping from the parent ticket's config.
+ * Evaluates each mapping expression against the parent ticket data
+ * and merges the results into newTicketData.
+ */
+const applySubticketMapping = () => {
+    if (!parentTicketData.value || !newTicketType.value) return;
+
+    const parentConfig = config.value[parentTicketData.value.type];
+    if (!parentConfig || !Array.isArray(parentConfig.subTickets)) return;
+
+    const subTicketDef = parentConfig.subTickets.find(st => st.type === newTicketType.value);
+    if (!subTicketDef || !subTicketDef.mapping) return;
+
+    const defaults = {};
+    for (const [field, expression] of Object.entries(subTicketDef.mapping)) {
+        const value = evaluateTemplate(expression, parentTicketData.value);
+        if (value !== undefined && value !== null && value !== '') {
+            setNestedValue(defaults, field, value);
+        }
+    }
+
+    newTicketData.value = { ...defaults, ...newTicketData.value };
+};
+
+onMounted(async () => {
     if (route.query.type) {
         newTicketType.value = route.query.type;
+    }
+
+    // Load parent ticket data for subticket mapping
+    if (parentTicket.value) {
+        try {
+            const res = await axios.get('/api/tickets', {
+                params: { id: parentTicket.value },
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.data && res.data.length > 0) {
+                parentTicketData.value = res.data[0];
+                applySubticketMapping();
+            }
+        } catch (err) {
+            console.warn('Failed to load parent ticket for mapping:', err.message);
+        }
     }
 });
 
@@ -140,6 +196,7 @@ const fetchWorkflowDoc = async (type) => {
 
 watch(newTicketType, (newType) => {
     fetchWorkflowDoc(newType);
+    applySubticketMapping();
 });
 
 const resetForm = () => {

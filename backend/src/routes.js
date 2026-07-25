@@ -678,19 +678,22 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             if (parent) {
                 const workflowEngine = require('./workflow');
                 const parentWf = workflowEngine.getWorkflowForType(parent.type);
-                if (parentWf && parentWf.subTickets && parentWf.subTickets.logStatusToParent) {
-                    const Log = require('./models/log');
-                    await new Log({
-                        ticket: parent._id,
-                        editor: 'System',
-                        action: `Subticket ${ticket.id} ist nun im Status: ${ticket.state}`,
-                        timestamp: new Date(),
-                        dataAfter: parent.toObject()
-                    }).save();
+                if (parentWf && Array.isArray(parentWf.subTickets)) {
+                    const subTicketConfig = parentWf.subTickets.find(st => st.type === ticket.type);
+                    if (subTicketConfig && subTicketConfig.logStatusToParent) {
+                        const Log = require('./models/log');
+                        await new Log({
+                            ticket: parent._id,
+                            editor: 'System',
+                            action: `Subticket ${ticket.id} ist nun im Status: ${ticket.state}`,
+                            timestamp: new Date(),
+                            dataAfter: parent.toObject()
+                        }).save();
 
-                    // Asynchronously trigger bots for the parent
-                    const { runBotsForTicket } = require('./bots');
-                    runBotsForTicket(parent).catch(e => console.error("Error running bots for parent:", e));
+                        // Asynchronously trigger bots for the parent
+                        const { runBotsForTicket } = require('./bots');
+                        runBotsForTicket(parent).catch(e => console.error("Error running bots for parent:", e));
+                    }
                 }
             }
         }

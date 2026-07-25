@@ -6,6 +6,9 @@ export const useUsersStore = defineStore('users', () => {
     // Cache: username -> displayName
     const cache = ref({})
 
+    // Cache: username -> full user object { username, displayName, employeeId, groups, ... }
+    const userDataCache = ref({})
+
     // Pending requests to avoid duplicate fetches
     const pending = {}
 
@@ -62,6 +65,7 @@ export const useUsersStore = defineStore('users', () => {
                 if (u.displayName) {
                     cache.value[u.username] = u.displayName
                 }
+                userDataCache.value[u.username] = u
             })
             return users
         } catch (err) {
@@ -70,5 +74,14 @@ export const useUsersStore = defineStore('users', () => {
         }
     }
 
-    return { cache, getDisplayName, fetchUser, fetchUsersByGroup }
+    /**
+     * Get cached full user data object for a username.
+     * Returns the cached user object or null if not found.
+     */
+    function getUserData(username) {
+        if (!username) return null
+        return userDataCache.value[username.toLowerCase()] || userDataCache.value[username] || null
+    }
+
+    return { cache, getDisplayName, fetchUser, fetchUsersByGroup, getUserData }
 })

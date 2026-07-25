@@ -22,7 +22,7 @@
       handle=".drag-handle"
       :disabled="isFixedOrder || field.readonly || field.disabled"
       :filter="'.is-skeleton'"
-      :preventOnFilter="true"
+      :preventOnFilter="false"
       class="object-array-list"
       @change="emitUpdate"
     >
@@ -72,7 +72,7 @@
 import { defineProps, defineEmits, ref, watch, computed } from 'vue';
 import draggable from 'vuedraggable';
 import FormField from './FormField.vue';
-import { evaluateFields } from '../utils/evaluation';
+import { evaluateFields, computeFills } from '../utils/evaluation';
 
 const props = defineProps({
   field: { type: Object, required: true },
@@ -187,6 +187,21 @@ const updateSubField = (index, fieldName, newValue) => {
         if (!isFixedLength.value) {
             internalList.value.push(createSkeleton());
         }
+    }
+
+    // Compute fills: derive values from sibling fields in the same row
+    const rawFields = props.field.items?.fields || [];
+    const fills = computeFills(rawFields, updated);
+    let fillApplied = false;
+    for (const [key, val] of Object.entries(fills)) {
+        // Only fill if target field is currently empty
+        if (updated[key] === undefined || updated[key] === null || updated[key] === '') {
+            updated[key] = val;
+            fillApplied = true;
+        }
+    }
+    if (fillApplied) {
+        row.value = { ...updated };
     }
 
     emitUpdate();

@@ -119,7 +119,8 @@ async function getCalendars(allowedRooms = null, ownerEmail = null) {
                 // Check if it's a calendar collection
                 if (resourcetype && (resourcetype['c:calendar'] !== undefined || resourcetype['calendar'] !== undefined)) {
                     const href = getXmlKey(resp, 'href');
-                    const name = getXmlKey(prop, 'displayname') || href.split('/').filter(Boolean).pop();
+                    const rawName = getXmlKey(prop, 'displayname') || (href ? href.split('/').filter(Boolean).pop() : '');
+                    const name = rawName.replace(/\s*\([^)]+<[^>]+>\)$/, '').trim();
                     // Some calendars are not rooms (like Personal Calendar)
                     if (!allowedRooms || allowedRooms.includes(name)) {
                         calendars.push({ name, href });

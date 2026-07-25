@@ -1,12 +1,18 @@
 {
     "type": "Raumreservierung",
     "abbreviation": "RES",
-    "subTickets": {
-        "allowedTypes": [
-            "Bewirtungsauftrag"
-        ],
-        "logStatusToParent": true
-    },
+    "subTickets": [
+        {
+            "type": "Bewirtungsauftrag",
+            "mapping": {
+                "title": "{{ ticket.title }}",
+                "date": "{{ ticket.date }}",
+                "room": "{{ ticket.termin ? ticket.termin.room : '' }}",
+                "endTime": "{{ ticket.termin ? ticket.termin.end : '' }}"
+            },
+            "logStatusToParent": true
+        }
+    ],
     "template": "{{ticket.termin.room || 'Raum'}} - {{ticket.date}}",
     "fields": [
         {

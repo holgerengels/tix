@@ -42,6 +42,7 @@ const emit = defineEmits(['update:modelValue']);
 const isOpen = ref(false);
 const searchText = ref('');
 const hasSelected = ref(false);
+let suppressOpen = false; // Guard to prevent reopening after selection or blur
 
 // Helpers to handle both string[] and { value, label }[] options
 const optValue = (opt) => typeof opt === 'object' ? opt.value : opt;
@@ -64,6 +65,7 @@ const filteredOptions = computed(() => {
 const handleInput = (event) => {
     searchText.value = event.target.value;
     hasSelected.value = false;
+    suppressOpen = false;
     // Also emit the raw text as value so partial typing works
     // Check if text matches a value exactly
     const match = props.options.find(opt => optLabel(opt).toLowerCase() === event.target.value.toLowerCase());
@@ -80,7 +82,9 @@ const handleInput = (event) => {
 };
 
 const handleFocus = () => {
-    if (displayValue.value && displayValue.value.length >= 3) {
+    // Don't reopen if we just closed after a selection or blur
+    if (suppressOpen) return;
+    if (searchText.value && searchText.value.length >= 3) {
         isOpen.value = true;
     }
 };
@@ -97,21 +101,30 @@ const handleBlur = () => {
         }
     }
 
-    // Delay closing logic to allow click event on menu item to fire first
+    // Suppress reopening and close after a short delay (to allow click on menu item)
+    suppressOpen = true;
     setTimeout(() => {
         isOpen.value = false;
     }, 150);
+    setTimeout(() => {
+        suppressOpen = false;
+    }, 300);
 };
 
 const handleItemClick = (option) => {
+    suppressOpen = true;
     emit('update:modelValue', optValue(option));
     hasSelected.value = true;
     searchText.value = '';
     isOpen.value = false;
+    setTimeout(() => {
+        suppressOpen = false;
+    }, 300);
 };
 
 const focusMenu = () => {
     if (!isOpen.value) {
+        suppressOpen = false;
         isOpen.value = true;
         return;
     }

@@ -1,13 +1,16 @@
 {
     "type": "IT-Ticket",
     "abbreviation": "ITT",
-    "subTickets": {
-        "allowedTypes": [
-            "IT-Ticket",
-            "Hausmeisterauftrag"
-        ],
-        "logStatusToParent": true
-    },
+    "subTickets": [
+        {
+            "type": "IT-Ticket",
+            "logStatusToParent": true
+        },
+        {
+            "type": "Hausmeisterauftrag",
+            "logStatusToParent": true
+        }
+    ],
     "template": "{{location}} {{ticket.category}}",
     "fields": [
         {

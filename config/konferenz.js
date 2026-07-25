@@ -11,14 +11,20 @@ async function getAttendeesAndCreatorEmail(ticket) {
     const attendees = [];
     
     for (const p of participants) {
-        if (p.name) {
+        if (p.email) {
+            // Direct email (internal or external)
+            const cn = p.name || p.email;
+            attendees.push({ email: p.email, cn });
+        } else if (p.name) {
+            // Fallback: look up user in MongoDB
             const userDoc = await User.findOne({ username: p.name.toLowerCase() });
-            const emailAccount = (userDoc && userDoc.employeeId) ? userDoc.employeeId : p.name.toLowerCase();
-            const cn = userDoc ? userDoc.displayName : p.name;
-            attendees.push({
-                email: `${emailAccount}@valckenburgschule.de`,
-                cn: cn
-            });
+            if (userDoc && userDoc.employeeId) {
+                attendees.push({
+                    email: `${userDoc.employeeId}@valckenburgschule.de`,
+                    cn: userDoc.displayName || p.name
+                });
+            }
+            // No email found → attendance-only participant, skip CalDAV
         }
     }
 
@@ -64,41 +70,6 @@ async function eintragen(ticket) {
         }
     } catch (err) {
         console.warn(`[Konferenz] Failed to create calendar event for creator (possibly missing SOGo superuser permissions for the service account):`, err.message);
-    }
-
-    // Create Raumreservierung sub-ticket if requested
-    if (ticket.get('wantsRoom') === true) {
-        const termin = ticket.get('termin');
-        if (termin && termin.room) {
-            await createSubTicket(ticket, 'Raumreservierung', {
-                title: ticket.title || 'Konferenz',
-                date: date,
-                termin: termin,
-                description: `Raumreservierung für Konferenz ${ticket.id}`
-            }, ticket.creator);
-            console.log(`[Konferenz] Raumreservierung-Subticket für ${ticket.id} erstellt.`);
-        } else {
-            console.warn(`[Konferenz] wantsRoom=true but no valid termin for ${ticket.id}`);
-        }
-    }
-
-    // Create Bewirtungsauftrag sub-ticket if requested
-    if (ticket.get('wantsCatering') === true) {
-        const termin = ticket.get('termin');
-        const room = termin ? termin.room : '';
-
-        await createSubTicket(ticket, 'Bewirtungsauftrag', {
-            title: ticket.title || 'Konferenz',
-            date: date,
-            eventType: 'intern',
-            numberOfPersons: ticket.get('cateringPersons') || 0,
-            room: room,
-            breakfast: true,
-            bfDrinksAndFood: ticket.get('cateringDrinks') || [],
-            breakfastTime: ticket.get('cateringTime') || timeStart,
-            description: ticket.get('cateringDescription') || ''
-        }, ticket.creator);
-        console.log(`[Konferenz] Bewirtungsauftrag-Subticket für ${ticket.id} erstellt.`);
     }
 
     ticket.state = 'offen.eingetragen';
@@ -156,7 +127,6 @@ async function syncDate(ticket) {
 
     const timeStart = ticket.get('timeStart');
     const timeEnd = ticket.get('timeEnd');
-    const termin = ticket.get('termin');
 
     // Update event on creator's personal calendar (including updated attendees & times)
     try {
@@ -178,6 +148,7 @@ async function syncDate(ticket) {
         console.warn(`[Konferenz] Failed to reschedule calendar event for creator (possibly missing SOGo superuser permissions):`, err.message);
     }
 
+    // Sync date to all open sub-tickets
     const subTickets = await Ticket.find({
         parentTicket: ticket.id,
         state: { $regex: /^offen\./ }
@@ -197,6 +168,7 @@ async function syncDate(ticket) {
 
         // Raumreservierung specific sync
         if (sub.type === 'Raumreservierung') {
+            const termin = ticket.get('termin');
             if (termin && JSON.stringify(sub.get('termin')) !== JSON.stringify(termin)) {
                 sub.set('termin', termin);
                 sub.markModified('termin');
@@ -204,41 +176,6 @@ async function syncDate(ticket) {
             }
             if (changed && sub.state === 'offen.eingetragen') {
                 sub.state = 'offen.verschoben';
-            }
-        }
-
-        // Bewirtungsauftrag specific sync
-        if (sub.type === 'Bewirtungsauftrag') {
-            const cateringTime = ticket.get('cateringTime') || timeStart;
-            const cateringPersons = ticket.get('cateringPersons') || 0;
-            const cateringDrinks = ticket.get('cateringDrinks') || [];
-            const cateringDesc = ticket.get('cateringDescription') || '';
-            const room = termin ? termin.room : '';
-
-            if (cateringTime && sub.get('breakfastTime') !== cateringTime) {
-                sub.set('breakfastTime', cateringTime);
-                sub.markModified('breakfastTime');
-                changed = true;
-            }
-            if (cateringPersons && sub.get('numberOfPersons') !== cateringPersons) {
-                sub.set('numberOfPersons', cateringPersons);
-                sub.markModified('numberOfPersons');
-                changed = true;
-            }
-            if (cateringDrinks && JSON.stringify(sub.get('bfDrinksAndFood')) !== JSON.stringify(cateringDrinks)) {
-                sub.set('bfDrinksAndFood', cateringDrinks);
-                sub.markModified('bfDrinksAndFood');
-                changed = true;
-            }
-            if (room && sub.get('room') !== room) {
-                sub.set('room', room);
-                sub.markModified('room');
-                changed = true;
-            }
-            if (sub.get('description') !== cateringDesc) {
-                sub.set('description', cateringDesc);
-                sub.markModified('description');
-                changed = true;
             }
         }
 

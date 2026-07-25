@@ -23,7 +23,7 @@
 <script setup>
 import { defineProps, defineEmits, defineExpose, computed, watch, ref, nextTick } from 'vue';
 import FormField from './FormField.vue';
-import { evaluateFields, validateTicket } from '../utils/evaluation';
+import { evaluateFields, validateTicket, computeFills } from '../utils/evaluation';
 import { useUiStore } from '../stores/ui';
 
 const ui = useUiStore();
@@ -44,6 +44,15 @@ const updateField = (name, value) => {
     // By mutating the proxy instead of extracting it, we avoid race conditions
     // where asynchronous wa-change events use a stale modelValue clone.
     props.modelValue[name] = value;
+
+    // Compute fills: derive values from other fields
+    const fills = computeFills(props.fields, props.modelValue);
+    for (const [key, val] of Object.entries(fills)) {
+        if (props.modelValue[key] === undefined || props.modelValue[key] === null || props.modelValue[key] === '') {
+            props.modelValue[key] = val;
+        }
+    }
+
     emit('update:modelValue', props.modelValue);
 };
 
