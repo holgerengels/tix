@@ -396,10 +396,15 @@ async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, des
 
     const uid = `TIX-${ticketId}`;
 
+    let organizerLine = '';
+    if (ownerEmail) {
+        organizerLine = `ORGANIZER:mailto:${ownerEmail}`;
+    }
+
     let attendeeLines = '';
     if (Array.isArray(attendees) && attendees.length > 0) {
         attendeeLines = attendees.map(att => {
-            const cnPart = att.cn ? `;CN=${att.cn}` : '';
+            const cnPart = att.cn ? `;CN="${att.cn}"` : '';
             return `ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE${cnPart}:mailto:${att.email}`;
         }).join('\n');
     }
@@ -414,6 +419,7 @@ ${dtStartProp}
 ${dtEndProp}
 SUMMARY:${description}
 DESCRIPTION:Tix Reservierung (Ticket ID: ${ticketId})
+${organizerLine ? organizerLine : ''}
 ${attendeeLines ? attendeeLines : ''}
 END:VEVENT
 END:VCALENDAR`.replace(/\n+/g, '\n');
