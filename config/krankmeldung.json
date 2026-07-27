@@ -71,7 +71,7 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "form": "krankmeldung.bearbeiten"
                 }
@@ -105,19 +105,19 @@
             "groups": [
                 "@creator",
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "undo",
             "groups": [
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "comment",
             "groups": [
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         }
     ],

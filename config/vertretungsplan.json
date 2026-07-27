@@ -6,7 +6,7 @@
         {
             "name": "assignee",
             "groups": [
-                "Stundenplanung"
+                "Vertretungsplanung"
             ],
             "visible": true
         },
@@ -72,14 +72,14 @@
                     "groups": [
                         "@assignee",
                         "Schulleitung",
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "form": "aufgabe.bearbeiten"
                 },
                 {
                     "name": "zuweisen",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "inline": "assign"
                 },
@@ -87,14 +87,14 @@
                     "name": "ablehnen",
                     "groups": [
                         "Schulleitung",
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "script": "ticket.state = 'geschlossen.abgelehnt'"
                 },
                 {
                     "name": "an Stundenplanung",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "script": "convert(ticket)"
                 }
@@ -145,7 +145,7 @@
             "name": "read",
             "groups": [
                 "@creator",
-                "Stundenplanung",
+                "Vertretungsplanung",
                 "Schulleitung"
             ]
         },
@@ -153,21 +153,21 @@
             "name": "undo",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "delete",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "comment",
             "groups": [
                 "@creator",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         }
     ],

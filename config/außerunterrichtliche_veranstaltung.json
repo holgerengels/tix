@@ -140,14 +140,14 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "form": "bearbeiten"
                 },
                 {
                     "name": "zuweisen",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "inline": "assign"
                 }
@@ -183,14 +183,14 @@
                 "@creator",
                 "Schulleitung",
                 "Abteilungsleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "undo",
             "groups": [
                 "Abteilungsleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
@@ -204,7 +204,7 @@
             "groups": [
                 "Schulleitung",
                 "Abteilungsleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         }
     ],

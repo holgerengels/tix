@@ -98,7 +98,7 @@
                 {
                     "name": "bearbeiten",
                     "groups": [
-                        "Stundenplanung"
+                        "Vertretungsplanung"
                     ],
                     "form": "bearbeiten"
                 }
@@ -139,14 +139,14 @@
             "groups": [
                 "@creator",
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
             "name": "undo",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         },
         {
@@ -159,7 +159,7 @@
             "name": "comment",
             "groups": [
                 "Schulleitung",
-                "Stundenplanung"
+                "Vertretungsplanung"
             ]
         }
     ],
