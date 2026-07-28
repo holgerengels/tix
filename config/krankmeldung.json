@@ -37,7 +37,7 @@
         {
             "name": "workAssignment",
             "label": "Folgende Unterrichte sind mit Arbeitsaufträgen versorgt:",
-            "hint": "Arbeitsaufträge bitte selbst kommunizieren",
+            "hint": "Arbeitsaufträge bitte selbst kommunizieren!",
             "type": "RichText",
             "required": false
         },

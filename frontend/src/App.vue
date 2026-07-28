@@ -10,6 +10,9 @@
         <div class="logo"><img src="/vu.svg" alt="TIX" height="44"/>&nbsp;TIX</div>
         
         <nav>
+            <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path && $route.path.includes('/new') }">
+                <wa-icon name="plus-circle"></wa-icon> <span class="nav-text">Neues Ticket</span>
+            </router-link>
             <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
                 <wa-icon name="person"></wa-icon> <span class="nav-text">Meine Tickets</span>
             </router-link>
@@ -18,9 +21,6 @@
             </router-link>
             <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
                 <wa-icon name="collection"></wa-icon> <span class="nav-text">Alle Tickets</span>
-            </router-link>
-            <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path && $route.path.includes('/new') }">
-                <wa-icon name="plus-circle"></wa-icon> <span class="nav-text">Neues Ticket</span>
             </router-link>
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
                 <wa-icon name="journal-text"></wa-icon> <span class="nav-text">Protokoll</span>

@@ -1,5 +1,6 @@
 {
     "type": "Raumreservierung",
+    "typeVerbose": "Raumreservierung (Besprechungsräume)",
     "abbreviation": "RES",
     "subTickets": [
         {
@@ -31,7 +32,6 @@
             "type": "Termin",
             "rooms": [
                 "Raum 318 (Konferenz)",
-                "Raum 401 (Recherche)",
                 "Raum 513 (Besprechung)"
             ],
             "required": true

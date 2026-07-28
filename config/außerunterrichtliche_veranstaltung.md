@@ -4,8 +4,11 @@ Ein außerunterrichtliche Veranstaltung wird für Wandertage, Lerngänge, etc. v
 
 ### Beispiel
 
-* Besuch der Boulderhalle am 9.5.
-* Klassenfahrt nach Berlin vom 15.6. bis 19.6.
+* Lerngang Boulderhalle
+* Klassenfahrt nach Berlin
+* Schullandheim auf der Ulmer Hütte
+* Studienfahrt nach London
+* Wandertag
 
 ### Prozess
 

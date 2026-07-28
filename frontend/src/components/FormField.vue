@@ -63,6 +63,7 @@
         :modelValue="modelValue || ''"
         :hint="field.hint"
         :options="field.options"
+        :allowFreetext="field.allowFreetext !== false && field.freetext !== false"
         @update:modelValue="updateValue"
       />
 
@@ -85,6 +86,7 @@
         :disabled="field.readonly === true"
         :modelValue="modelValue || ''"
         :hint="field.hint"
+        :allowFreetext="field.allowFreetext === true || field.freetext === true"
         :options="displayUsers.map(u => ({ value: u.username, label: u.displayName || u.username }))"
         @update:modelValue="updateValue"
       />

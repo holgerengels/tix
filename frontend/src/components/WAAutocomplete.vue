@@ -34,7 +34,8 @@ const props = defineProps({
   required: { type: Boolean, default: false },
   options: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
-  hint: { type: String, default: '' }
+  hint: { type: String, default: '' },
+  allowFreetext: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -66,13 +67,14 @@ const handleInput = (event) => {
     searchText.value = event.target.value;
     hasSelected.value = false;
     suppressOpen = false;
-    // Also emit the raw text as value so partial typing works
     // Check if text matches a value exactly
     const match = props.options.find(opt => optLabel(opt).toLowerCase() === event.target.value.toLowerCase());
     if (match) {
         emit('update:modelValue', optValue(match));
-    } else {
+    } else if (props.allowFreetext) {
         emit('update:modelValue', event.target.value);
+    } else {
+        emit('update:modelValue', '');
     }
     if (event.target.value.length >= 3) {
         isOpen.value = true;
@@ -98,7 +100,14 @@ const handleBlur = () => {
             emit('update:modelValue', optValue(match));
             hasSelected.value = true;
             searchText.value = '';
+        } else if (!props.allowFreetext) {
+            searchText.value = '';
+            emit('update:modelValue', '');
+        } else {
+            emit('update:modelValue', searchText.value);
         }
+    } else if (!props.modelValue) {
+        emit('update:modelValue', '');
     }
 
     // Suppress reopening and close after a short delay (to allow click on menu item)

@@ -39,6 +39,13 @@
             "required": true
         },
         {
+            "name": "students",
+            "label": "Beteiligte Schüler*innen",
+            "hint": "Klasse(n), Kurs(e), Anzahl Schüler*innen",
+            "type": "Text",
+            "required": true
+        },
+        {
             "name": "teachers",
             "label": "Beteiligte Lehrkräfte",
             "type": "Array",
@@ -96,6 +103,7 @@
         "dateFrom dateFrom lessonFrom lessonFrom",
         "dateUntil dateUntil lessonUntil lessonUntil",
         "location location location location",
+        "students students students students",
         "teachers teachers teachers teachers",
         "colleaguesAgree colleaguesAgree acrossDepartments acrossDepartments",
         "assignee assignee assignee assignee",

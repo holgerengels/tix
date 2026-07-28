@@ -36,9 +36,42 @@
                     </wa-tag>
                     
                     <h3 style="margin: 0; display: inline-flex; align-items: center; gap: 1ch;">
-                        <wa-tag :variant="getStatusColor(ticket)" size="small">
-                            {{ getStatusLabel(ticket) }}
-                        </wa-tag>
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <wa-tag 
+                                id="status-badge"
+                                :variant="getStatusColor(ticket)" 
+                                size="small"
+                                @mouseenter="showHelp = true"
+                                @mouseleave="showHelp = false"
+                            >
+                                {{ getStatusLabel(ticket) }}
+                            </wa-tag>
+                            <wa-popover id="status-help-popover" for="status-badge" placement="bottom-start" distance="5" :open="showHelp">
+                                <div class="popover-content">
+                                    <h4>Nächste Aktionen &amp; Zuständigkeiten</h4>
+                                    <div v-if="nextActionsWithGroups.length === 0" class="no-actions">
+                                        Keine weiteren Aktionen für diesen Status definiert.
+                                    </div>
+                                    <ul v-else class="actions-list">
+                                        <li v-for="act in nextActionsWithGroups" :key="act.name" class="action-item">
+                                            <span class="action-badge-container">
+                                                <wa-tag 
+                                                    :variant="act.optional ? 'neutral' : 'brand'" 
+                                                    size="small"
+                                                    class="action-tag"
+                                                    :class="{ 'is-optional': act.optional }"
+                                                >
+                                                    {{ act.name }} <span v-if="act.optional" class="optional-label">(optional)</span>
+                                                </wa-tag>
+                                            </span>
+                                            <span class="groups-text">
+                                                durch: <strong>{{ act.groups.join(', ') }}</strong>
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </wa-popover>
+                        </span>
                         <span>{{ ticket.id }} {{ ticket.title }}</span>
                     </h3>
                     
@@ -135,6 +168,7 @@ const error = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const undoAction = ref(null);
 const executingActionId = ref(null);
+const showHelp = ref(false);
 
 const ticketData = ref({});
 const formFields = ref([]);
@@ -163,6 +197,27 @@ const {
 const createSubticket = (type) => {
     router.push({ path: '/tickets/new', query: { type: type, parent: ticket.value.id } });
 };
+
+const nextActionsWithGroups = computed(() => {
+    if (!ticket.value || !config.value || !config.value[ticket.value.type]) return [];
+    
+    const wf = config.value[ticket.value.type];
+    const matchingBlocks = (wf.workflow || []).filter(s => s.states.includes(ticket.value.state));
+    const allActions = matchingBlocks.flatMap(block => block.actions || []);
+    
+    return allActions.map(action => {
+        const mappedGroups = (action.groups || []).map(g => {
+            if (g === '@creator') return 'Ersteller';
+            if (g === '@assignee') return 'Zuständiger';
+            return g;
+        });
+        return {
+            name: action.name,
+            groups: mappedGroups,
+            optional: !!action.optional
+        };
+    });
+});
 
 const fetchData = async () => {
     loading.value = true;
@@ -423,5 +478,57 @@ onMounted(fetchData);
 }
 .is-narrow .ticket-card h3 {
     font-size: 1rem !important;
+}
+
+.popover-content {
+    padding: 0.75rem;
+    max-width: 350px;
+    font-size: 0.85rem;
+}
+.popover-content h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--wa-color-neutral-20);
+    border-bottom: 1px solid var(--wa-color-neutral-80);
+    padding-bottom: 0.25rem;
+}
+.actions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.action-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.action-badge-container {
+    display: flex;
+    align-items: center;
+}
+.action-tag {
+    font-weight: 600;
+}
+.action-tag.is-optional {
+    font-weight: 500;
+    opacity: 0.85;
+}
+.optional-label {
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--wa-color-neutral-40);
+}
+.groups-text {
+    color: var(--wa-color-neutral-35);
+    font-size: 0.8rem;
+}
+.no-actions {
+    color: var(--wa-color-neutral-40);
+    font-style: italic;
 }
 </style>
