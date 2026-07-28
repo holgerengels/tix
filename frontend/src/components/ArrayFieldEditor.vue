@@ -8,7 +8,7 @@
         handle=".drag-handle"
         :disabled="field.readonly || field.disabled"
         :filter="'.is-skeleton'"
-        :preventOnFilter="true"
+        :preventOnFilter="false"
         class="array-field-list"
         :class="[
           field.layout === 'columns' ? 'layout-row' : 'layout-column',

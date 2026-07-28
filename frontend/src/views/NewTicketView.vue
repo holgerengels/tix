@@ -14,7 +14,7 @@
         <wa-spinner></wa-spinner> Lade Konfiguration...
     </div>
 
-    <wa-card v-else class="ticket-card" with-footer>
+    <wa-card v-else class="ticket-card" with-footer with-footer-actions>
         <div slot="header" class="card-header">Typ<wa-select :value.prop="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen" style="width: 100%;">
            <wa-option v-for="type in availableTypes" :key="type" :value="type">
               {{ config[type]?.typeVerbose || type }}
@@ -44,6 +44,8 @@
 
 
         
+        <!-- Dummy to force Web Awesome to render the card footer container -->
+        <div slot="footer" style="display: none;"></div>
         <wa-button slot="footer-actions" v-if="newTicketType" size="small" variant="neutral" appearance="filled" @click="cancelCreation">Abbrechen</wa-button>
         <wa-divider slot="footer-actions" v-if="newTicketType" orientation="vertical"></wa-divider>
         <wa-button slot="footer-actions" size="small" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>

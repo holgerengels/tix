@@ -13,16 +13,16 @@
       ></wa-input>
 
       <!-- Time -->
-      <wa-input 
+      <wa-time-input 
         v-else-if="field.type === 'Time'"
-        type="time"
+        step="300" hour-format="24"
         :label="field.label"
         :required="field.required === true"
         :disabled="field.readonly === true"
         :value.prop="modelValue || ''"
         :hint="field.hint"
         @change="updateValue($event.target.value)"
-      ></wa-input>
+      ></wa-time-input>
 
       <!-- Email -->
       <wa-input 

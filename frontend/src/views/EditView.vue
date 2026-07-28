@@ -18,7 +18,7 @@
         {{ error }}
     </div>
 
-    <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer>
+    <wa-card v-else-if="ticket" class="ticket-card" with-header with-footer with-footer-actions>
         <div slot="header" style="display: flex; flex-direction: column; width: 100%; gap: 0.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 1ch;">
@@ -68,6 +68,8 @@
 
         <wa-button slot="footer-actions" size="small" @click="goBack" appearance="plain">Abbrechen</wa-button>
         <wa-button slot="footer-actions" size="small" variant="primary" @click="save" :loading="saving">Speichern</wa-button>
+        <!-- Dummy to force Web Awesome to render the card footer container -->
+        <div slot="footer" style="display: none;"></div>
     </wa-card>
   </div>
 </template>
