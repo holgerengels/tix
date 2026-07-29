@@ -18,7 +18,8 @@
             "name": "lessonFrom",
             "label": "Stunde von",
             "type": "Lesson",
-            "required": true
+            "required": true,
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}"
         },
         {
             "name": "dateUntil",
@@ -30,7 +31,8 @@
             "name": "lessonUntil",
             "label": "Stunde bis",
             "type": "Lesson",
-            "required": true
+            "required": true,
+            "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}"
         },
         {
             "name": "location",
