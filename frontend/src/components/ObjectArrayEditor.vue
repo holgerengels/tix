@@ -191,14 +191,18 @@ const updateSubField = (index, fieldName, newValue) => {
 
     // Compute fills: derive values from sibling fields in the same row
     const rawFields = props.field.items?.fields || [];
-    const fills = computeFills(rawFields, updated);
+    const { defaults, computeds } = computeFills(rawFields, updated);
     let fillApplied = false;
-    for (const [key, val] of Object.entries(fills)) {
+    for (const [key, val] of Object.entries(defaults)) {
         // Only fill if target field is currently empty
         if (updated[key] === undefined || updated[key] === null || updated[key] === '') {
             updated[key] = val;
             fillApplied = true;
         }
+    }
+    for (const [key, val] of Object.entries(computeds)) {
+        updated[key] = val;
+        fillApplied = true;
     }
     if (fillApplied) {
         row.value = { ...updated };

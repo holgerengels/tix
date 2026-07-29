@@ -287,12 +287,10 @@ watch(userGroupsKey, () => {
     }
 }, { immediate: true });
 
-// Initialize Default Values if empty
-watch(() => [props.field.type, props.field.default], ([newType, newDefault]) => {
+// Initialize Default Values for special types if empty
+watch(() => props.field.type, (newType) => {
     if (props.modelValue === undefined) {
-        if (newDefault !== undefined) {
-            updateValue(newDefault);
-        } else if (newType === 'Lesson') {
+        if (newType === 'Lesson') {
             updateValue(1);
         } else if (newType === 'Lessons') {
             updateValue({ min: 1, max: 11 });

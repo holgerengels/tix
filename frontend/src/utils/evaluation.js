@@ -125,33 +125,39 @@ export function evaluateFields(fields, ticketData) {
         return evaluatedField;
     });
 }
-
 /**
- * Evaluates 'fill' expressions on fields and returns derived values.
- * Only returns values for fields where the fill expression evaluates to a non-empty result.
- * The caller is responsible for only applying fills to currently empty fields.
+ * Evaluates 'default' and 'computed' expressions on fields and returns derived values.
+ * - default: only applied when the target field is currently empty
+ * - computed: always applied, overwriting any existing value
  *
- * @param {Array} fields - Field definitions (may contain 'fill' properties with {{ }} expressions)
+ * @param {Array} fields - Field definitions (may contain 'default' or 'computed' properties)
  * @param {Object} context - The data context (ticket data or row data for ObjectArrays)
- * @returns {Object} Map of { fieldName: derivedValue } for non-empty fill results
+ * @returns {Object} { defaults, computeds } maps of { fieldName: derivedValue }
  */
 export function computeFills(fields, context) {
-    if (!fields) return {};
+    if (!fields) return { defaults: {}, computeds: {} };
 
-    const fills = {};
+    const defaults = {};
+    const computeds = {};
     for (const field of fields) {
-        if (field.fill && typeof field.fill === 'string' && field.fill.includes('{{')) {
+        const isComputed = !!field.computed;
+        const expr = field.computed || field.default;
+        if (expr !== undefined && expr !== null) {
             try {
-                const value = evaluateTemplate(field.fill, context);
+                const value = typeof expr === 'string' ? evaluateTemplate(expr, context) : expr;
                 if (value !== undefined && value !== null && value !== '') {
-                    fills[field.name] = value;
+                    if (isComputed) {
+                        computeds[field.name] = value;
+                    } else {
+                        defaults[field.name] = value;
+                    }
                 }
             } catch (e) {
-                console.warn(`Failed to evaluate fill for field ${field.name}:`, e);
+                console.warn(`Failed to evaluate ${isComputed ? 'computed' : 'default'} for field ${field.name}:`, e);
             }
         }
     }
-    return fills;
+    return { defaults, computeds };
 }
 
 export function validateTicket(ticketData, workflow, formFields = null) {

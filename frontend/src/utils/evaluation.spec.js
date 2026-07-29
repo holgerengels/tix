@@ -107,4 +107,108 @@ describe('evaluation.js', () => {
             expect(result.errors).toContain('End date before start date');
         });
     });
+
+    describe('computeFills', () => {
+        // Need to import computeFills
+        let computeFills;
+        beforeAll(async () => {
+            const mod = await import('./evaluation');
+            computeFills = mod.computeFills;
+        });
+
+        it('should return empty objects for undefined fields', () => {
+            const { defaults, computeds } = computeFills(undefined, {});
+            expect(defaults).toEqual({});
+            expect(computeds).toEqual({});
+        });
+
+        it('should return empty objects for empty fields array', () => {
+            const { defaults, computeds } = computeFills([], {});
+            expect(defaults).toEqual({});
+            expect(computeds).toEqual({});
+        });
+
+        it('should evaluate a static default value', () => {
+            const fields = [
+                { name: 'priority', default: 'normal' }
+            ];
+            const { defaults, computeds } = computeFills(fields, {});
+            expect(defaults.priority).toBe('normal');
+            expect(computeds).toEqual({});
+        });
+
+        it('should evaluate a numeric default value', () => {
+            const fields = [
+                { name: 'lessonFrom', default: 1 }
+            ];
+            const { defaults, computeds } = computeFills(fields, {});
+            expect(defaults.lessonFrom).toBe(1);
+        });
+
+        it('should evaluate an object default value', () => {
+            const fields = [
+                { name: 'lessons', default: { min: 1, max: 11 } }
+            ];
+            const { defaults, computeds } = computeFills(fields, {});
+            expect(defaults.lessons).toEqual({ min: 1, max: 11 });
+        });
+
+        it('should evaluate a template default from other fields', () => {
+            const fields = [
+                { name: 'title', default: '{{ticket.firstName + " " + ticket.lastName}}' }
+            ];
+            const context = { firstName: 'Max', lastName: 'Mustermann' };
+            const { defaults } = computeFills(fields, context);
+            expect(defaults.title).toBe('Max Mustermann');
+        });
+
+        it('should not return a default if the template evaluates to empty', () => {
+            const fields = [
+                { name: 'title', default: '{{ticket.firstName}}' }
+            ];
+            const context = { firstName: '' };
+            const { defaults } = computeFills(fields, context);
+            expect(defaults.title).toBeUndefined();
+        });
+
+        it('should evaluate a computed field', () => {
+            const fields = [
+                { name: 'title', computed: '{{ticket.level + ": " + ticket.name}}' }
+            ];
+            const context = { level: '1. Mahnung', name: 'Max' };
+            const { defaults, computeds } = computeFills(fields, context);
+            expect(computeds.title).toBe('1. Mahnung: Max');
+            expect(defaults).toEqual({});
+        });
+
+        it('should handle both default and computed fields together', () => {
+            const fields = [
+                { name: 'priority', default: 'normal' },
+                { name: 'title', computed: '{{ticket.level + ": " + ticket.name}}' }
+            ];
+            const context = { level: '2. Mahnung', name: 'Anna' };
+            const { defaults, computeds } = computeFills(fields, context);
+            expect(defaults.priority).toBe('normal');
+            expect(computeds.title).toBe('2. Mahnung: Anna');
+        });
+
+        it('should prefer computed over default if both are present on same field', () => {
+            const fields = [
+                { name: 'title', default: 'fallback', computed: '{{ticket.name}}' }
+            ];
+            const context = { name: 'Max' };
+            const { defaults, computeds } = computeFills(fields, context);
+            expect(computeds.title).toBe('Max');
+            expect(defaults.title).toBeUndefined();
+        });
+
+        it('should skip fields without default or computed', () => {
+            const fields = [
+                { name: 'firstName', type: 'Text', required: true },
+                { name: 'priority', default: 'high' }
+            ];
+            const { defaults } = computeFills(fields, {});
+            expect(Object.keys(defaults)).toEqual(['priority']);
+        });
+    });
 });

@@ -1,0 +1,219 @@
+{
+    "type": "Mahnverfahren",
+    "abbreviation": "MHN",
+    "template": "{{ticket.className}}",
+    "fields": [
+        {
+            "name": "title",
+            "visible": false,
+            "required": false,
+            "computed": "{{ticket.level + ': ' + ticket.firstName + ' ' + ticket.lastName}}"
+        },
+        {
+            "name": "level",
+            "label": "Mahnstufe",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "1. Mahnung",
+                "2. Mahnung"
+            ]
+        },
+        {
+            "name": "firstName",
+            "label": "Vorname",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "lastName",
+            "label": "Nachname",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "className",
+            "label": "Klasse",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "reason",
+            "label": "Grund",
+            "type": "RichText",
+            "required": true
+        },
+        {
+            "name": "medicalCertificate",
+            "label": "Soll eine ärztliche Bescheinigungspflicht verhängt werden?",
+            "type": "Select",
+            "required": true,
+            "options": [
+                "ja",
+                "nein",
+                "wurde bereits"
+            ]
+        },
+        {
+            "name": "parentMeeting",
+            "label": "Bitte um ein Elterngespräch (E-Mail-Adresse wird angegeben)",
+            "type": "Boolean"
+        },
+        {
+            "name": "absenceReport",
+            "label": "Ausdruck der Abwesenheiten soll angehängt werden",
+            "type": "Boolean"
+        },
+        {
+            "name": "classbookReport",
+            "label": "Ausdruck der Klassenbucheinträge soll angehängt werden",
+            "type": "Boolean"
+        },
+        {
+            "name": "detention",
+            "label": "Einbestellung zum Nachsitzen, Termin über KL",
+            "type": "Boolean"
+        },
+        {
+            "name": "description",
+            "label": "Bemerkung"
+        }
+    ],
+    "grid": [
+        "badges badges badges badges",
+        "level level className className",
+        "firstName firstName lastName lastName",
+        "reason reason reason reason",
+        "medicalCertificate medicalCertificate medicalCertificate medicalCertificate",
+        "parentMeeting parentMeeting absenceReport absenceReport",
+        "classbookReport classbookReport detention detention",
+        "description description description description"
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "Sekretariat"
+                    ],
+                    "form": "bearbeiten"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.neu"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'geschlossen.storniert'"
+                }
+            ]
+        }
+    ],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Lehrkräfte"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Schulleitung",
+                "Sekretariat"
+            ]
+        },
+        {
+            "name": "edit",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "undo",
+            "groups": [
+                "Sekretariat"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "Schulleitung",
+                "Sekretariat"
+            ]
+        }
+    ],
+    "forms": [
+        {
+            "name": "bearbeiten",
+            "title": "Mahnverfahren bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'geschlossen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen.*",
+            "label": "offen (alle)",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "geschlossen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.*",
+            "label": "geschlossen (alle)",
+            "color": "green"
+        }
+    ]
+}
