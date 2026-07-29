@@ -76,13 +76,13 @@
         },
         {
             "name": "assignee",
-            "label": "{{ticket.acrossDepartments ? 'Schulleitung' : 'Zuständige Abteilungsleitung'}}",
+            "label": "{{ticket.acrossDepartments || ticket.dateFrom < ticket.dateUntil ? 'Schulleitung' : 'Zuständige Abteilungsleitung'}}",
             "type": "User",
             "groups": [
                 "Abteilungsleitung"
             ],
-            "required": "{{!ticket.acrossDepartments}}",
-            "readonly": "{{ticket.acrossDepartments}}",
+            "required": "{{!(ticket.acrossDepartments || ticket.dateFrom < ticket.dateUntil)}}",
+            "readonly": "{{ticket.acrossDepartments || ticket.dateFrom < ticket.dateUntil}}",
             "visible": true
         },
         {

@@ -1,5 +1,6 @@
 {
     "type": "Krankmeldung",
+    "typeVerbose": "Abwesenheit (Krankmeldung)",
     "abbreviation": "KRM",
     "template": "{{ticket.dateFrom}} - {{ticket.dateUntil}}",
     "fields": [

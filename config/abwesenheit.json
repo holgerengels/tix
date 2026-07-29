@@ -1,6 +1,6 @@
 {
     "type": "Abwesenheitsantrag",
-    "typeVerbose": "Abwesenheitsantrag (Lehrkräfte)",
+    "typeVerbose": "Abwesenheit (Sonstiges)",
     "abbreviation": "ABW",
     "template": "{{ticket.dateFrom}} [{{ticket.lessonFrom}}] - {{ticket.dateUntil}} [{{ticket.lessonUntil}}] {{ticket.reason}}",
     "fields": [
@@ -42,7 +42,6 @@
             "options": [
                 "Dienstgeschäft",
                 "Fortbildung",
-                "Korrekturtag",
                 "Beurlaubung"
             ]
         },
@@ -176,12 +175,12 @@
             "script": "dringend(ticket)"
         },
         {
-            "name": "korrekturtag",
+            "name": "dienstgeschäft",
             "states": [
                 "offen.neu"
             ],
             "onChange": "insync",
-            "script": "await korrekturtag(ticket)"
+            "script": "await dienstgeschaeft(ticket)"
         }
     ],
     "forms": [

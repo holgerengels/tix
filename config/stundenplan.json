@@ -77,8 +77,7 @@
         },
         {
             "states": [
-                "offen.neu",
-                "offen.inArbeit"
+                "offen.neu"
             ],
             "actions": [
                 {

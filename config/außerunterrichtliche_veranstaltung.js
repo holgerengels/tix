@@ -30,7 +30,7 @@ function isUrgent(dateInput) {
 const { getUsers } = require('./auth');
 
 async function acrossDepartments(ticket) {
-  if (ticket.acrossDepartments) {
+  if (ticket.acrossDepartments || ticket.dateFrom < ticket.dateUntil) {
     const slUsers = await getUsers(['Schulleitung']);
     if (slUsers && slUsers.length > 0) {
       ticket.assignee = slUsers[0].username;

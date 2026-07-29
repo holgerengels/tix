@@ -8,6 +8,7 @@
             <wa-icon name="arrow-left"></wa-icon>
         </wa-button>
         <h2>Ticket editieren</h2>
+        <p>(Korrektur fehlerhafter Eingaben / fehlgeleiteter Tickets)</p>
     </div>
 
     <div v-if="loading" class="loading">
@@ -236,6 +237,8 @@ onMounted(fetchData);
     height: 100%;
     display: flex;
     flex-direction: column;
+    background: color-mix(in srgb, var(--wa-color-warning-70) 15%, transparent);
+    border-radius: var(--wa-border-radius-large);
 }
 .header {
     display: flex;

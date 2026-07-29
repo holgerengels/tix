@@ -21,6 +21,7 @@
 
     <div class="comment-input">
       <wa-textarea 
+        ref="textareaRef"
         v-model="newComment" 
         placeholder="Kommentar schreiben..." 
         rows="2"
@@ -53,6 +54,7 @@ const newComment = ref('');
 const loading = ref(false);
 const sending = ref(false);
 const listRef = ref(null);
+const textareaRef = ref(null);
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
@@ -87,6 +89,8 @@ const sendComment = async (silent = false) => {
         comments.value.push(res.data);
         newComment.value = '';
         await scrollToBottom();
+        await nextTick();
+        textareaRef.value?.focus();
     } catch (err) {
         toast.error('Fehler beim Senden: ' + (err.response?.data?.message || err.message));
     } finally {
