@@ -5,6 +5,12 @@
     "template": "{{ticket.dateFrom}} - {{ticket.dateUntil}}",
     "fields": [
         {
+            "name": "title",
+            "visible": false,
+            "required": false,
+            "computed": "{{'Krankmeldung: ' + ticket.firstName + ' ' + ticket.lastName + (ticket.who == 'Mein Kind' ? ' (Kind)' : ' (selbst)') + (ticket.exam ? ' 🎓' : '')}}"
+        },
+        {
             "name": "dateFrom",
             "label": "Datum von",
             "type": "Date",
