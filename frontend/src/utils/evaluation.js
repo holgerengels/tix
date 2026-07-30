@@ -15,6 +15,27 @@ const getUsersStore = () => {
     return _usersStore;
 };
 
+function getFirstNameFromDisplayName(displayName) {
+    if (!displayName) return '';
+    if (displayName.includes(',')) {
+        const parts = displayName.split(',');
+        return parts[1] ? parts[1].trim() : parts[0].trim();
+    }
+    const parts = displayName.trim().split(/\s+/);
+    return parts[0] || '';
+}
+
+function getLastNameFromDisplayName(displayName) {
+    if (!displayName) return '';
+    if (displayName.includes(',')) {
+        const parts = displayName.split(',');
+        return parts[0].trim();
+    }
+    const parts = displayName.trim().split(/\s+/);
+    if (parts.length <= 1) return '';
+    return parts.slice(1).join(' ');
+}
+
 const createSafeEvaluator = (expr, ticketData) => {
     // We cannot just use Object.keys(ticketData) because Vue needs to track GET requests
     // for specific properties inside the expression, even if they don't exist on the object yet.
@@ -58,6 +79,18 @@ const createSafeEvaluator = (expr, ticketData) => {
                 return `${userData.employeeId}@valckenburgschule.de`;
             }
             return null;
+        },
+        firstName: (username) => {
+            if (!username) return '';
+            const store = getUsersStore();
+            const displayName = store ? store.getDisplayName(username) : username;
+            return getFirstNameFromDisplayName(displayName);
+        },
+        lastName: (username) => {
+            if (!username) return '';
+            const store = getUsersStore();
+            const displayName = store ? store.getDisplayName(username) : username;
+            return getLastNameFromDisplayName(displayName);
         }
     };
 

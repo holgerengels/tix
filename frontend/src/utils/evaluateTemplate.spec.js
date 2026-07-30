@@ -99,6 +99,14 @@ describe('evaluateTemplate', () => {
             // With surrounding text, it interpolates as empty string
             expect(evaluateTemplate('Datum: {{ format(ticket.d, "yyyy-MM-dd") }}', { d: null })).toBe('Datum: ');
         });
+
+        it('should extract firstName and lastName from displayName', () => {
+            expect(evaluateTemplate('{{ firstName("Sabine Keller") }}', {})).toBe('Sabine');
+            expect(evaluateTemplate('{{ lastName("Sabine Keller") }}', {})).toBe('Keller');
+
+            expect(evaluateTemplate('{{ firstName("Keller, Sabine") }}', {})).toBe('Sabine');
+            expect(evaluateTemplate('{{ lastName("Keller, Sabine") }}', {})).toBe('Keller');
+        });
     });
 
     describe('with-based variable access (Vue reactivity)', () => {

@@ -8,7 +8,7 @@
             "name": "title",
             "visible": false,
             "required": false,
-            "computed": "{{ticket.creator + (ticket.who == 'Mein Kind' ? ' (Kind)' : ' (selbst)') + (ticket.exam ? ' 🎓' : '')}}"
+            "computed": "{{firstName(ticket.creator) + ' ' + lastName(ticket.creator) + (ticket.who == 'Mein Kind' ? ' (Kind)' : ' (selbst)') + (ticket.exam ? ' 🎓' : '')}}"
         },
         {
             "name": "dateFrom",

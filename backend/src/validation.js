@@ -1,6 +1,73 @@
 const { format, formatDistance, addDays, subDays } = require('date-fns');
 const { de } = require('date-fns/locale');
 
+const userCache = new Map();
+
+// Helper to lookup user displayName in background
+function getBackendDisplayName(username) {
+    if (!username) return '';
+    const cleanUsername = username.toLowerCase();
+    if (userCache.has(cleanUsername)) {
+        return userCache.get(cleanUsername);
+    }
+    
+    // Trigger background database fetch
+    try {
+        const User = require('./models/user');
+        User.findOne({ username: cleanUsername }).then(u => {
+            if (u && u.displayName) {
+                userCache.set(cleanUsername, u.displayName);
+            } else {
+                userCache.set(cleanUsername, username);
+            }
+        }).catch(err => {
+            console.error(`[Validation] Error fetching user ${username} in background:`, err);
+        });
+    } catch (e) {
+        // Model import or mongoose fetch could fail if not fully initialized or in test scripts
+    }
+
+    // Return fallback for first execution
+    return username;
+}
+
+// Pre-populate user cache
+try {
+    const User = require('./models/user');
+    User.find({}).then(users => {
+        for (const u of users) {
+            if (u.username && u.displayName) {
+                userCache.set(u.username.toLowerCase(), u.displayName);
+            }
+        }
+    }).catch(err => {
+        // Connection or query might fail on immediate startup, background fetch will handle
+    });
+} catch (e) {
+    // Ignore import errors in tests/scripts where Mongoose isn't initialized
+}
+
+function getFirstNameFromDisplayName(displayName) {
+    if (!displayName) return '';
+    if (displayName.includes(',')) {
+        const parts = displayName.split(',');
+        return parts[1] ? parts[1].trim() : parts[0].trim();
+    }
+    const parts = displayName.trim().split(/\s+/);
+    return parts[0] || '';
+}
+
+function getLastNameFromDisplayName(displayName) {
+    if (!displayName) return '';
+    if (displayName.includes(',')) {
+        const parts = displayName.split(',');
+        return parts[0].trim();
+    }
+    const parts = displayName.trim().split(/\s+/);
+    if (parts.length <= 1) return '';
+    return parts.slice(1).join(' ');
+}
+
 const createSafeEvaluator = (expr, ticketData, user = null) => {
     const keys = Object.keys(ticketData || {});
     const values = Object.values(ticketData || {});
@@ -18,7 +85,15 @@ const createSafeEvaluator = (expr, ticketData, user = null) => {
         subDays: (date, amount) => date ? subDays(new Date(date), amount) : null,
         now: new Date(),
         context: { user: user ? user.username : null },
-        currentUser: () => user || {}
+        currentUser: () => user || {},
+        firstName: (username) => {
+            const displayName = getBackendDisplayName(username);
+            return getFirstNameFromDisplayName(displayName);
+        },
+        lastName: (username) => {
+            const displayName = getBackendDisplayName(username);
+            return getLastNameFromDisplayName(displayName);
+        }
     };
 
     for (const [key, val] of Object.entries(helpers)) {

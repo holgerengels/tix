@@ -63,6 +63,20 @@ describe('evaluateTemplate', () => {
         const result = evaluateTemplate('{{ new Date(ticket.date) >= subDays(now, 3) }}', { date: '2099-01-01' });
         expect(result).toBe(true);
     });
+
+    it('should extract firstName and lastName from displayName', () => {
+        const result1 = evaluateTemplate('{{ firstName("Sabine Keller") }}', {});
+        expect(result1).toBe('Sabine');
+
+        const result2 = evaluateTemplate('{{ lastName("Sabine Keller") }}', {});
+        expect(result2).toBe('Keller');
+
+        const result3 = evaluateTemplate('{{ firstName("Keller, Sabine") }}', {});
+        expect(result3).toBe('Sabine');
+
+        const result4 = evaluateTemplate('{{ lastName("Keller, Sabine") }}', {});
+        expect(result4).toBe('Keller');
+    });
 });
 
 describe('evaluateFields', () => {
