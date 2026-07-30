@@ -8,7 +8,7 @@
             "name": "title",
             "visible": false,
             "required": false,
-            "computed": "{{'Krankmeldung: ' + ticket.creator + (ticket.who == 'Mein Kind' ? ' (Kind)' : ' (selbst)') + (ticket.exam ? ' 🎓' : '')}}"
+            "computed": "{{ticket.creator + (ticket.who == 'Mein Kind' ? ' (Kind)' : ' (selbst)') + (ticket.exam ? ' 🎓' : '')}}"
         },
         {
             "name": "dateFrom",
