@@ -28,6 +28,9 @@
             <router-link v-if="auth.user && auth.user.groups && auth.user.groups.includes('Administration')" to="/admin" class="nav-item" :class="{ active: $route.path === '/admin' }">
                 <wa-icon name="shield-lock"></wa-icon> <span class="nav-text">Administration</span>
             </router-link>
+            <router-link v-if="auth.user && auth.user.groups && auth.user.groups.includes('Administration')" to="/substitutes" class="nav-item" :class="{ active: $route.path === '/substitutes' }">
+                <wa-icon name="people"></wa-icon> <span class="nav-text">Vertretungen</span>
+            </router-link>
             <router-link to="/settings" class="nav-item" :class="{ active: $route.path === '/settings' }">
                 <wa-icon name="gear"></wa-icon> <span class="nav-text">Einstellungen</span>
             </router-link>

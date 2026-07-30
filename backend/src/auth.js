@@ -57,6 +57,25 @@ const REFRESH_SECRET_KEY = 'supersecretrefreshkey'; // In prod, use .env
 const ACCESS_TOKEN_EXPIRY = '1h';
 const REFRESH_TOKEN_EXPIRY = (settings.server && settings.server.refreshTokenExpiry) || '30d';
 
+const mergeSubstituteGroups = async (username, groups) => {
+    try {
+        const substitutedUsers = await User.find({ substitutedBy: username });
+        if (substitutedUsers.length > 0) {
+            const extraGroups = substitutedUsers
+                .flatMap(u => u.groups || [])
+                .filter(g => g !== 'Administration' && !groups.includes(g));
+            if (extraGroups.length > 0) {
+                groups.push(...extraGroups);
+                const substitutedNames = substitutedUsers.map(u => u.username).join(', ');
+                console.log(`[Auth] Merged substitute groups for ${username} (substituting ${substitutedNames}): +${extraGroups.join(', ')}`);
+            }
+        }
+    } catch (e) {
+        console.error('[Auth] Error merging substitute groups:', e.message);
+    }
+    return groups;
+};
+
 const login = async (username, password, isPwa) => {
     username = username.toLowerCase();
     console.log(`[Auth] Attempting login for user: ${username} (PWA: ${!!isPwa})`);
@@ -84,9 +103,12 @@ const login = async (username, password, isPwa) => {
                 console.error(`[Auth] Error auto-creating mock user ${user.username} in Mongo:`, err.message);
             }
 
-            const token = jwt.sign({ username: user.username, groups: user.groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-            const result = { token, user: { username: user.username, groups: user.groups } };
-            if (isPwa) result.refreshToken = generateRefreshToken(user.username, user.groups);
+            const groups = [...user.groups];
+            await mergeSubstituteGroups(user.username, groups);
+
+            const token = jwt.sign({ username: user.username, groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+            const result = { token, user: { username: user.username, groups } };
+            if (isPwa) result.refreshToken = generateRefreshToken(user.username, groups);
             return result;
         }
     }
@@ -232,6 +254,8 @@ const login = async (username, password, isPwa) => {
                         } catch (mongoErr) {
                             console.error(`[Auth] Error auto-creating LDAP user ${username} in Mongo:`, mongoErr.message);
                         }
+
+                        await mergeSubstituteGroups(username, groups);
 
                         const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
                         const result = { token, user: { username: username, groups: groups } };
@@ -552,19 +576,21 @@ const generateRefreshToken = (username, groups) => {
     return jwt.sign({ username, groups, type: 'refresh' }, REFRESH_SECRET_KEY, { expiresIn: REFRESH_TOKEN_EXPIRY });
 };
 
-const refreshAccessToken = (refreshToken) => {
+const refreshAccessToken = async (refreshToken) => {
     try {
         const decoded = jwt.verify(refreshToken, REFRESH_SECRET_KEY);
         if (decoded.type !== 'refresh') {
             console.log('[Auth] Token is not a refresh token');
             return null;
         }
+        const groups = [...decoded.groups];
+        await mergeSubstituteGroups(decoded.username, groups);
         const newAccessToken = jwt.sign(
-            { username: decoded.username, groups: decoded.groups },
+            { username: decoded.username, groups },
             SECRET_KEY,
             { expiresIn: ACCESS_TOKEN_EXPIRY }
         );
-        return { token: newAccessToken, user: { username: decoded.username, groups: decoded.groups } };
+        return { token: newAccessToken, user: { username: decoded.username, groups } };
     } catch (err) {
         console.log('[Auth] Refresh token invalid or expired:', err.message);
         return null;
@@ -588,11 +614,12 @@ const getUserSettings = async (username) => {
     try {
         const user = await User.findOne({ username });
         return {
-            notificationUri: user ? user.notificationUri || '' : ''
+            notificationUri: user ? user.notificationUri || '' : '',
+            substitutedBy: user ? user.substitutedBy || [] : []
         };
     } catch (err) {
         console.error(`[Auth] Error fetching user settings for ${username}:`, err.message);
-        return { notificationUri: '' };
+        return { notificationUri: '', substitutedBy: [] };
     }
 };
 
@@ -616,6 +643,9 @@ const updateUserSettings = async (username, newSettings) => {
         const update = {};
         if (newSettings.notificationUri !== undefined) {
             update.notificationUri = normalizeNotificationUri(newSettings.notificationUri);
+        }
+        if (newSettings.substitutedBy !== undefined) {
+            update.substitutedBy = newSettings.substitutedBy.map(u => u.toLowerCase());
         }
         await User.findOneAndUpdate(
             { username },

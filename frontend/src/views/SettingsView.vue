@@ -34,18 +34,41 @@
 
       <h3 class="settings-header" style="margin-top: 2rem;">Abonnements (Web Push & Channel)</h3>
       <SubscriptionManager />
+
+      <h3 class="settings-header" style="margin-top: 2rem;">Vertretung</h3>
+      <div v-if="substitutedBy.length > 0" class="substitute-active">
+          <wa-icon name="person-check" style="font-size: 1.2rem; color: var(--wa-color-success-30);"></wa-icon>
+          <span>Ich werde vertreten von <strong>{{ usersStore.getDisplayName(substitutedBy[0]) }}</strong></span>
+          <wa-button size="small" variant="danger" appearance="plain" @click="removeMySubstitute">
+              Vertretung beenden
+          </wa-button>
+      </div>
+      <div v-else class="form-group">
+        <WAAutocomplete
+            v-model="newSubstitute"
+            label="Vertretung aktivieren"
+            :options="substituteUserOptions"
+            hint="Person auswählen, die meine Tickets übernimmt"
+        />
+        <wa-button variant="brand" size="small" style="margin-top: 0.5rem;" @click="activateSubstitute" :disabled="!newSubstitute">
+            Vertretung aktivieren
+        </wa-button>
+      </div>
     </wa-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useUiStore } from '../stores/ui';
+import { useUsersStore } from '../stores/users';
 import { toast } from '../composables/useToast';
+import WAAutocomplete from '../components/WAAutocomplete.vue';
 
 const ui = useUiStore();
+const usersStore = useUsersStore();
 import SubscriptionManager from '../components/SubscriptionManager.vue';
 
 const router = useRouter();
@@ -71,6 +94,17 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+const substitutedBy = ref([]);
+const newSubstitute = ref('');
+const allUsers = ref([]);
+
+const substituteUserOptions = computed(() => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    return allUsers.value
+        .filter(u => u.username !== currentUser.username && !substitutedBy.value.includes(u.username))
+        .map(u => ({ value: u.username, label: u.displayName || u.username }));
+});
+
 onMounted(async () => {
     try {
         const res = await axios.get('/api/settings', {
@@ -79,10 +113,46 @@ onMounted(async () => {
         if (res.data.notificationUri) {
             notificationUri.value = res.data.notificationUri;
         }
+        if (res.data.substitutedBy) {
+            substitutedBy.value = res.data.substitutedBy;
+        }
     } catch (err) {
         console.error('Failed to load settings:', err);
     }
+    // Fetch users for autocomplete
+    try {
+        const users = await usersStore.fetchUsersByGroup([], true);
+        allUsers.value = users;
+    } catch (err) {
+        console.error('Failed to fetch users:', err);
+    }
 });
+
+const activateSubstitute = async () => {
+    if (!newSubstitute.value) return;
+    substitutedBy.value = [newSubstitute.value];
+    newSubstitute.value = '';
+    await saveSubstitutes();
+};
+
+const removeMySubstitute = async () => {
+    substitutedBy.value = [];
+    await saveSubstitutes();
+};
+
+const saveSubstitutes = async () => {
+    try {
+        await axios.post('/api/settings', {
+            substitutedBy: substitutedBy.value
+        }, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        toast.success('Vertretung gespeichert');
+    } catch (err) {
+        console.error('Failed to save substitutes:', err);
+        toast.error('Fehler beim Speichern der Vertretung');
+    }
+};
 
 function normalizeNotificationUri(uri) {
     if (!uri) return '';
@@ -231,5 +301,15 @@ const togglePush = async (e) => {
 }
 @keyframes spin {
     100% { transform: rotate(360deg); }
+}
+.substitute-active {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--wa-color-success-95);
+    border: 1px solid var(--wa-color-success-80);
+    border-radius: var(--wa-border-radius-medium);
 }
 </style>

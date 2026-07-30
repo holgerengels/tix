@@ -6,6 +6,7 @@ const Counter = require('./models/counter');
 const Comment = require('./models/comment');
 const Log = require('./models/log');
 const Subscription = require('./models/subscription');
+const User = require('./models/user');
 const workflowEngine = require('./workflow');
 const { canComment, canDelete } = require('./workflow');
 const mongoose = require('mongoose');
@@ -33,7 +34,7 @@ router.post('/refresh', async (req, res) => {
     if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
 
     const { refreshAccessToken } = require('./auth');
-    const result = refreshAccessToken(refreshToken);
+    const result = await refreshAccessToken(refreshToken);
     if (result) {
         res.json(result);
     } else {
@@ -126,6 +127,46 @@ router.post('/settings/filters', verifyToken, async (req, res) => {
         res.json({ message: 'Saved filters updated' });
     } catch (err) {
         console.error('Error updating saved filters:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Substitutes Management
+router.get('/substitutes', verifyToken, async (req, res) => {
+    try {
+        if (!req.user.groups.includes('Administration')) {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+        const usersWithSubstitutes = await User.find(
+            { substitutedBy: { $exists: true, $ne: [] } },
+            { username: 1, displayName: 1, substitutedBy: 1, groups: 1 }
+        );
+        res.json(usersWithSubstitutes);
+    } catch (err) {
+        console.error('Error fetching substitutes:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/users/:username/substitutes', verifyToken, async (req, res) => {
+    try {
+        const targetUsername = req.params.username.toLowerCase();
+        // Only admins or the user themselves can set substitutes
+        if (!req.user.groups.includes('Administration') && req.user.username !== targetUsername) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+        const { substitutedBy } = req.body;
+        if (!Array.isArray(substitutedBy)) {
+            return res.status(400).json({ message: 'substitutedBy must be an array of usernames' });
+        }
+        await User.findOneAndUpdate(
+            { username: targetUsername },
+            { $set: { substitutedBy: substitutedBy.map(u => u.toLowerCase()) } },
+            { upsert: true }
+        );
+        res.json({ message: 'Substitutes updated' });
+    } catch (err) {
+        console.error('Error updating substitutes:', err);
         res.status(500).json({ error: err.message });
     }
 });
