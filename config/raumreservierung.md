@@ -1,19 +1,19 @@
 ## Raumreservierung
 
-Eine Raumreservierung wird verwendet, um spezielle Räume (z.B. Konferenz- oder Medienräume) für einen Termin zu buchen.
+Eine Raumreservierung wird verwendet, um Konferenz-Räume im Kalender zu buchen.
 
-### Beispiel
+### Beispiele
 
-* Reservierung des Konferenzraums (Raum 318) für eine Besprechung am 12.05. um 10:00 Uhr.
-* Buchung des Recherche-Raums (Raum 401) für die 3. und 4. Stunde.
+* Reservierung des Konferenzraums (Raum 318) für eine Besprechung am 12.05. um 10:00 Uhr
 
 ### Prozess
 
 [neu] → [eingetragen] → [abgeschlossen]
 
-[eingetragen] → [verschoben] → [eingetragen]
+[neu] → [eingetragen] → [verschoben] → [eingetragen]
 
-[eingetragen] → [storniert]
+[neu] → [eingetragen] → [storniert]
 
-* Die Reservierung wird automatisch in den Kalender eingetragen.
-* Terminverschiebungen und Stornierungen sind vor dem Erreichen des Termins jederzeit möglich.
+* Das Eintragen in den Kalender und das Verschieben im Kalender erfolgen automatisch per Bot
+* Die Terminverschiebung und Stornierung erfolgen bei Bedarf durch den Ersteller
+* Die Erstellung eines Subtickets (Bewirtungsauftrag) erfolgt bei Bedarf durch den Ersteller

@@ -2,7 +2,7 @@
 
 Ein IT-Ticket wird verwendet, um Störungen, Reparaturen oder Support-Anfragen an das Netzwerkteam zu melden.
 
-### Beispiel
+### Beispiele
 
 * Der Beamer in Raum 123 verbindet sich nicht.
 * Der Rechner im Lehrerzimmer startet nicht.

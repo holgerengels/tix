@@ -120,7 +120,7 @@ const buildDefaultRow = () => {
     const row = {};
     const fields = props.field.items?.fields || [];
     fields.forEach(f => {
-        if (f.default !== undefined) {
+        if (f.default !== undefined && !(typeof f.default === 'string' && f.default.includes('{{'))) {
             row[f.name] = f.default;
         }
     });
@@ -194,8 +194,8 @@ const updateSubField = (index, fieldName, newValue) => {
     const { defaults, computeds } = computeFills(rawFields, updated);
     let fillApplied = false;
     for (const [key, val] of Object.entries(defaults)) {
-        // Only fill if target field is currently empty
-        if (updated[key] === undefined || updated[key] === null || updated[key] === '') {
+        // Only fill if target field is currently empty or contains an unevaluated template string
+        if (updated[key] === undefined || updated[key] === null || updated[key] === '' || (typeof updated[key] === 'string' && updated[key].includes('{{'))) {
             updated[key] = val;
             fillApplied = true;
         }

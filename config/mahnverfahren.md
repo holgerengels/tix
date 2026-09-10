@@ -4,8 +4,8 @@ Ein Mahnverfahren wird bei unentschuldigten Fehlstunden oder Verhaltensauffälli
 
 ### Beispiel
 
-* 1. Mahnung für Max Mustermann (10a) wegen unentschuldigter Fehlstunden
-* 2. Mahnung für Anna Schmidt (12b) wegen wiederholter Verstöße
+* 1. Mahnung für Max Mustermann wegen unentschuldigter Fehlstunden
+* 1. Mahnung für Anna Schmidt wegen wiederholter Verstöße
 
 ### Prozess
 

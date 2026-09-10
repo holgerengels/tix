@@ -1,13 +1,12 @@
-## Hausmeister-Ticket
+## Hausmeisterauftrag
 
-Ein Hausmeister-Ticket wird verwendet, um Arbeitsaufträge an den Hausmeister zu geben.
+Ein Hausmeisterauftrag wird verwendet, um Arbeitsaufträge, Reparaturen oder Vorbereitungen an das Hausmeisterteam zu übermitteln.
 
-### Beispiel
+### Beispiele
 
-* Bitte um Bestuhlung für die Infoabend
-* Bitte um Reinigung des Raumes 123
-* Bitte um Entsorgung des Mülls
-* Bitte um Reparatur des Tisches
+* Bestuhlung für den Infoabend in der Aula aufbauen
+* Reparatur eines defekten Schülertisches in Raum 215
+* Schloss an der Schranktür im Fachraum reparieren
 
 ### Prozess
 
@@ -15,4 +14,8 @@ Ein Hausmeister-Ticket wird verwendet, um Arbeitsaufträge an den Hausmeister zu
 
 [neu] → [abgelehnt]
 
+[neu] / [genehmigt] → [storniert]
+
 * Die Genehmigung erfolgt durch die Schulleitung
+* Die Bearbeitung erfolgt durch das Hausmeisterteam
+* Die Stornierung erfolgt durch den Ersteller

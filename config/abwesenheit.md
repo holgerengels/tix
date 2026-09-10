@@ -2,7 +2,7 @@
 
 Ein Abwesenheitsantrag wird für Dienstgeschäfte, Fortbildungen und andere Abwesenheiten verwendet.
 
-### Beispiel
+### Beispiele
 
 * Dienstgeschäft beim ZSL am 13.4.
 * Fortbildung vom 10.3. bis 12.3.
@@ -13,5 +13,8 @@ Ein Abwesenheitsantrag wird für Dienstgeschäfte, Fortbildungen und andere Abwe
 
 [neu] → [abgelehnt]
 
-* Die Genehmigung erfolgt durch die Schulleitung
+[neu] / [genehmigt] → [storniert]
+
+* Die Genehmigung oder Ablehnung erfolgt durch die Schulleitung
 * Die Bearbeitung erfolgt durch das Vertretungsplanteam
+* Die Stornierung erfolgt durch den Ersteller

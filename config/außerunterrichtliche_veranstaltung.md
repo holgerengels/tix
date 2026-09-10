@@ -1,20 +1,22 @@
 ## Außerunterrichtliche Veranstaltung
 
-Ein außerunterrichtliche Veranstaltung wird für Wandertage, Lerngänge, etc. verwendet.
+Eine außerunterrichtliche Veranstaltung wird für Wandertage, Schullandheime, Studienfahrten und Lerngänge verwendet.
 
-### Beispiel
+### Beispiele
 
-* Lerngang Boulderhalle
-* Klassenfahrt nach Berlin
+* Lerngang in die Boulderhalle
 * Schullandheim auf der Ulmer Hütte
+* Klassenfahrt nach Berlin
 * Studienfahrt nach London
-* Wandertag
 
 ### Prozess
 
 [neu] → [genehmigt] → [in Arbeit] → [erledigt]
 
-[neu]
+[neu] → [abgelehnt]
 
-* Die Genehmigung erfolgt durch die Abteilungsleitung (bitte zuständige AL auswählen)
+[neu] / [genehmigt] → [storniert]
+
+* Die Genehmigung erfolgt durch die Abteilungsleitung (eintägig) oder Schulleitung (mehrtägig)
 * Die Bearbeitung erfolgt durch das Vertretungsplanteam
+* Die Stornierung erfolgt durch den Ersteller

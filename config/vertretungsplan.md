@@ -1,8 +1,8 @@
 ## Vertretungsplan-Ticket
 
-Ein Vertretungsplan-Ticket wird verwendet, um kurzfristige Vertretungen zu organisieren.
+Ein Vertretungsplan-Ticket wird verwendet, um kurzfristige Vertretungen oder einen Raumtausch zu organisieren.
 
-### Beispiel
+### Beispiele
 
 * Bitte um Raumtausch für die 3. Stunde am 3.3.
 
@@ -14,4 +14,9 @@ Ein Vertretungsplan-Ticket wird verwendet, um kurzfristige Vertretungen zu organ
 
 [neu] → [in Arbeit] → [erledigt]
 
-* Die Bearbeitung erfolgt durch das Vertretungsplanteam
+[neu] → [abgelehnt]
+
+[neu] → [storniert]
+
+* Die Bearbeitung oder Ablehnung erfolgt durch das Vertretungsplanteam oder die Schulleitung
+* Die Stornierung erfolgt durch den Ersteller
