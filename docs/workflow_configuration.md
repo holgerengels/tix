@@ -4,6 +4,8 @@ The heart of Tix is the dynamic workflow engine. Each workflow (or "ticket type"
 
 This documentation describes the overall structure of the JSON configuration for a workflow.
 
+---
+
 ## 1. Ticket Type Basic Data
 
 Every workflow starts with basic information and metadata:
@@ -11,20 +13,22 @@ Every workflow starts with basic information and metadata:
 ```json
 {
     "type": "Raumreservierung",
+    "typeVerbose": "Raumreservierung (Besprechungsräume)",
     "abbreviation": "RES",
     "template": "{{ticket.termin.room || 'Raum'}} - {{ticket.date}}"
 }
 ```
 
-* **type**: The full, human-readable name of the workflow.
-* **abbreviation**: A short code from which the ticket IDs are generated (e.g., RES-1, RES-2).
-* **template**: A JavaScript expression that dynamically generates the primary title of a ticket in list views. Placeholders can access ticket fields here (like `ticket.date`).
+* **`type`**: The full, unique identifier and title of the workflow.
+* **`typeVerbose`** *(optional)*: A more descriptive display name used in the ticket creation wizard (`NewTicketView`), helpful when differentiating similar workflows (e.g., `Abwesenheit (Sonstiges)` vs. `Abwesenheit (Krankmeldung)`).
+* **`abbreviation`**: A short code from which human-readable ticket IDs are generated (e.g., `RES-1`, `KNF-4`).
+* **`template`**: A JavaScript expression that dynamically generates the primary title of a ticket in list views. Placeholders can access ticket fields here (like `ticket.date` or `ticket.termin.room`).
 
 ---
 
 ## 2. Fields and Layout (Forms)
 
-The forms are structured generically. You define the data fields under `fields` and arrange them under `grid`.
+The forms are structured generically. You define the data fields under `fields` and arrange them visually under `grid`.
 
 ```json
     "fields": [
@@ -40,21 +44,160 @@ The forms are structured generically. You define the data fields under `fields` 
         }
     ],
     "grid": [
-        "date date"
+        "date date timeStart timeEnd"
     ]
 ```
 
-* **name**: The property name of the field in the ticket object.
-* **type**: The data type (e.g., `String`, `Date`, `Number`, `Boolean`, or complex types like `Termin`).
-* **required**: Indicates whether this field is mandatory.
-* **validation / visible / readonly**: JavaScript expressions that are evaluated dynamically in the frontend by Vue reactivity. See also [Frontend & UI Details](frontend_forms.md).
-* **grid**: Defines the layout. Spacers (`.`) can be used to align elements in the grid.
+### 2.1 Field Properties
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `name` | String | Property name of the field in the ticket data object. |
+| `label` | String | Label displayed above/next to the form input. |
+| `type` | String | Data type and input component (see [Supported Field Types](#24-supported-field-types)). |
+| `required` | Boolean / Expression | Indicates whether this field is mandatory. Can be dynamic (e.g. `"{{ ticket.wantsRoom === true }}"`). |
+| `visible` | Boolean / Expression | Dynamic visibility. If `false`, the field is hidden and skipped during validation. |
+| `readonly` | Boolean / Expression | Readonly flag. If `true`, the field remains visible but disabled. |
+| `default` | Any / Expression | Initial value applied **only if the field is currently empty** (see [Default vs. Computed](#22-default-vs-computed)). |
+| `computed` | String (Expression) | Derived value **always re-evaluated and overwriting** the field (see [Default vs. Computed](#22-default-vs-computed)). |
+| `validation` | Object | Field-level validation: `{ "expression": "...", "message": "..." }`. |
+| `hint` / `help` | String | Helper text displayed below the field. |
+| `options` | Array | Option values for `Select` or `Autocomplete` fields. |
+| `multiple` | Boolean | For `Select` fields: enables multi-select (stores array of values). |
+| `groups` | Array of Strings | For `User` fields: filters selectable accounts by AD/LDAP groups (e.g. `["Lehrkräfte"]`). |
+| `allowFreetext` | Boolean | For `User` / `Autocomplete`: allows typing arbitrary text not present in the options list. |
+| `rooms` | Array of Strings | For `Termin` fields: restricts available room options in the interactive schedule picker. |
+| `indicator` | String / Expression | For `LessonSlider`: `'from'` or `'until'` to format slider tooltips as start or end time. |
+| `layout` / `minWidth` | String | For `Array` fields: `layout: "columns"` or `"rows"`, with responsive CSS minWidth. |
 
 ---
 
-## 3. States
+### 2.2 `default` vs. `computed`
 
-The possible phases or states of a ticket in the workflow are stored under `states`. They define the current step and the visual feedback (like colors) in the UI:
+Tix distinguishes cleanly between initial default values and continuously computed fields via `computeFills()`:
+
+```json
+{
+    "name": "email",
+    "label": "E-Mail",
+    "type": "Email",
+    "default": "{{ lookupUserEmail(name) }}"
+},
+{
+    "name": "title",
+    "label": "Titel",
+    "type": "Text",
+    "computed": "{{ ticket.level + ': ' + ticket.name }}"
+}
+```
+
+* **`default` (Only fills when empty)**:
+  * Applied when the ticket or row is initialized, or whenever sibling fields change and the target field is currently empty (`null`, `undefined`, `""`, or contains an unevaluated template string).
+  * Can be a **static value** (e.g. `"eingeladen"`, `1`, `true`, `["Lehrkräfte"]`) or a **dynamic template expression** (`"{{ lookupUserEmail(name) }}"`).
+  * **User Overwrite Allowed**: Because it only fills when empty, users can manually modify the populated value afterwards without it being overwritten.
+  * In `ObjectArray` subfields, dynamic template defaults are evaluated per row when dependencies are fulfilled and are **not** written verbatim into empty skeleton rows.
+
+* **`computed` (Always overwrites)**:
+  * Always calculated from expressions and **strictly overwrites** any existing value whenever dependencies change.
+  * Ideal for derived values, formatted display titles, summaries, or fields strictly derived from other inputs.
+  * The user cannot manually diverge from the computed result because each form change recomputes the field.
+
+---
+
+### 2.3 Template Expressions & Helpers
+
+Template expressions (`{{ ... }}`) have direct access to:
+1. `ticket`: The reactive ticket object (e.g. `ticket.date`, `ticket.state`).
+2. Sibling properties directly (e.g. `name`, `level` inside `ObjectArray` row context).
+3. Built-in helper functions:
+
+| Helper | Signature | Description |
+| :--- | :--- | :--- |
+| `lookupUserEmail(username)` | `(username: string) => string \| null` | Resolves the school email (`employeeId@valckenburgschule.de`) from the users store. |
+| `firstName(username)` | `(username: string) => string` | Resolves the first name from the user's display name or username. |
+| `lastName(username)` | `(username: string) => string` | Resolves the last name from the user's display name or username. |
+| `format(date, fmt)` | `(date, fmt: string) => string` | Formats a date using `date-fns` with German locale (`de`). |
+| `formatDistance(d1, d2)` | `(d1, d2) => string` | Formats distance between two dates in German. |
+| `addDays(date, amount)` | `(date, amount: number) => Date` | Adds days to a date. |
+| `subDays(date, amount)` | `(date, amount: number) => Date` | Subtracts days from a date. |
+| `now` | `Date` | Current timestamp instance. |
+| `currentUser()` | `() => Object` | Currently authenticated user object from `localStorage` (e.g. `{ username, displayName, groups }`). |
+| `context.user` | `string \| null` | Username of the logged-in user. |
+
+---
+
+### 2.4 Supported Field Types
+
+* **`Text` / `Email`**: Standard single-line inputs.
+* **`Integer` / `Decimal`**: Numeric inputs with step validation.
+* **`Boolean`**: Checkbox toggle.
+* **`Date` / `Time`**: HTML5 date picker and 24-hour time selector.
+* **`Select`**: Dropdown select. Supports `multiple: true` for multi-value arrays (e.g., drinks and food).
+* **`Autocomplete`**: Filterable dropdown with `options` array and optional `allowFreetext: true`.
+* **`User`**: Specialized autocomplete for school users with `groups: ["Lehrkräfte"]` filter and optional `allowFreetext: true`.
+* **`RichText`**: Full WYSIWYG Quill editor for formatted text (e.g. agendas, protocols).
+* **`Attachments`**: File upload and attachment manager.
+* **`Badges`**: Interactive tag/badge list for quick labeling.
+* **`Lesson` / `Lessons`**: School period selector or range slider (1st to 11th period). Supports dynamic `indicator`.
+* **`Weekday`**: Day of the week selector.
+* **`Termin`**: Interactive CalDAV room and schedule picker with `rooms` filter and date binding.
+* **`Array`**: List editor for repeating single values (e.g. list of user names). Supports `layout: "columns"`.
+* **`ObjectArray`**: Multi-column table editor for complex repeating objects (see below).
+
+#### `ObjectArray` Configuration
+```json
+{
+    "name": "participants",
+    "label": "Teilnehmer*innen",
+    "type": "ObjectArray",
+    "fixedLength": "{{ ticket.state !== 'offen.neu' }}",
+    "fixedOrder": "{{ ticket.state !== 'offen.neu' }}",
+    "items": {
+        "fields": [
+            { "name": "name", "label": "Name", "type": "User", "groups": ["Lehrkräfte"] },
+            { "name": "email", "label": "E-Mail", "type": "Email", "default": "{{ lookupUserEmail(name) }}" },
+            { "name": "status", "label": "Status", "type": "Select", "options": ["eingeladen", "anwesend", "abwesend"], "default": "eingeladen" }
+        ],
+        "validation": {
+            "expression": "name || email",
+            "message": "Name oder E-Mail muss angegeben werden"
+        }
+    }
+}
+```
+* **`items.fields`**: Array of sub-field definitions. Each subfield can have its own `type`, `default`, `computed`, `readonly`, `visible`, and validation.
+* **`fixedLength`**: Disables adding/deleting rows (can be boolean or dynamic template expression).
+* **`fixedOrder`**: Disables row drag-and-drop reordering.
+* **Row-Level `computeFills`**: When a subfield changes (e.g. `name`), sibling fields in the same row evaluate their `default` and `computed` expressions using the row object as context.
+
+---
+
+## 3. Cross-Field Validations (`validations`)
+
+In addition to field-level validation, workflows support global cross-field validations at the root level:
+
+```json
+"validations": [
+    {
+        "name": "validDateRange",
+        "expression": "ticket.dateUntil >= ticket.dateFrom",
+        "message": "Das Bis-Datum muss am oder nach dem Von-Datum liegen"
+    },
+    {
+        "name": "validLessonRange",
+        "expression": "ticket.dateUntil > ticket.dateFrom || ticket.lessonUntil >= ticket.lessonFrom",
+        "message": "Die Bis-Stunde muss nach oder gleich der Von-Stunde sein"
+    }
+]
+```
+
+These validations evaluate reactively on every form change and prevent form submission when any expression evaluates to false.
+
+---
+
+## 4. States
+
+The possible phases or states of a ticket in the workflow are stored under `states`:
 
 ```json
     "states": [
@@ -64,19 +207,29 @@ The possible phases or states of a ticket in the workflow are stored under `stat
             "color": "blue"
         },
         {
+            "name": "offen.eingetragen",
+            "label": "eingetragen",
+            "color": "green"
+        },
+        {
             "name": "geschlossen.ok",
             "label": "abgeschlossen",
             "color": "green"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
         }
     ]
 ```
-Each state gets an internal name (`name`), a label for the user interface, and a color (`color` like blue, green, yellow, red, etc.). The naming structure (e.g., `offen.xyz`, `geschlossen.xyz`) helps categorize open and closed processes.
+States follow a `category.state` convention (e.g., `offen.*` for active tickets, `geschlossen.*` for resolved/cancelled tickets).
 
 ---
 
-## 4. Permissions (Access)
+## 5. Permissions (Access)
 
-Access rights determine which user groups can view, create, edit, or delete the ticket:
+Access rights determine which user groups can perform specific operations on the ticket:
 
 ```json
     "access": [
@@ -87,92 +240,191 @@ Access rights determine which user groups can view, create, edit, or delete the 
         {
             "name": "read",
             "groups": ["@creator", "Schulleitung"]
+        },
+        {
+            "name": "edit",
+            "groups": ["@creator", "Schulleitung"]
+        },
+        {
+            "name": "delete",
+            "groups": ["Schulleitung"]
+        },
+        {
+            "name": "comment",
+            "groups": ["@creator", "Schulleitung"]
+        },
+        {
+            "name": "undo",
+            "groups": ["Schulleitung", "Vertretungsplanung"]
         }
     ]
 ```
 
-The abbreviation `@creator` is a dynamic group, meaning that the ticket creator has the corresponding rights, even if they have no other global privileges.
+* **Supported Operations**:
+  * **`create`**: Permission to initiate a new ticket of this type.
+  * **`read`**: Permission to view the ticket and its history.
+  * **`edit`**: Permission to modify form fields in an open state.
+  * **`delete`**: Permission to permanently delete the ticket.
+  * **`comment`**: Permission to add comments.
+  * **`undo`**: Permission to roll back the most recent workflow action or state change via `/api/tickets/:id/undo`.
+* **Dynamic Roles**:
+  * **`@creator`**: Grants permission to the user who initially filed the ticket.
+  * **`@assignee`**: Grants permission to the currently assigned agent.
 
 ---
 
-## 5. Actions (Workflow & Actions)
+## 6. Actions (Workflow & State Transitions)
 
-Actions represent the arrows or transitions between states. They are executed manually by users in the detail view.
-
-Actions are attached to the `workflow` array on a state basis:
+Actions represent user-triggered state transitions in the ticket detail view:
 
 ```json
     "workflow": [
         {
-            "states": ["offen.eingetragen"],
+            "states": ["offen.neu"],
             "actions": [
                 {
-                    "name": "verschieben",
+                    "name": "genehmigen",
+                    "groups": ["Schulleitung"],
+                    "script": "ticket.state = 'offen.genehmigt'"
+                },
+                {
+                    "name": "ablehnen",
+                    "groups": ["Schulleitung"],
+                    "inline": "comment",
+                    "script": "ticket.state = 'geschlossen.abgelehnt'"
+                },
+                {
+                    "name": "an Stundenplanung",
+                    "groups": ["Vertretungsplanung"],
+                    "script": "convert(ticket)"
+                },
+                {
+                    "name": "stornieren",
                     "groups": ["@creator"],
                     "optional": true,
-                    "form": "verschieben",
-                    "script": "ticket.state = 'offen.verschoben'"
+                    "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]
         }
     ]
 ```
 
-* **states**: Array of states (from `#3`) in which these actions should be offered.
-* At the **action** level:
-  * **name**: The button text for the action.
-  * **groups**: Who is allowed to click this button? `@creator` is also possible here.
-  * **optional**: Indicates whether the action is not the regular workflow path (Green button), but rather a cancellation or postponement, for example (Gray/Red button).
-  * **script**: Direct model updates via JS code (often setting a subsequent state: `ticket.state = ...`).
-  * **form** (optional): If an action requires a sub-dialog (e.g., entering further details for postponement), the name of a sub-form is specified here.
-
-### Sub-forms (Forms in Actions)
-
-If an action refers to a `form`, this form must be defined separately in the JSON's `forms` array. The dialog box then appears when the action is clicked:
-
-```json
-    "forms": [
-        {
-            "name": "verschieben",
-            "title": "Termin verschieben",
-            "actions": [
-                {
-                    "name": "verschieben",
-                    "script": "ticket.state = 'offen.verschoben'"
-                }
-            ]
-        }
-    ]
-```
-
-Such pop-up forms behave similarly to the base view and can load their own `fields` array and `grid` before the actual hook executes via the inner `script`.
+* **`states`**: Array of states in which these actions are visible.
+* **`name`**: Action button label.
+* **`groups`**: Allowed user groups or roles (`@creator`, `@assignee`, etc.).
+* **`optional`**: Boolean. If `true`, renders as secondary/danger button (e.g. cancellation or postponement).
+* **`script`**: JavaScript statement executed on the backend:
+  * State transition: `ticket.state = '...'`
+  * Workflow conversion: `convert(ticket)` (converts ticket type between related workflows, e.g. Vertretungsplan ↔ Stundenplan).
+* **`form`**: Name of a sub-form defined in the `forms` array (opens a dialog to collect input before transition).
+* **`inline`**:
+  * `"comment"`: Prompts for a mandatory/optional comment before executing the action.
+  * `"assign"`: Prompts for assignee selection.
+* **`subTickets`**: Array of ticket types that can be spawned from this action (see [Subtickets](#7-subtickets)).
 
 ---
 
-## 6. Automations (Bots)
+## 7. Subtickets
 
-Bots are asynchronous background processes that start on state transitions or periodically.
+Subtickets allow decomposing large tasks into linked child tickets for different departments (e.g. room booking or catering for a conference).
+
+### 7.1 Root Configuration (`subTickets`)
+Defined at the root level of the workflow JSON:
+
+```json
+"subTickets": [
+    {
+        "type": "Raumreservierung",
+        "mapping": {
+            "title": "{{ ticket.title }}",
+            "date": "{{ ticket.date }}",
+            "termin.start": "{{ ticket.timeStart }}",
+            "termin.end": "{{ ticket.timeEnd }}"
+        },
+        "logStatusToParent": true
+    },
+    {
+        "type": "Bewirtungsauftrag",
+        "mapping": {
+            "title": "{{ ticket.title }}",
+            "date": "{{ ticket.date }}",
+            "numberOfPersons": "{{ (ticket.participants || []).length }}"
+        },
+        "logStatusToParent": true
+    }
+]
+```
+
+* **`type`**: Target child ticket type.
+* **`mapping`**: Key-value map where keys are target field paths (supports dot-notation, e.g. `termin.start`) and values are `{{ ... }}` expressions evaluated against the parent ticket.
+* **`logStatusToParent`**: When `true`, any state change of the subticket automatically posts an audit comment into the parent ticket.
+
+### 7.2 Action-Level Subtickets
+Expose subticket creation as an action button:
+
+```json
+{
+    "name": "Subticket erstellen",
+    "groups": ["@creator", "Schulleitung"],
+    "subTickets": [
+        "Raumreservierung",
+        "Bewirtungsauftrag"
+    ]
+}
+```
+
+Detailed architecture, database model, and synchronization bot patterns are documented in [Subtickets in Tix](subtickets.md).
+
+---
+
+## 8. Automations (Bots)
+
+Bots execute backend JavaScript hooks asynchronously or synchronously upon ticket changes, or on a schedule:
 
 ```json
     "bots": [
         {
             "name": "eintragen",
             "states": ["offen.neu"],
-            "script": "eintragen(ticket)"
+            "script": "await eintragen(ticket)"
+        },
+        {
+            "name": "syncDate",
+            "states": ["offen.eingetragen"],
+            "onChange": "insync",
+            "script": "await syncDate(ticket)"
         },
         {
             "name": "abschliessen",
             "states": ["offen.eingetragen"],
             "onChange": "async",
             "schedule": "0 1 * * *",
-            "script": "abschliessen(ticket)"
+            "script": "await abschliessen(ticket)"
         }
     ]
 ```
 
-* **name**: Helps identify the bot. Often named after the JS function to be called.
-* **states**: The ticket state in which the bot is allowed to trigger the code.
-* **schedule** (optional): A CRON expression for bots that are not executed immediately but check at periodic intervals (e.g., nightly closure).
-* **script**: The script call. The JavaScript function referenced here (like `abschliessen(ticket)`) must be defined and exported in the corresponding `.js` file of the same name (e.g., `config/raumreservierung.js`).
+* **`name`**: Bot identifier.
+* **`states`**: Array of ticket states in which the bot triggers.
+* **`onChange`**:
+  * `"insync"`: Executes synchronously inside the ticket save transaction. If it mutates fields or child tickets, changes are persisted before the HTTP response.
+  * `"async"`: Runs in the background after the response is returned.
+* **`schedule`**: Optional 5-field CRON expression for periodic background runs (e.g. nightly checks).
+* **`script`**: JavaScript function call. The function must be implemented and exported in the companion `config/<workflow>.js` file.
 
-Further information on the mechanics behind the bots can be found in [Backend & Bots](backend_and_bots.md).
+See [Backend & Bots](backend_and_bots.md) for deeper lifecycle details.
+
+---
+
+## 9. Process Documentation (`<workflow>.md`)
+
+Every workflow JSON in `config/` is accompanied by a markdown file of the same name (e.g., `config/konferenz.json` ↔ `config/konferenz.md`). 
+
+* **API Endpoint**: Served via `GET /api/config/:type/doc`.
+* **UI Integration**: Displayed in `NewTicketView` as a helpful reference sidebar while creating a ticket.
+* **Standardized Structure**:
+  1. `## <Titel>`: Human-readable name of the process.
+  2. Description paragraph: Purpose and scope of the workflow.
+  3. `### Beispiele`: Bulleted list of realistic scenarios.
+  4. `### Prozess`: Flow diagrams showing transitions (e.g., `[neu] → [genehmigt] → [in Arbeit] → [erledigt]`).
+  5. Action assignments: Bulleted summary specifying which user group performs which action.
