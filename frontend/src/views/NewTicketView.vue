@@ -1,5 +1,5 @@
 <template>
-  <div class="new-ticket-view" :class="{ 'is-mobile': ui.isMobile }">
+  <div class="new-ticket-view" :class="{ 'is-mobile': ui.isMobile, 'is-narrow': ui.isNarrow }">
     <div class="header">
         <wa-button variant="text" size="small" appearance="outlined" @click="ui.toggleSidebar()">
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
@@ -262,6 +262,7 @@ onBeforeRouteLeave(async (to, from, next) => {
     height: 100%;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
 }
 .header {
     display: flex;
@@ -274,7 +275,8 @@ onBeforeRouteLeave(async (to, from, next) => {
     margin: 0;
 }
 .ticket-card {
-    height: calc(100% - 70px);
+    flex: 1;
+    min-height: 0;
     margin: 0 1rem 1rem 1rem;
 }
 .card-header {
@@ -365,18 +367,21 @@ onBeforeRouteLeave(async (to, from, next) => {
     padding-left: 0;
     margin-top: 2rem;
 }
-.is-mobile {
+.is-mobile, .is-narrow {
     height: auto;
+    min-height: 100%;
     overflow: visible;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.5rem);
 }
-.is-mobile .ticket-card {
+.is-mobile .ticket-card, .is-narrow .ticket-card {
     height: auto;
+    flex: none;
     margin: 0;
 }
-.is-mobile .ticket-card::part(body) {
+.is-mobile .ticket-card::part(body), .is-narrow .ticket-card::part(body) {
     overflow: visible;
 }
-.is-mobile wa-card {
+.is-mobile wa-card, .is-narrow wa-card {
     border-radius: 0;
 }
 .is-mobile .header h2 {

@@ -5,11 +5,13 @@
     </label>
     <div class="quill-wrapper">
       <QuillEditor 
+        ref="quillEditor"
         theme="snow" 
-        :content="modelValue" 
+        :content="editorContent" 
         contentType="html"
         :readOnly="disabled"
-        @update:content="$emit('update:modelValue', $event)" 
+        @update:content="onEditorUpdate"
+        @blur="handleBlur"
         toolbar="essential"
       />
     </div>
@@ -18,7 +20,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { ref, watch } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
@@ -31,6 +33,43 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const quillEditor = ref(null);
+const editorContent = ref(props.modelValue || '');
+const latestHtml = ref(props.modelValue || '');
+
+const normalizeHtml = (html) => {
+  if (!html || html === '<p><br></p>' || html === '<p></p>') {
+    return '';
+  }
+  return html;
+};
+
+const onEditorUpdate = (content) => {
+  latestHtml.value = content || '';
+};
+
+const handleBlur = () => {
+  let html = latestHtml.value;
+  if (quillEditor.value && typeof quillEditor.value.getHTML === 'function') {
+    html = quillEditor.value.getHTML();
+  }
+  const normalized = normalizeHtml(html);
+  if (normalized !== normalizeHtml(props.modelValue)) {
+    emit('update:modelValue', normalized);
+  }
+};
+
+watch(() => props.modelValue, (newVal) => {
+  const incoming = newVal || '';
+  if (normalizeHtml(incoming) !== normalizeHtml(latestHtml.value)) {
+    latestHtml.value = incoming;
+    editorContent.value = incoming;
+    if (quillEditor.value && typeof quillEditor.value.setHTML === 'function') {
+      quillEditor.value.setHTML(incoming);
+    }
+  }
+});
 </script>
 
 <style scoped>
@@ -55,6 +94,12 @@ const emit = defineEmits(['update:modelValue']);
 }
 :deep(.ql-editor) {
     min-height: 150px;
+    -webkit-user-select: text;
+    user-select: text;
+}
+:deep(.ql-clipboard) {
+    -webkit-user-select: text;
+    user-select: text;
 }
 :deep(.ql-toolbar) {
     background: var(--wa-color-neutral-95);
@@ -69,7 +114,6 @@ const emit = defineEmits(['update:modelValue']);
 :deep(.ql-editor[contenteditable=false]) {
     background-color: white;
     border-bottom-left-radius: var(--wa-border-radius-medium);
-    border-bottom-right-radius: var(--wa-border-radius-medium);
     border-bottom-right-radius: var(--wa-border-radius-medium);
     color: var(--wa-color-neutral-30);
 }

@@ -290,7 +290,7 @@ async function sendPush(userId, payloadObj) {
                     console.log(`[Publisher] Push subscription for ${userId} expired (Status ${error.statusCode}). Removing endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...`);
                     await PushSubscription.deleteOne({ _id: pushSub._id });
                 } else {
-                    console.error(`[Publisher] Error sending push notification to ${userId} (Endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...):`, error.message, error.body ? error.body : '');
+                    console.error(`[Publisher] Error sending push notification to ${userId} (Endpoint: ${pushSub.subscription.endpoint.substring(0, 50)}...):`, error.message, error.statusCode ? `(Status: ${error.statusCode})` : '', error.body ? error.body : '');
                 }
             }
         }

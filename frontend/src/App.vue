@@ -247,6 +247,7 @@ body {
     background-color: var(--wa-color-neutral-90);
     margin: 0;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
     overflow: hidden;
 }
@@ -347,6 +348,8 @@ body {
 .main-content {
     flex: 1;
     padding: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
     background-color: var(--wa-color-neutral-95);
     overflow: hidden; /* Ensure content doesn't spill over when sidebar is toggled */
     container-type: inline-size;
@@ -407,6 +410,9 @@ body {
         width: 100%;
         height: 100%;
         overflow-y: auto; /* Allow main content to scroll on mobile */
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        box-sizing: border-box;
     }
 }
 
