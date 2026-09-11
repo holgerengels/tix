@@ -91,4 +91,42 @@ describe('DynamicForm.vue', () => {
         expect(stubs[1].props('field').readonly).toBe(true);
         expect(stubs[2].props('field').readonly).toBe(false);
     });
+
+    it('should clear error messages when clearErrors is called or workflow changes', async () => {
+        const fields = [
+            { name: 'missingField', required: true, visible: true, label: 'Missing' }
+        ];
+        const workflow = { fields };
+        const modelValue = {};
+
+        const wrapper = mount(DynamicForm, {
+            props: { fields, modelValue, workflow, grid: [] },
+            global: {
+                stubs: { 'FormField': FormFieldStub }
+            }
+        });
+
+        // Trigger validation failure
+        wrapper.vm.validate();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').exists()).toBe(true);
+
+        // Call clearErrors
+        wrapper.vm.clearErrors();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').exists()).toBe(false);
+
+        // Trigger validation failure again
+        wrapper.vm.validate();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').exists()).toBe(true);
+
+        // Update workflow prop
+        await wrapper.setProps({
+            workflow: { fields: [{ name: 'otherField', visible: true }] },
+            fields: [{ name: 'otherField', visible: true }]
+        });
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').exists()).toBe(false);
+    });
 });

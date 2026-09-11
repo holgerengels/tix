@@ -88,8 +88,18 @@ const validate = () => {
     return validation.isValid;
 };
 
+const clearErrors = () => {
+    errors.value = [];
+};
+
+// Clear validation errors when workflow definition or fields change
+watch([() => props.workflow, () => props.fields], () => {
+    clearErrors();
+});
+
 defineExpose({
-    validate
+    validate,
+    clearErrors
 });
 
 // Start Grid Logic

@@ -24,6 +24,7 @@
         <div class="ticket-content">
             <DynamicForm
                 v-if="newTicketType && config[newTicketType]" 
+                :key="newTicketType"
                 ref="formRef"
                 :fields="config[newTicketType].fields" 
                 :grid="config[newTicketType].grid"
@@ -197,12 +198,18 @@ const fetchWorkflowDoc = async (type) => {
 };
 
 watch(newTicketType, (newType) => {
+    if (formRef.value && typeof formRef.value.clearErrors === 'function') {
+        formRef.value.clearErrors();
+    }
     fetchWorkflowDoc(newType);
     applySubticketMapping();
 });
 
 const resetForm = () => {
     newTicketData.value = {};
+    if (formRef.value && typeof formRef.value.clearErrors === 'function') {
+        formRef.value.clearErrors();
+    }
     setTimeout(() => { isDirty.value = false; }, 0);
 };
 
