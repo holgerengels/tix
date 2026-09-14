@@ -117,7 +117,7 @@ const usersStore = useUsersStore();
 const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
-import { validateTicket } from '../utils/evaluation';
+import { validateTicket, computeFills } from '../utils/evaluation';
 
 const route = useRoute();
 const router = useRouter();
@@ -232,6 +232,14 @@ const prepareAction = () => {
                     fields.push(sf);
                 }
             });
+        }
+
+        // Apply default fills for empty fields
+        const { defaults } = computeFills(fields, actionFormData.value);
+        for (const [key, val] of Object.entries(defaults)) {
+            if (actionFormData.value[key] === undefined || actionFormData.value[key] === null || actionFormData.value[key] === '') {
+                actionFormData.value[key] = val;
+            }
         }
 
         currentFormDef.value = {

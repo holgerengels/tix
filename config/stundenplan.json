@@ -71,7 +71,7 @@
                     "groups": [
                         "Stundenplanung"
                     ],
-                    "script": "convert(ticket)"
+                    "form": "anVertretungsplanung"
                 }
             ]
         },
@@ -146,6 +146,66 @@
         }
     ],
     "forms": [
+        {
+            "name": "anVertretungsplanung",
+            "title": "An Vertretungsplanung übergeben",
+            "fields": [
+                {
+                    "name": "dateFrom",
+                    "label": "Datum von",
+                    "type": "Date",
+                    "required": true,
+                    "validation": {
+                        "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
+                        "message": "Datum von kann nicht in der Vergangenheit liegen"
+                    }
+                },
+                {
+                    "name": "lessonFrom",
+                    "label": "Stunde von",
+                    "type": "Lesson",
+                    "required": true,
+                    "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'from' : ''}}",
+                    "default": "{{ ticket.lessons ? ticket.lessons.min : '' }}"
+                },
+                {
+                    "name": "dateUntil",
+                    "label": "Datum bis",
+                    "type": "Date",
+                    "required": false
+                },
+                {
+                    "name": "lessonUntil",
+                    "label": "Stunde bis",
+                    "type": "Lesson",
+                    "required": "{{ticket.dateUntil ? true : false}}",
+                    "indicator": "{{ticket.dateUntil > ticket.dateFrom ? 'until' : ''}}",
+                    "default": "{{ ticket.lessons ? ticket.lessons.max : '' }}"
+                }
+            ],
+            "validations": [
+                {
+                    "name": "dateRange",
+                    "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
+                    "message": "Datum von kann nicht nach Datum bis liegen"
+                }
+            ],
+            "grid": [
+                "title title title title",
+                "badges badges badges badges",
+                "description description description description",
+                "day day lessons lessons",
+                "dateFrom dateFrom lessonFrom lessonFrom",
+                "dateUntil dateUntil lessonUntil lessonUntil",
+                "assignee assignee assignee assignee"
+            ],
+            "actions": [
+                {
+                    "name": "übergeben",
+                    "script": "convert(ticket)"
+                }
+            ]
+        },
         {
             "name": "bearbeiten",
             "title": "Aufgabe bearbeiten",
