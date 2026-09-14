@@ -18,13 +18,13 @@
             "name": "day",
             "label": "Wochentag",
             "type": "Weekday",
-            "required": true
+            "required": false
         },
         {
             "name": "lessons",
             "label": "Stunden",
             "type": "Lessons",
-            "required": "{{ticket.day ? true : false}}"
+            "required": false
         }
     ],
     "validations": [],
