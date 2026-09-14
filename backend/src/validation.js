@@ -68,7 +68,9 @@ function getLastNameFromDisplayName(displayName) {
     return parts.slice(1).join(' ');
 }
 
-const createSafeEvaluator = (expr, ticketData, user = null) => {
+const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+const createSafeEvaluator = (expr, ticketData, user = null, isAsync = false) => {
     const keys = Object.keys(ticketData || {});
     const values = Object.values(ticketData || {});
     const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
@@ -93,6 +95,11 @@ const createSafeEvaluator = (expr, ticketData, user = null) => {
         lastName: (username) => {
             const displayName = getBackendDisplayName(username);
             return getLastNameFromDisplayName(displayName);
+        },
+        isAvailable: async (termin, date, excludeTicketId = null) => {
+            if (!termin || !termin.room || !termin.start || !termin.end || !date) return true;
+            const { checkRoomAvailability } = require('./caldav');
+            return await checkRoomAvailability(termin.room, date, termin.start, termin.end, excludeTicketId);
         }
     };
 
@@ -101,8 +108,13 @@ const createSafeEvaluator = (expr, ticketData, user = null) => {
         validValues.push(val);
     }
 
-    const func = new Function(...validKeys, `return ${expr}`);
-    return () => func(...validValues);
+    if (isAsync) {
+        const func = new AsyncFunction(...validKeys, `return await (${expr})`);
+        return () => func(...validValues);
+    } else {
+        const func = new Function(...validKeys, `return ${expr}`);
+        return () => func(...validValues);
+    }
 };
 
 function evaluateTemplate(templateStr, ticketData, user = null) {
@@ -157,8 +169,9 @@ function validateTicket(ticketData, workflow, formFields = null, user = null) {
 
     const fieldsToValidate = formFields || workflow.fields || [];
     const evaluatedFields = evaluateFields(fieldsToValidate, ticketData, user);
+    const asyncTasks = [];
 
-    evaluatedFields.forEach(field => {
+    for (const field of evaluatedFields) {
         if (field.required && field.visible !== false) {
             const val = ticketData[field.name];
             if (val === undefined || val === null || val === '') {
@@ -168,31 +181,76 @@ function validateTicket(ticketData, workflow, formFields = null, user = null) {
 
         if (field.validation && field.visible !== false) {
             try {
-                const evaluate = createSafeEvaluator(field.validation.expression, ticketData, user);
-                const passed = evaluate();
-                if (!passed) {
-                    errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
+                const expr = field.validation.expression;
+                const isAsync = expr && (expr.includes('isAvailable') || expr.includes('await'));
+                const evaluate = createSafeEvaluator(expr, ticketData, user, isAsync);
+                const res = evaluate();
+                if (res instanceof Promise || (res && typeof res.then === 'function')) {
+                    asyncTasks.push(
+                        res.then(passed => {
+                            if (!passed) {
+                                errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
+                            }
+                        }).catch(e => {
+                            console.error(`Error evaluating field validation for ${field.name}:`, e.message || e);
+                            const isUserFacing = e.isValidationError || (e.message && e.message.startsWith('Kalender-Server'));
+                            const msg = isUserFacing ? e.message : `Interner Fehler bei Validierung von '${field.label || field.name}'`;
+                            errors.push(msg);
+                        })
+                    );
+                } else {
+                    if (!res) {
+                        errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
+                    }
                 }
             } catch (e) {
-                console.error(`Error evaluating field validation for ${field.name}:`, e);
-                errors.push(`Interner Fehler bei Validierung von '${field.label || field.name}'`);
+                console.error(`Error evaluating field validation for ${field.name}:`, e.message || e);
+                const isUserFacing = e.isValidationError || (e.message && e.message.startsWith('Kalender-Server'));
+                const msg = isUserFacing ? e.message : `Interner Fehler bei Validierung von '${field.label || field.name}'`;
+                errors.push(msg);
             }
         }
-    });
+    }
 
     if (workflow.validations && Array.isArray(workflow.validations)) {
-        workflow.validations.forEach(validation => {
+        for (const validation of workflow.validations) {
             try {
-                const evaluate = createSafeEvaluator(validation.expression, ticketData, user);
-                const passed = evaluate();
-                if (!passed) {
-                    errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
+                const expr = validation.expression;
+                const isAsync = expr && (expr.includes('isAvailable') || expr.includes('await'));
+                const evaluate = createSafeEvaluator(expr, ticketData, user, isAsync);
+                const res = evaluate();
+                if (res instanceof Promise || (res && typeof res.then === 'function')) {
+                    asyncTasks.push(
+                        res.then(passed => {
+                            if (!passed) {
+                                errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
+                            }
+                        }).catch(e => {
+                            console.error(`Error evaluating validation ${validation.name}:`, e.message || e);
+                            const isUserFacing = e.isValidationError || (e.message && e.message.startsWith('Kalender-Server'));
+                            const msg = isUserFacing ? e.message : `Interner Fehler bei Validierung: ${validation.name}`;
+                            errors.push(msg);
+                        })
+                    );
+                } else {
+                    if (!res) {
+                        errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
+                    }
                 }
             } catch (e) {
-                console.error(`Error evaluating validation ${validation.name}:`, e);
-                errors.push(`Interner Fehler bei Validierung: ${validation.name}`);
+                console.error(`Error evaluating validation ${validation.name}:`, e.message || e);
+                const isUserFacing = e.isValidationError || (e.message && e.message.startsWith('Kalender-Server'));
+                const msg = isUserFacing ? e.message : `Interner Fehler bei Validierung: ${validation.name}`;
+                errors.push(msg);
             }
-        });
+        }
+    }
+
+    if (asyncTasks.length > 0) {
+        return Promise.all(asyncTasks).then(() => ({
+            isValid: errors.length === 0,
+            errors
+        }));
     }
 
     return {

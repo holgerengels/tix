@@ -34,7 +34,11 @@
                 "Raum 318 (Konferenz)",
                 "Raum 513 (Besprechung)"
             ],
-            "required": true
+            "required": true,
+            "validation": {
+                "expression": "isAvailable(ticket.termin, ticket.date, ticket.id)",
+                "message": "Der gewählte Raum ist zu dieser Zeit bereits belegt."
+            }
         },
         {
             "name": "description",

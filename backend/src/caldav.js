@@ -15,7 +15,7 @@ const getCaldavSettings = (ownerEmail = null) => {
             const username = settings.calendar.login;
             const password = settings.calendar.password;
             const roomUser = settings.calendar.roomUser || 'raeume@valckenburgschule.de';
-            const userPart = ownerEmail || username;
+            const userPart = ownerEmail || roomUser;
             return {
                 // SOGo typically serves a user's calendars at /SOGo/dav/email@domain.com/Calendar/
                 url: `${serverUrl}${userPart}/Calendar/`,
@@ -132,7 +132,7 @@ async function getCalendars(allowedRooms = null, ownerEmail = null) {
         return calendars;
     } catch (err) {
         console.error("[CalDAV] Error fetching calendars:", err.message);
-        return [];
+        throw new Error(`Kalender-Server nicht erreichbar (${err.message})`);
     }
 }
 
@@ -334,8 +334,18 @@ async function fetchCalendarEvents(calendarHref, targetDateStr, ownerEmail = nul
         return events;
     } catch (err) {
         console.error(`[CalDAV] Error fetching events for ${calendarHref}:`, err.message);
-        return [];
+        throw new Error(`Fehler beim Abrufen der Termine (${err.message})`);
     }
+}
+
+function findMatchingCalendar(calendars, calendarName) {
+    if (!calendarName) return calendars[0] || null;
+    const exact = calendars.find(c => c.name === calendarName);
+    if (exact) return exact;
+    const lower = calendarName.toLowerCase();
+    const fuzzy = calendars.find(c => c.name.toLowerCase() === lower || (lower === 'personal' && c.name.toLowerCase().includes('personal')));
+    if (fuzzy) return fuzzy;
+    return null;
 }
 
 /**
@@ -355,6 +365,49 @@ async function getAllAvailability(dateStr, allowedRooms = null, ownerEmail = nul
         availability[cal.name] = events;
     }
 
+    // Merge active MongoDB tickets for that date (read from existing tickets as requested)
+    try {
+        const Ticket = require('./models/ticket');
+        const dbTickets = await Ticket.find({
+            date: dateStr,
+            'termin.room': { $exists: true, $ne: null },
+            state: { $nin: ['geschlossen.storniert', 'offen.storniert', 'geschlossen.abgelehnt'] }
+        }).lean();
+
+        for (const t of dbTickets) {
+            if (t.termin && t.termin.room && t.termin.start && t.termin.end) {
+                const roomName = t.termin.room;
+                if (!availability[roomName]) {
+                    if (!allowedRooms || allowedRooms.includes(roomName)) {
+                        availability[roomName] = [];
+                    }
+                }
+                if (availability[roomName]) {
+                    const cleanStart = t.termin.start.toString().replace(':', '').padStart(4, '0');
+                    const cleanEnd = t.termin.end.toString().replace(':', '').padStart(4, '0');
+                    const cleanTicketId = (t.id || t._id).toString();
+
+                    const alreadyPresent = availability[roomName].some(e =>
+                        (e.ticketId && (e.ticketId === cleanTicketId || e.ticketId === `TIX-${cleanTicketId}`)) ||
+                        (e.start === cleanStart && e.end === cleanEnd)
+                    );
+
+                    if (!alreadyPresent) {
+                        availability[roomName].push({
+                            start: cleanStart,
+                            end: cleanEnd,
+                            status: 'occupied',
+                            ticketId: cleanTicketId,
+                            summary: t.title || 'Reservierung'
+                        });
+                    }
+                }
+            }
+        }
+    } catch (dbErr) {
+        // If DB model is not available (e.g. in test without DB), ignore
+    }
+
     return availability;
 }
 
@@ -371,8 +424,8 @@ async function getAllAvailability(dateStr, allowedRooms = null, ownerEmail = nul
  */
 async function addEvent(calendarName, ticketId, dateStr, startHHMM, endHHMM, description, attendees = [], ownerEmail = null) {
     const calendars = await getCalendars(null, ownerEmail);
-    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
-    if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
+    const calendar = findMatchingCalendar(calendars, calendarName);
+    if (!calendar) throw new Error(`Calendar '${calendarName}' not found among: ${calendars.map(c => c.name).join(', ')}`);
 
     const client = getClient(ownerEmail);
     const targetDate = parseISO(dateStr);
@@ -449,8 +502,8 @@ END:VCALENDAR`.replace(/\n+/g, '\n');
  */
 async function deleteEvent(calendarName, ticketId, ownerEmail = null) {
     const calendars = await getCalendars(null, ownerEmail);
-    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
-    if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
+    const calendar = findMatchingCalendar(calendars, calendarName);
+    if (!calendar) throw new Error(`Calendar '${calendarName}' not found among: ${calendars.map(c => c.name).join(', ')}`);
 
     const client = getClient(ownerEmail);
     const uid = `TIX-${ticketId}`;
@@ -536,8 +589,8 @@ function unfoldIcs(icsData) {
  */
 async function getEvent(calendarName, ticketId, ownerEmail = null) {
     const calendars = await getCalendars(null, ownerEmail);
-    const calendar = calendars.find(c => c.name === calendarName) || calendars[0];
-    if (!calendar) throw new Error(`Calendar not found: ${calendarName}`);
+    const calendar = findMatchingCalendar(calendars, calendarName);
+    if (!calendar) throw new Error(`Calendar '${calendarName}' not found among: ${calendars.map(c => c.name).join(', ')}`);
 
     const client = getClient(ownerEmail);
     const uid = `TIX-${ticketId}`;
@@ -606,11 +659,84 @@ async function getEventAttendees(calendarName, ticketId, ownerEmail = null) {
     return [];
 }
 
+/**
+ * Checks if a room is available for the given time slot.
+ * Returns true if available.
+ * Returns false if already occupied by an event or ticket.
+ * Throws an Error if the CalDAV server is unreachable or fails.
+ */
+async function checkRoomAvailability(roomName, dateStr, startHHMM, endHHMM, excludeTicketId = null) {
+    if (!roomName || !dateStr || !startHHMM || !endHHMM) return true;
+
+    const cleanStart = startHHMM.toString().replace(':', '').padStart(4, '0');
+    const cleanEnd = endHHMM.toString().replace(':', '').padStart(4, '0');
+
+    // 1. Check CalDAV availability
+    const calSettings = getCaldavSettings();
+    const targetOwner = calSettings ? calSettings.roomUser : 'raeume@valckenburgschule.de';
+
+    const calendars = await getCalendars(null, targetOwner);
+    const calendar = calendars.find(c => c.name === roomName);
+    if (!calendar) {
+        throw new Error(`Kalender für Raum '${roomName}' nicht gefunden.`);
+    }
+
+    const events = await fetchCalendarEvents(calendar.href, dateStr, targetOwner);
+
+    for (const evt of events) {
+        if (excludeTicketId) {
+            const cleanExclude = excludeTicketId.toString().replace(/^TIX-/, '');
+            if (evt.ticketId && evt.ticketId === cleanExclude) {
+                continue;
+            }
+        }
+
+        const evtStart = evt.start.padStart(4, '0');
+        const evtEnd = evt.end.padStart(4, '0');
+
+        // Overlap check: start < evtEnd && end > evtStart
+        if (cleanStart < evtEnd && cleanEnd > evtStart) {
+            console.log(`[checkRoomAvailability] Collision in CalDAV for ${roomName} on ${dateStr}: requested ${cleanStart}-${cleanEnd}, occupied ${evtStart}-${evtEnd}`);
+            return false;
+        }
+    }
+
+    // 2. Check MongoDB for pending/active tickets for the same room (Race condition protection)
+    try {
+        const Ticket = require('./models/ticket');
+        const query = {
+            date: dateStr,
+            'termin.room': roomName,
+            state: { $nin: ['geschlossen.storniert', 'offen.storniert', 'geschlossen.abgelehnt'] }
+        };
+        if (excludeTicketId) {
+            query._id = { $ne: excludeTicketId };
+            query.id = { $ne: excludeTicketId };
+        }
+        const overlappingTickets = await Ticket.find(query);
+        for (const t of overlappingTickets) {
+            if (t.termin && t.termin.start && t.termin.end) {
+                const tStart = t.termin.start.toString().replace(':', '').padStart(4, '0');
+                const tEnd = t.termin.end.toString().replace(':', '').padStart(4, '0');
+                if (cleanStart < tEnd && cleanEnd > tStart) {
+                    console.log(`[checkRoomAvailability] Collision in MongoDB for ${roomName} on ${dateStr} with ticket ${t.id || t._id}`);
+                    return false;
+                }
+            }
+        }
+    } catch (dbErr) {
+        // If Ticket model is not ready or in test without db, ignore
+    }
+
+    return true;
+}
+
 module.exports = {
     getCalendars,
     getAllAvailability,
     addEvent,
     deleteEvent,
     deleteEventByTicketId,
-    getEventAttendees
+    getEventAttendees,
+    checkRoomAvailability
 };

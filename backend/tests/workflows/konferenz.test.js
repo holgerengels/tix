@@ -41,7 +41,8 @@ jest.mock('../../src/caldav', () => ({
         const cal = calendarName || 'personal';
         const event = (mockEvents[cal] || []).find(e => e.id === ticketId);
         return event ? event.attendees || [] : [];
-    })
+    }),
+    checkRoomAvailability: jest.fn().mockResolvedValue(true)
 }));
 
 const caldav = require('../../src/caldav');

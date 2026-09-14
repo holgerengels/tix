@@ -21,6 +21,11 @@
         Termine werden geladen...
       </div>
 
+      <div v-else-if="calendarError" class="termin-error-box">
+        <wa-icon name="triangle-exclamation" style="color: var(--wa-color-danger-50, #e11d48); font-size: 1.25rem;"></wa-icon>
+        <span>{{ calendarError }}</span>
+      </div>
+
       <div v-else class="termin-calendars-wrapper">
         <div class="termin-calendars" ref="scrollContainer" @wheel="onScrollWheel">
           <div v-for="room in calendars" :key="room" class="calendar-row">
@@ -109,6 +114,7 @@ const SNAP_MINUTES = 5;
 
 // Data state
 const loading = ref(false);
+const calendarError = ref(null);
 const availability = ref({});
 const selection = ref(null); // { room, startMin, endMin }
 const tracks = ref([]); 
@@ -179,6 +185,7 @@ const getWidthPercent = (startMin, endMin) => {
 
 // Fetch data
 const fetchAvailability = async () => {
+  calendarError.value = null;
   if (!props.date) {
     availability.value = {};
     return;
@@ -202,9 +209,15 @@ const fetchAvailability = async () => {
         }));
       }
       availability.value = data;
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      calendarError.value = errData.message || 'Kalender-Server nicht erreichbar. Raumbelegung kann nicht geprüft werden.';
+      availability.value = {};
     }
   } catch (err) {
     console.error("Failed to fetch availability", err);
+    calendarError.value = 'Kalender-Server nicht erreichbar. Raumbelegung kann nicht geprüft werden.';
+    availability.value = {};
   } finally {
     loading.value = false;
   }
@@ -582,6 +595,19 @@ const onResizeEnd = () => {
   text-align: center;
   color: var(--wa-color-neutral-40);
   font-size: 0.875rem;
+}
+
+.termin-error-box {
+  background: var(--wa-color-danger-95, #fff1f2);
+  border: 1px solid var(--wa-color-danger-70, #fecdd3);
+  padding: 1rem;
+  border-radius: var(--wa-border-radius-medium, 4px);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--wa-color-danger-30, #9f1239);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .termin-readonly {

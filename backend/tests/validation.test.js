@@ -312,4 +312,60 @@ describe('validateTicket', () => {
         const pass = validateTicket({ dateFrom: futureDate.toISOString() }, workflow);
         expect(pass.isValid).toBe(true);
     });
+
+    it('should validate async rules using isAvailable helper', async () => {
+        const caldav = require('../src/caldav');
+        jest.spyOn(caldav, 'checkRoomAvailability').mockResolvedValueOnce(false);
+
+        const workflow = {
+            fields: [{
+                name: 'termin',
+                validation: {
+                    expression: 'isAvailable(ticket.termin, ticket.date, ticket.id)',
+                    message: 'Raum ist bereits belegt'
+                }
+            }]
+        };
+
+        const fail = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(fail.isValid).toBe(false);
+        expect(fail.errors).toContain('Raum ist bereits belegt');
+
+        jest.spyOn(caldav, 'checkRoomAvailability').mockResolvedValueOnce(true);
+        const pass = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(pass.isValid).toBe(true);
+    });
+
+    it('should catch and surface CalDAV server unreachable error during isAvailable', async () => {
+        const caldav = require('../src/caldav');
+        jest.spyOn(caldav, 'checkRoomAvailability').mockRejectedValueOnce(
+            new Error('Kalender-Server nicht erreichbar (ECONNREFUSED)')
+        );
+
+        const workflow = {
+            fields: [{
+                name: 'termin',
+                validation: {
+                    expression: 'isAvailable(ticket.termin, ticket.date, ticket.id)',
+                    message: 'Raum ist bereits belegt'
+                }
+            }]
+        };
+
+        const result = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(result.isValid).toBe(false);
+        expect(result.errors[0]).toContain('Kalender-Server nicht erreichbar');
+    });
 });
