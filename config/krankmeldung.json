@@ -16,7 +16,10 @@
             "type": "Date",
             "required": true,
             "validation": {
-                "expression": "ticket.state || !ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
+                "actions": [
+                    "create"
+                ],
+                "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
                 "message": "Datum von kann nicht in der Vergangenheit liegen"
             }
         },

@@ -32,7 +32,10 @@
             "type": "Date",
             "required": true,
             "validation": {
-                "expression": "ticket.state || !ticket.date || ticket.date >= format(now, 'yyyy-MM-dd')",
+                "actions": [
+                    "create"
+                ],
+                "expression": "!ticket.date || ticket.date >= format(now, 'yyyy-MM-dd')",
                 "message": "Datum kann nicht in der Vergangenheit liegen"
             }
         },

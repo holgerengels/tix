@@ -36,7 +36,7 @@ function getLastNameFromDisplayName(displayName) {
     return parts.slice(1).join(' ');
 }
 
-const createSafeEvaluator = (expr, ticketData) => {
+const createSafeEvaluator = (expr, ticketData, action = null) => {
     // We cannot just use Object.keys(ticketData) because Vue needs to track GET requests
     // for specific properties inside the expression, even if they don't exist on the object yet.
     // By passing 'ticket' as the proxy itself, evaluating `ticket.breakfast` will trigger
@@ -91,7 +91,8 @@ const createSafeEvaluator = (expr, ticketData) => {
             const store = getUsersStore();
             const displayName = store ? store.getDisplayName(username) : username;
             return getLastNameFromDisplayName(displayName);
-        }
+        },
+        action: action || null
     };
 
     const validKeys = ['ticket', 'helpers'];
@@ -193,7 +194,27 @@ export function computeFills(fields, context) {
     return { defaults, computeds };
 }
 
-export function validateTicket(ticketData, workflow, formFields = null) {
+export function shouldRunValidation(validationDef, action = null) {
+    if (!validationDef) return false;
+
+    if (validationDef.actions) {
+        const allowed = Array.isArray(validationDef.actions) ? validationDef.actions : [validationDef.actions];
+        if (!action || !allowed.includes(action)) {
+            return false;
+        }
+    }
+
+    if (validationDef.exceptActions) {
+        const excluded = Array.isArray(validationDef.exceptActions) ? validationDef.exceptActions : [validationDef.exceptActions];
+        if (action && excluded.includes(action)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+export function validateTicket(ticketData, workflow, formFields = null, action = null) {
     const errors = [];
 
     // 1. Validate required fields
@@ -210,9 +231,9 @@ export function validateTicket(ticketData, workflow, formFields = null) {
         }
 
         // Field-specific validation
-        if (field.validation && field.visible !== false) {
+        if (field.validation && field.visible !== false && shouldRunValidation(field.validation, action)) {
             try {
-                const evaluate = createSafeEvaluator(field.validation.expression, ticketData);
+                const evaluate = createSafeEvaluator(field.validation.expression, ticketData, action);
                 const passed = evaluate();
                 if (!passed) {
                     errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
@@ -227,15 +248,17 @@ export function validateTicket(ticketData, workflow, formFields = null) {
     // 2. Cross-field validations
     if (workflow.validations && Array.isArray(workflow.validations)) {
         workflow.validations.forEach(validation => {
-            try {
-                const evaluate = createSafeEvaluator(validation.expression, ticketData);
-                const passed = evaluate();
-                if (!passed) {
-                    errors.push(validation.message || `Validation failed: ${validation.name}`);
+            if (shouldRunValidation(validation, action)) {
+                try {
+                    const evaluate = createSafeEvaluator(validation.expression, ticketData, action);
+                    const passed = evaluate();
+                    if (!passed) {
+                        errors.push(validation.message || `Validation failed: ${validation.name}`);
+                    }
+                } catch (e) {
+                    console.error(`Error evaluating validation ${validation.name}:`, e);
+                    errors.push(`Interner Fehler bei Validierung: ${validation.name}`);
                 }
-            } catch (e) {
-                console.error(`Error evaluating validation ${validation.name}:`, e);
-                errors.push(`Interner Fehler bei Validierung: ${validation.name}`);
             }
         });
     }

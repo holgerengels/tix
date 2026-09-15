@@ -60,6 +60,7 @@
             <DynamicForm 
                 v-if="formFields.length > 0"
                 ref="formRef"
+                action="editieren"
                 :fields="formFields" 
                 :grid="formGrid"
                 :workflow="config[ticket.type]"
@@ -177,7 +178,7 @@ const prepareForm = () => {
 };
 
 const save = async () => {
-    if (formRef.value && !formRef.value.validate()) {
+    if (formRef.value && !formRef.value.validate('editieren')) {
         return;
     }
 

@@ -312,4 +312,99 @@ describe('validateTicket', () => {
         const pass = validateTicket({ dateFrom: futureDate.toISOString() }, workflow);
         expect(pass.isValid).toBe(true);
     });
+
+    it('should respect declarative actions filter (e.g. create only)', () => {
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - 7);
+
+        const workflow = {
+            fields: [{
+                name: 'dateFrom',
+                validation: {
+                    actions: ['create'],
+                    expression: 'new Date(ticket.dateFrom) >= now',
+                    message: 'Datum von kann nicht in der Vergangenheit liegen'
+                }
+            }]
+        };
+
+        // When action is 'create', validation should execute and fail on past date
+        const failCreate = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'create');
+        expect(failCreate.isValid).toBe(false);
+        expect(failCreate.errors[0]).toBe('Datum von kann nicht in der Vergangenheit liegen');
+
+        // When action is 'bearbeiten' or 'editieren', validation should be skipped and pass
+        const passBearbeiten = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'bearbeiten');
+        expect(passBearbeiten.isValid).toBe(true);
+
+        const passEditieren = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'editieren');
+        expect(passEditieren.isValid).toBe(true);
+    });
+
+    it('should respect multiple actions (e.g. create and verschieben)', () => {
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - 7);
+
+        const workflow = {
+            fields: [{
+                name: 'date',
+                validation: {
+                    actions: ['create', 'verschieben'],
+                    expression: 'new Date(ticket.date) >= now',
+                    message: 'Datum kann nicht in der Vergangenheit liegen'
+                }
+            }]
+        };
+
+        // Fails on create
+        const failCreate = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'create');
+        expect(failCreate.isValid).toBe(false);
+
+        // Fails on verschieben
+        const failVerschieben = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'verschieben');
+        expect(failVerschieben.isValid).toBe(false);
+
+        // Passes on abschliessen or other actions
+        const passAbschliessen = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'abschliessen');
+        expect(passAbschliessen.isValid).toBe(true);
+    });
+
+    it('should respect exceptActions filter', () => {
+        const workflow = {
+            fields: [{
+                name: 'note',
+                validation: {
+                    exceptActions: ['erledigt', 'stornieren'],
+                    expression: 'ticket.note && ticket.note.length > 5',
+                    message: 'Notiz zu kurz'
+                }
+            }]
+        };
+
+        // Runs and fails on bearbeiten
+        const failBearbeiten = validateTicket({ note: 'hi' }, workflow, null, null, 'bearbeiten');
+        expect(failBearbeiten.isValid).toBe(false);
+
+        // Skipped on erledigt
+        const passErledigt = validateTicket({ note: 'hi' }, workflow, null, null, 'erledigt');
+        expect(passErledigt.isValid).toBe(true);
+    });
+
+    it('should inject action variable into expression evaluator', () => {
+        const workflow = {
+            fields: [{
+                name: 'reason',
+                validation: {
+                    expression: 'action === "ablehnen" ? !!ticket.reason : true',
+                    message: 'Grund erforderlich beim Ablehnen'
+                }
+            }]
+        };
+
+        const failAblehnen = validateTicket({ reason: '' }, workflow, null, null, 'ablehnen');
+        expect(failAblehnen.isValid).toBe(false);
+
+        const passGenehmigen = validateTicket({ reason: '' }, workflow, null, null, 'genehmigen');
+        expect(passGenehmigen.isValid).toBe(true);
+    });
 });

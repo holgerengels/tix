@@ -68,7 +68,7 @@ function getLastNameFromDisplayName(displayName) {
     return parts.slice(1).join(' ');
 }
 
-const createSafeEvaluator = (expr, ticketData, user = null) => {
+const createSafeEvaluator = (expr, ticketData, user = null, action = null) => {
     const keys = Object.keys(ticketData || {});
     const values = Object.values(ticketData || {});
     const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
@@ -84,6 +84,7 @@ const createSafeEvaluator = (expr, ticketData, user = null) => {
         addDays: (date, amount) => date ? addDays(new Date(date), amount) : null,
         subDays: (date, amount) => date ? subDays(new Date(date), amount) : null,
         now: new Date(),
+        action: action || null,
         context: { user: user ? user.username : null },
         currentUser: () => user || {},
         firstName: (username) => {
@@ -104,6 +105,26 @@ const createSafeEvaluator = (expr, ticketData, user = null) => {
     const func = new Function(...validKeys, `return ${expr}`);
     return () => func(...validValues);
 };
+
+function shouldRunValidation(validationDef, action = null) {
+    if (!validationDef) return false;
+
+    if (validationDef.actions) {
+        const allowed = Array.isArray(validationDef.actions) ? validationDef.actions : [validationDef.actions];
+        if (!action || !allowed.includes(action)) {
+            return false;
+        }
+    }
+
+    if (validationDef.exceptActions) {
+        const excluded = Array.isArray(validationDef.exceptActions) ? validationDef.exceptActions : [validationDef.exceptActions];
+        if (action && excluded.includes(action)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 function evaluateTemplate(templateStr, ticketData, user = null) {
     if (typeof templateStr !== 'string') return templateStr;
@@ -152,7 +173,7 @@ function evaluateFields(fields, ticketData, user = null) {
     });
 }
 
-function validateTicket(ticketData, workflow, formFields = null, user = null) {
+function validateTicket(ticketData, workflow, formFields = null, user = null, action = null) {
     const errors = [];
 
     const fieldsToValidate = formFields || workflow.fields || [];
@@ -166,9 +187,9 @@ function validateTicket(ticketData, workflow, formFields = null, user = null) {
             }
         }
 
-        if (field.validation && field.visible !== false) {
+        if (field.validation && field.visible !== false && shouldRunValidation(field.validation, action)) {
             try {
-                const evaluate = createSafeEvaluator(field.validation.expression, ticketData, user);
+                const evaluate = createSafeEvaluator(field.validation.expression, ticketData, user, action);
                 const passed = evaluate();
                 if (!passed) {
                     errors.push(field.validation.message || `Validierung fehlgeschlagen für '${field.label || field.name}'`);
@@ -182,15 +203,17 @@ function validateTicket(ticketData, workflow, formFields = null, user = null) {
 
     if (workflow.validations && Array.isArray(workflow.validations)) {
         workflow.validations.forEach(validation => {
-            try {
-                const evaluate = createSafeEvaluator(validation.expression, ticketData, user);
-                const passed = evaluate();
-                if (!passed) {
-                    errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
+            if (shouldRunValidation(validation, action)) {
+                try {
+                    const evaluate = createSafeEvaluator(validation.expression, ticketData, user, action);
+                    const passed = evaluate();
+                    if (!passed) {
+                        errors.push(validation.message || `Validierung fehlgeschlagen: ${validation.name}`);
+                    }
+                } catch (e) {
+                    console.error(`Error evaluating validation ${validation.name}:`, e);
+                    errors.push(`Interner Fehler bei Validierung: ${validation.name}`);
                 }
-            } catch (e) {
-                console.error(`Error evaluating validation ${validation.name}:`, e);
-                errors.push(`Interner Fehler bei Validierung: ${validation.name}`);
             }
         });
     }
@@ -218,6 +241,8 @@ function computeSummary(ticketData, wf) {
 }
 
 module.exports = {
+    createSafeEvaluator,
+    shouldRunValidation,
     evaluateTemplate,
     evaluateFields,
     validateTicket,

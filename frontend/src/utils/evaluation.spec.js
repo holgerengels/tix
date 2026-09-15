@@ -106,6 +106,72 @@ describe('evaluation.js', () => {
             expect(result.isValid).toBe(false);
             expect(result.errors).toContain('End date before start date');
         });
+
+        it('should filter validations by actions (e.g. create vs bearbeiten/editieren)', () => {
+            const d = new Date();
+            d.setDate(d.getDate() - 7);
+
+            const ticketData = { dateFrom: d.toISOString() };
+            const workflow = {
+                fields: [{
+                    name: 'dateFrom',
+                    validation: {
+                        actions: ['create'],
+                        expression: 'new Date(ticket.dateFrom) >= now',
+                        message: 'Datum liegt in der Vergangenheit'
+                    }
+                }]
+            };
+
+            // Fails on create
+            const failCreate = validateTicket(ticketData, workflow, null, 'create');
+            expect(failCreate.isValid).toBe(false);
+            expect(failCreate.errors).toContain('Datum liegt in der Vergangenheit');
+
+            // Passes on bearbeiten / editieren
+            const passBearbeiten = validateTicket(ticketData, workflow, null, 'bearbeiten');
+            expect(passBearbeiten.isValid).toBe(true);
+
+            const passEditieren = validateTicket(ticketData, workflow, null, 'editieren');
+            expect(passEditieren.isValid).toBe(true);
+        });
+
+        it('should filter validations by multiple actions (e.g. create and verschieben)', () => {
+            const d = new Date();
+            d.setDate(d.getDate() - 7);
+
+            const ticketData = { date: d.toISOString() };
+            const workflow = {
+                fields: [{
+                    name: 'date',
+                    validation: {
+                        actions: ['create', 'verschieben'],
+                        expression: 'new Date(ticket.date) >= now',
+                        message: 'Datum liegt in der Vergangenheit'
+                    }
+                }]
+            };
+
+            expect(validateTicket(ticketData, workflow, null, 'create').isValid).toBe(false);
+            expect(validateTicket(ticketData, workflow, null, 'verschieben').isValid).toBe(false);
+            expect(validateTicket(ticketData, workflow, null, 'abschliessen').isValid).toBe(true);
+        });
+
+        it('should respect exceptActions in frontend', () => {
+            const workflow = {
+                fields: [{
+                    name: 'note',
+                    validation: {
+                        exceptActions: ['erledigt'],
+                        expression: 'ticket.note && ticket.note.length > 5',
+                        message: 'Notiz zu kurz'
+                    }
+                }]
+            };
+
+            expect(validateTicket({ note: '12' }, workflow, null, 'bearbeiten').isValid).toBe(false);
+            expect(validateTicket({ note: '12' }, workflow, null, 'erledigt').isValid).toBe(true);
+        });
     });
 
     describe('computeFills', () => {

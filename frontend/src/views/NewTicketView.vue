@@ -22,10 +22,11 @@
         </wa-select></div>
 
         <div class="ticket-content">
-            <DynamicForm
+            <DynamicForm 
                 v-if="newTicketType && config[newTicketType]" 
                 :key="newTicketType"
                 ref="formRef"
+                action="create"
                 :fields="config[newTicketType].fields" 
                 :grid="config[newTicketType].grid"
                 :workflow="config[newTicketType]"
@@ -225,7 +226,7 @@ const cancelCreation = async () => {
 
 const createTicket = async () => {
     // Validate dynamic fields
-    if (formRef.value && !formRef.value.validate()) {
+    if (formRef.value && !formRef.value.validate('create')) {
         return;
     }
 

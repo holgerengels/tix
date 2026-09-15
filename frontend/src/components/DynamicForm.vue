@@ -32,7 +32,8 @@ const props = defineProps({
   fields: { type: Array, required: true },
   modelValue: { type: Object, required: true },
   grid: { type: Array, default: () => [] },
-  workflow: { type: Object, default: () => null }
+  workflow: { type: Object, default: () => null },
+  action: { type: String, default: null }
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -59,14 +60,14 @@ const updateField = (name, value) => {
     emit('update:modelValue', props.modelValue);
 };
 
-// Auto re-validate dynamically if we already have errors showing
-watch(props.modelValue, () => {
+// Re-validate if errors are already displayed to give immediate feedback
+watch(() => props.modelValue, () => {
     if (errors.value.length > 0) {
         validate();
     }
 }, { deep: true });
 
-const validate = () => {
+const validate = (actionOverride = null) => {
     errors.value = [];
     if (!props.workflow && (!props.fields || props.fields.length === 0)) {
         return true; // Nothing to validate against
@@ -74,8 +75,9 @@ const validate = () => {
     
     // Fallback if workflow is incomplete but we have fields
     const wfToValidate = props.workflow || { fields: props.fields, validations: [] };
+    const currentAction = actionOverride || props.action || null;
     
-    const validation = validateTicket(props.modelValue, wfToValidate, props.fields);
+    const validation = validateTicket(props.modelValue, wfToValidate, props.fields, currentAction);
     if (!validation.isValid) {
         errors.value = validation.errors;
         nextTick(() => {

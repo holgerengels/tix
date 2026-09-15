@@ -60,6 +60,7 @@
             <DynamicForm 
                v-if="currentFormDef && currentFormDef.fields && currentFormDef.fields.length > 0" 
                ref="formRef"
+               :action="actionDef ? actionDef.name : null"
                :fields="currentFormDef.fields" 
                :grid="currentFormDef.grid"
                :workflow="config[ticket.type]"
@@ -262,7 +263,7 @@ const actionTitle = computed(() => {
 const execute = async (btnName = null) => {
     // Check form validation if action has fields
     if (currentFormDef.value && currentFormDef.value.fields && currentFormDef.value.fields.length > 0) {
-        if (formRef.value && !formRef.value.validate()) {
+        if (formRef.value && !formRef.value.validate(actionDef.value?.name)) {
             return;
         }
     }

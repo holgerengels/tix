@@ -466,7 +466,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         // Validation
         if (wf) {
             const { validateTicket } = require('./validation');
-            const validationResult = validateTicket(req.body, wf, null, req.user);
+            const validationResult = validateTicket(req.body, wf, null, req.user, 'create');
             if (!validationResult.isValid) {
                 return res.status(400).json({
                     message: `Validation failed: ${validationResult.errors.join(', ')}`
@@ -699,7 +699,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         // Validate modified ticket
         const currentWf = workflowEngine.getWorkflowForType(ticket.type) || wf;
         const { validateTicket } = require('./validation');
-        const validationResult = validateTicket(ticket.toObject(), currentWf, null, req.user);
+        const validationResult = validateTicket(ticket.toObject(), currentWf, null, req.user, actionName);
         if (!validationResult.isValid) {
             return res.status(400).json({
                 message: `Validation failed: ${validationResult.errors.join(', ')}`
