@@ -313,7 +313,7 @@ describe('validateTicket', () => {
         expect(pass.isValid).toBe(true);
     });
 
-    it('should respect declarative actions filter (e.g. create only)', () => {
+    it('should respect declarative actions filter (e.g. create only)', async () => {
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - 7);
 
@@ -329,19 +329,19 @@ describe('validateTicket', () => {
         };
 
         // When action is 'create', validation should execute and fail on past date
-        const failCreate = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'create');
+        const failCreate = await validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'create');
         expect(failCreate.isValid).toBe(false);
         expect(failCreate.errors[0]).toBe('Datum von kann nicht in der Vergangenheit liegen');
 
         // When action is 'bearbeiten' or 'editieren', validation should be skipped and pass
-        const passBearbeiten = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'bearbeiten');
+        const passBearbeiten = await validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'bearbeiten');
         expect(passBearbeiten.isValid).toBe(true);
 
-        const passEditieren = validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'editieren');
+        const passEditieren = await validateTicket({ dateFrom: pastDate.toISOString() }, workflow, null, null, 'editieren');
         expect(passEditieren.isValid).toBe(true);
     });
 
-    it('should respect multiple actions (e.g. create and verschieben)', () => {
+    it('should respect multiple actions (e.g. create and verschieben)', async () => {
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - 7);
 
@@ -357,19 +357,19 @@ describe('validateTicket', () => {
         };
 
         // Fails on create
-        const failCreate = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'create');
+        const failCreate = await validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'create');
         expect(failCreate.isValid).toBe(false);
 
         // Fails on verschieben
-        const failVerschieben = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'verschieben');
+        const failVerschieben = await validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'verschieben');
         expect(failVerschieben.isValid).toBe(false);
 
         // Passes on abschliessen or other actions
-        const passAbschliessen = validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'abschliessen');
+        const passAbschliessen = await validateTicket({ date: pastDate.toISOString() }, workflow, null, null, 'abschliessen');
         expect(passAbschliessen.isValid).toBe(true);
     });
 
-    it('should respect exceptActions filter', () => {
+    it('should respect exceptActions filter', async () => {
         const workflow = {
             fields: [{
                 name: 'note',
@@ -382,15 +382,15 @@ describe('validateTicket', () => {
         };
 
         // Runs and fails on bearbeiten
-        const failBearbeiten = validateTicket({ note: 'hi' }, workflow, null, null, 'bearbeiten');
+        const failBearbeiten = await validateTicket({ note: 'hi' }, workflow, null, null, 'bearbeiten');
         expect(failBearbeiten.isValid).toBe(false);
 
         // Skipped on erledigt
-        const passErledigt = validateTicket({ note: 'hi' }, workflow, null, null, 'erledigt');
+        const passErledigt = await validateTicket({ note: 'hi' }, workflow, null, null, 'erledigt');
         expect(passErledigt.isValid).toBe(true);
     });
 
-    it('should inject action variable into expression evaluator', () => {
+    it('should inject action variable into expression evaluator', async () => {
         const workflow = {
             fields: [{
                 name: 'reason',
@@ -401,10 +401,66 @@ describe('validateTicket', () => {
             }]
         };
 
-        const failAblehnen = validateTicket({ reason: '' }, workflow, null, null, 'ablehnen');
+        const failAblehnen = await validateTicket({ reason: '' }, workflow, null, null, 'ablehnen');
         expect(failAblehnen.isValid).toBe(false);
 
-        const passGenehmigen = validateTicket({ reason: '' }, workflow, null, null, 'genehmigen');
+        const passGenehmigen = await validateTicket({ reason: '' }, workflow, null, null, 'genehmigen');
         expect(passGenehmigen.isValid).toBe(true);
+    });
+
+    it('should validate async rules using isAvailable helper', async () => {
+        const caldav = require('../src/caldav');
+        jest.spyOn(caldav, 'checkRoomAvailability').mockResolvedValueOnce(false);
+
+        const workflow = {
+            fields: [{
+                name: 'termin',
+                validation: {
+                    expression: 'isAvailable(ticket.termin, ticket.date, ticket.id)',
+                    message: 'Raum ist bereits belegt'
+                }
+            }]
+        };
+
+        const fail = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(fail.isValid).toBe(false);
+        expect(fail.errors).toContain('Raum ist bereits belegt');
+
+        jest.spyOn(caldav, 'checkRoomAvailability').mockResolvedValueOnce(true);
+        const pass = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(pass.isValid).toBe(true);
+    });
+
+    it('should catch and surface CalDAV server unreachable error during isAvailable', async () => {
+        const caldav = require('../src/caldav');
+        jest.spyOn(caldav, 'checkRoomAvailability').mockRejectedValueOnce(
+            new Error('Kalender-Server nicht erreichbar (ECONNREFUSED)')
+        );
+
+        const workflow = {
+            fields: [{
+                name: 'termin',
+                validation: {
+                    expression: 'isAvailable(ticket.termin, ticket.date, ticket.id)',
+                    message: 'Raum ist bereits belegt'
+                }
+            }]
+        };
+
+        const result = await validateTicket({
+            date: '2026-03-12',
+            termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+        }, workflow);
+
+        expect(result.isValid).toBe(false);
+        expect(result.errors[0]).toContain('Kalender-Server nicht erreichbar');
     });
 });

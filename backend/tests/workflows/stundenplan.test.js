@@ -76,6 +76,37 @@ describe('Workflow: Stundenplan-Ticket', () => {
         expect(resErledigt.body.state).toBe('geschlossen.erledigt');
     });
 
+    it('should convert ticket to Vertretungsplan-Ticket via form anVertretungsplanung', async () => {
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        const t1 = res.body;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const resConvert = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .send({
+                actionName: 'an Vertretungsplanung',
+                formButtonName: 'übergeben',
+                formData: {
+                    dateFrom: todayStr,
+                    lessonFrom: 3,
+                    lessonUntil: 4
+                }
+            });
+
+        expect(resConvert.status).toBe(200);
+        expect(resConvert.body.type).toBe('Vertretungsplan-Ticket');
+        expect(resConvert.body.description).toContain('Aus Stundenplan-Ticket');
+        expect(resConvert.body.dateFrom).toBe(todayStr);
+        expect(resConvert.body.lessonFrom).toBe(3);
+        expect(resConvert.body.lessonUntil).toBe(4);
+    });
+
     it('should allow stundenplaner to reject a ticket', async () => {
         const res = await request(app)
             .post('/api/tickets')

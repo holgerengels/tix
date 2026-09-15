@@ -92,7 +92,8 @@ const createSafeEvaluator = (expr, ticketData, action = null) => {
             const displayName = store ? store.getDisplayName(username) : username;
             return getLastNameFromDisplayName(displayName);
         },
-        action: action || null
+        action: action || null,
+        isAvailable: () => true
     };
 
     const validKeys = ['ticket', 'helpers'];

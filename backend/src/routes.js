@@ -466,7 +466,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
         // Validation
         if (wf) {
             const { validateTicket } = require('./validation');
-            const validationResult = validateTicket(req.body, wf, null, req.user, 'create');
+            const validationResult = await validateTicket(req.body, wf, null, req.user, 'create');
             if (!validationResult.isValid) {
                 return res.status(400).json({
                     message: `Validation failed: ${validationResult.errors.join(', ')}`
@@ -699,7 +699,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         // Validate modified ticket
         const currentWf = workflowEngine.getWorkflowForType(ticket.type) || wf;
         const { validateTicket } = require('./validation');
-        const validationResult = validateTicket(ticket.toObject(), currentWf, null, req.user, actionName);
+        const validationResult = await validateTicket(ticket.toObject(), currentWf, null, req.user, actionName);
         if (!validationResult.isValid) {
             return res.status(400).json({
                 message: `Validation failed: ${validationResult.errors.join(', ')}`
@@ -1196,8 +1196,8 @@ router.get('/caldav/availability', verifyToken, async (req, res) => {
         const availability = await getAllAvailability(date, allowedRooms);
         res.json(availability);
     } catch (error) {
-        console.error('[API] Error fetching CalDAV availability:', error);
-        res.status(500).json({ message: 'Internal Server Error fetching calendars' });
+        console.error('[API] Error fetching CalDAV availability:', error.message || error);
+        res.status(503).json({ message: 'Kalender-Server nicht erreichbar' });
     }
 });
 

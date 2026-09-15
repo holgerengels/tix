@@ -52,23 +52,23 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
         expect(t1.id).toMatch(/^VRP-/);
         expect(t1.badges || []).toContain('dringend');
 
-        // --- 2. stundenplaner processes via form bearbeiten ---
+        // --- 2. vertretungsplaner processes via form bearbeiten ---
         const resAssign = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'in Arbeit',
-                formData: { assignee: 'stundenplaner' }
+                formData: { assignee: 'vertretungsplaner' }
             });
 
         expect(resAssign.status).toBe(200);
         expect(resAssign.body.state).toBe('offen.inArbeit');
 
-        // --- 3. stundenplaner marks as erledigt ---
+        // --- 3. vertretungsplaner marks as erledigt ---
         const resErledigt = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'erledigt'
@@ -76,6 +76,25 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
 
         expect(resErledigt.status).toBe(200);
         expect(resErledigt.body.state).toBe('geschlossen.erledigt');
+    });
+
+    it('should convert ticket to Stundenplan-Ticket via "an Stundenplanung"', async () => {
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        const t1 = res.body;
+
+        const resConvert = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
+            .send({ actionName: 'an Stundenplanung' });
+
+        expect(resConvert.status).toBe(200);
+        expect(resConvert.body.type).toBe('Stundenplan-Ticket');
+        expect(resConvert.body.description).toContain('Aus Vertretungsplan-Ticket');
     });
 
     it('should allow creator to cancel their ticket', async () => {
@@ -95,7 +114,7 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
         expect(resCancel.body.state).toBe('geschlossen.storniert');
     });
 
-    it('should allow stundenplaner to reject a ticket', async () => {
+    it('should allow vertretungsplaner to reject a ticket', async () => {
         const res = await request(app)
             .post('/api/tickets')
             .set('Authorization', `Bearer ${tokens.lehrer1}`)
@@ -105,7 +124,7 @@ describe('Workflow: Vertretungsplan-Ticket', () => {
 
         const resReject = await request(app)
             .post(`/api/tickets/${res.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({ actionName: 'ablehnen' });
 
         expect(resReject.status).toBe(200);

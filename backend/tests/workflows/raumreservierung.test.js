@@ -34,7 +34,24 @@ jest.mock('../../src/caldav', () => ({
         { name: 'Raum 101', href: '/r101' },
         { name: 'Raum 318 (Konferenz)', href: '/r318' }
     ]),
-    getAllAvailability: jest.fn().mockResolvedValue({})
+    getAllAvailability: jest.fn().mockResolvedValue({}),
+    checkRoomAvailability: jest.fn().mockImplementation(async (roomName, dateStr, startHHMM, endHHMM, excludeTicketId = null) => {
+        const events = mockEvents[roomName] || [];
+        const cleanStart = startHHMM.toString().replace(':', '').padStart(4, '0');
+        const cleanEnd = endHHMM.toString().replace(':', '').padStart(4, '0');
+
+        for (const evt of events) {
+            if (evt.targetDate === dateStr) {
+                if (excludeTicketId && evt.id === excludeTicketId) continue;
+                const evtStart = evt.startHHMM.replace(':', '').padStart(4, '0');
+                const evtEnd = evt.endHHMM.replace(':', '').padStart(4, '0');
+                if (cleanStart < evtEnd && cleanEnd > evtStart) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    })
 }));
 
 const caldav = require('../../src/caldav');
@@ -171,5 +188,120 @@ describe('Workflow: Raumreservierung', () => {
 
         // Verify it was cleared out of the simulated calendar server entirely
         expect(caldav._mockEvents['Raum 318 (Konferenz)'].length).toBe(0);
+    });
+
+    it('should reject ticket creation when the room is already booked (double booking prevention)', async () => {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Simulate an existing booking in mockEvents (either from another ticket or external calendar)
+        mockEvents['Raum 101'].push({
+            id: 'OTHER-EVENT',
+            targetDate: today,
+            startHHMM: '10:00',
+            endHHMM: '11:00'
+        });
+
+        // Attempt to create a reservation for overlapping time: 10:30 - 11:30
+        const overlappingPayload = {
+            type: 'Raumreservierung',
+            title: 'Doppelbuchung Test',
+            date: today,
+            termin: {
+                room: 'Raum 101',
+                start: '10:30',
+                end: '11:30'
+            }
+        };
+
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send(overlappingPayload);
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('Validation failed');
+        expect(res.body.message).toContain('Der gewählte Raum ist zu dieser Zeit bereits belegt');
+
+        // Verify ticket was NOT created in DB
+        const count = await Ticket.countDocuments({ title: 'Doppelbuchung Test' });
+        expect(count).toBe(0);
+    });
+
+    it('should reject ticket creation when the CalDAV server is unreachable', async () => {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Simulate CalDAV server error / offline
+        caldav.checkRoomAvailability.mockImplementationOnce(async () => {
+            throw new Error('Kalender-Server nicht erreichbar (ETIMEDOUT)');
+        });
+
+        const payload = {
+            type: 'Raumreservierung',
+            title: 'Server Offline Test',
+            date: today,
+            termin: {
+                room: 'Raum 101',
+                start: '12:00',
+                end: '13:00'
+            }
+        };
+
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send(payload);
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('Validation failed');
+        expect(res.body.message).toContain('Kalender-Server nicht erreichbar');
+
+        // Verify ticket was NOT created in DB
+        const count = await Ticket.countDocuments({ title: 'Server Offline Test' });
+        expect(count).toBe(0);
+    });
+
+    it('should reject rescheduling when the target room/slot is occupied', async () => {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Create first ticket at 09:00 - 10:00
+        const res1 = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send({
+                type: 'Raumreservierung',
+                title: 'Erstes Ticket',
+                date: today,
+                termin: { room: 'Raum 101', start: '09:00', end: '10:00' }
+            });
+        expect(res1.status).toBe(201);
+        const t1 = res1.body;
+
+        // Simulate another event in Raum 318 at 14:00 - 15:00
+        mockEvents['Raum 318 (Konferenz)'].push({
+            id: 'COLLISION-EVENT',
+            targetDate: today,
+            startHHMM: '14:00',
+            endHHMM: '15:00'
+        });
+
+        // Attempt to reschedule t1 to Raum 318 at 14:30 - 15:30 (overlaps!)
+        const resMove = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send({
+                actionName: 'verschieben',
+                formButtonName: 'verschieben',
+                formData: {
+                    termin: {
+                        room: 'Raum 318 (Konferenz)',
+                        start: '14:30',
+                        end: '15:30'
+                    }
+                }
+            });
+
+        expect(resMove.status).toBe(400);
+        expect(resMove.body.message).toContain('Validation failed');
+        expect(resMove.body.message).toContain('Der gewählte Raum ist zu dieser Zeit bereits belegt');
     });
 });

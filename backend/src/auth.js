@@ -23,7 +23,7 @@ const decodeDN = (dn) => {
     try {
         const urlEncoded = dn.replace(/\\([0-9a-fA-F]{2})/g, (match, hex) => '%' + hex);
         return decodeURIComponent(urlEncoded);
-    } catch(e) {
+    } catch (e) {
         return dn;
     }
 };
@@ -48,6 +48,7 @@ const MOCK_USERS = [
     { username: 'schulleiter', password: 'password', groups: ['Schulleitung', 'Lehrkräfte'], displayName: 'Thomas Braun', employeeId: 't.braun' },
     { username: 'abteilungsleiter', password: 'password', groups: ['Abteilungsleitung', 'Lehrkräfte'], displayName: 'Claudia Richter', employeeId: 'c.richter' },
     { username: 'stundenplaner', password: 'password', groups: ['Stundenplanung', 'Lehrkräfte'], displayName: 'Stefan Hoffmann', employeeId: 's.hoffmann' },
+    { username: 'vertretungsplaner', password: 'password', groups: ['Vertretungsplanung', 'Lehrkräfte'], displayName: 'Stefan Hoffmann', employeeId: 's.hoffmann' },
     { username: 'hausmeister', password: 'password', groups: ['Hausmeister'], displayName: 'Max Grau', employeeId: 'm.grau' },
     { username: 'netzwerker', password: 'password', groups: ['Netzwerkteam', 'Lehrkräfte'], displayName: 'Jens Schreiber', employeeId: 'j.schreiber' },
 ];
@@ -85,7 +86,7 @@ const login = async (username, password, isPwa) => {
         const user = MOCK_USERS.find(u => u.username === username && u.password === password);
         if (user) {
             console.log(`[Auth] Mock login successful for ${username}`);
-            
+
             // Auto create/update in MongoDB
             try {
                 await User.findOneAndUpdate(
@@ -547,7 +548,7 @@ const getUser = async (username) => {
                         if (Array.isArray(givenName)) givenName = givenName[0];
                         if (Array.isArray(sn)) sn = sn[0];
                         result.displayName = [givenName, sn].filter(Boolean).join(' ') || username;
-                        
+
                         let empId = userAttributes.employeeID || userAttributes.employeeid || '';
                         if (Array.isArray(empId)) empId = empId[0];
                         result.employeeId = empId || '';
