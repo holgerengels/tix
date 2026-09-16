@@ -12,6 +12,7 @@ const ticketSchema = new mongoose.Schema({
     created: { type: Date, required: true, default: Date.now },
     assignee: { type: String },
     assigned: { type: Date },
+    starredBy: [{ type: String, index: true }],
     badges: { type: [String], default: [] },
     parentTicket: { type: String, index: true },
     summary: { type: String }

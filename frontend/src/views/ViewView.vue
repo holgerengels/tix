@@ -73,6 +73,12 @@
                             </wa-popover>
                         </span>
                         <span>{{ ticket.id }} {{ ticket.title }}</span>
+                        <wa-icon 
+                            :name="isStarred ? 'star-fill' : 'star'" 
+                            :style="{ cursor: 'pointer', color: isStarred ? 'var(--wa-color-warning-50, #eab308)' : 'var(--wa-color-neutral-40, #9ca3af)', fontSize: '1.35rem', verticalAlign: 'middle', marginLeft: '0.25rem' }"
+                            :title="isStarred ? 'Favorit entfernen' : 'Zu Favoriten hinzufügen'"
+                            @click="toggleStar"
+                        ></wa-icon>
                     </h3>
                     
                     <template v-if="ticket.subTickets && ticket.subTickets.length > 0">
@@ -196,6 +202,47 @@ const {
 
 const createSubticket = (type) => {
     router.push({ path: '/tickets/new', query: { type: type, parent: ticket.value.id } });
+};
+
+const isStarred = computed(() => {
+    if (!ticket.value || !user?.username) return false;
+    return Array.isArray(ticket.value.starredBy) && ticket.value.starredBy.includes(user.username);
+});
+
+const togglingStar = ref(false);
+
+const toggleStar = async () => {
+    if (!ticket.value || !user?.username || togglingStar.value) return;
+    togglingStar.value = true;
+    const currentlyStarred = isStarred.value;
+    if (!Array.isArray(ticket.value.starredBy)) {
+        ticket.value.starredBy = [];
+    }
+    if (currentlyStarred) {
+        ticket.value.starredBy = ticket.value.starredBy.filter(u => u !== user.username);
+    } else {
+        ticket.value.starredBy.push(user.username);
+    }
+    try {
+        if (currentlyStarred) {
+            await axios.delete(`/api/tickets/${ticket.value._id}/star`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        } else {
+            await axios.post(`/api/tickets/${ticket.value._id}/star`, {}, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        }
+    } catch (err) {
+        if (currentlyStarred) {
+            ticket.value.starredBy.push(user.username);
+        } else {
+            ticket.value.starredBy = ticket.value.starredBy.filter(u => u !== user.username);
+        }
+        toast.error('Favorit konnte nicht aktualisiert werden: ' + (err.response?.data?.message || err.message));
+    } finally {
+        togglingStar.value = false;
+    }
 };
 
 const nextActionsWithGroups = computed(() => {

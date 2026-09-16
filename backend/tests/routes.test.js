@@ -145,6 +145,40 @@ describe('API Routes', () => {
             expect(res.status).toBe(200);
             expect(Array.isArray(res.body)).toBe(true);
         });
+
+        it('should star and unstar a ticket', async () => {
+            // Star
+            let res = await request(app)
+                .post(`/api/tickets/${ticketId}/star`)
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(res.status).toBe(200);
+            expect(res.body.starred).toBe(true);
+            expect(res.body.starredBy).toContain('admin');
+
+            // Verify filter=starred includes it
+            let listRes = await request(app)
+                .get('/api/tickets?filter=starred')
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(listRes.status).toBe(200);
+            const starredTickets = listRes.body.tickets || listRes.body;
+            expect(starredTickets.some(t => t._id.toString() === ticketId.toString())).toBe(true);
+
+            // Unstar
+            res = await request(app)
+                .delete(`/api/tickets/${ticketId}/star`)
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(res.status).toBe(200);
+            expect(res.body.starred).toBe(false);
+            expect(res.body.starredBy).not.toContain('admin');
+
+            // Verify filter=starred no longer includes it
+            listRes = await request(app)
+                .get('/api/tickets?filter=starred')
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(listRes.status).toBe(200);
+            const remainingStarred = listRes.body.tickets || listRes.body;
+            expect(remainingStarred.some(t => t._id.toString() === ticketId.toString())).toBe(false);
+        });
     });
 
     describe('Subscriptions and Notifications', () => {

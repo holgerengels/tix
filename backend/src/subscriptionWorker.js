@@ -131,16 +131,24 @@ async function runSubscriptionCheck() {
             // Format current result
             const currentTickets = tickets.map(t => ({ id: t.id, state: t.state, title: t.title }));
 
-            // Check for diffs
-            if (isDiff(sub.lastMatchingTickets, currentTickets)) {
-                console.log(`[SubscriptionWorker] Changes detected for subscription '${sub.name}' (User: ${sub.userId})`);
+            const previousIds = new Set((sub.lastMatchingTickets || []).map(item => item.id));
+            const addedTickets = currentTickets.filter(item => !previousIds.has(item.id));
+            const listChanged = isDiff(sub.lastMatchingTickets || [], currentTickets);
+
+            // Only notify if new tickets were added that were not in the list previously
+            if (addedTickets.length > 0) {
+                console.log(`[SubscriptionWorker] ${addedTickets.length} new ticket(s) detected for subscription '${sub.name}' (User: ${sub.userId})`);
 
                 // Get user notification preferences
                 const userSettings = await getUserSettings(sub.userId);
                 const notificationUri = userSettings ? userSettings.notificationUri : null;
 
                 if (notificationUri) {
-                    const message = `Hallo!\nDein Ticket-Abo "${sub.name}" hat Änderungen!\nEs gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`;
+                    const ticketDetails = addedTickets.length === 1
+                        ? `Neues Ticket: ${addedTickets[0].id}${addedTickets[0].title ? ` - ${addedTickets[0].title}` : ''}`
+                        : `Neue Tickets:\n${addedTickets.slice(0, 5).map(t => `- ${t.id}${t.title ? `: ${t.title}` : ''}`).join('\n')}${addedTickets.length > 5 ? `\n...und ${addedTickets.length - 5} weitere` : ''}`;
+
+                    const message = `Hallo!\nDein Ticket-Abo "${sub.name}" hat neue Tickets!\n\n${ticketDetails}\n\nEs gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`;
                     const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
 
                     for (const targetUri of uris) {
@@ -166,11 +174,9 @@ async function runSubscriptionCheck() {
                 // NEW: Web Push Notifications
                 await sendPush(sub.userId, {
                     title: `Ticket-Abo: ${sub.name}`,
-                    body: `Es gibt aktuell ${currentTickets.length} zutreffende Tickets in dieser Ansicht.`,
-                    // In Frontend router, we use ?filter=... depending on the subscription logic, 
-                    // but a generic link to the home page or specific sub-filter is fine.
-                    // Ideally we could pass the actual JSON filter, but that's complex to stringify in a URL reliably.
-                    // Let's bring them to the root so they see their tickets.
+                    body: addedTickets.length === 1
+                        ? `Neues Ticket: ${addedTickets[0].id}${addedTickets[0].title ? ` (${addedTickets[0].title})` : ''}`
+                        : `${addedTickets.length} neue Tickets in "${sub.name}"`,
                     url: `/?filter=all`
                 });
 
@@ -178,6 +184,14 @@ async function runSubscriptionCheck() {
                 sub.lastMatchingTickets = currentTickets.map(t => ({ id: t.id, state: t.state }));
 
                 // Avoid parallel version errors
+                await Subscription.updateOne(
+                    { _id: sub._id },
+                    { $set: { lastMatchingTickets: sub.lastMatchingTickets } }
+                );
+            } else if (listChanged) {
+                console.log(`[SubscriptionWorker] Tickets in '${sub.name}' changed (removed or status updated), but no new tickets added. Updating snapshot without notification.`);
+                sub.lastMatchingTickets = currentTickets.map(t => ({ id: t.id, state: t.state }));
+
                 await Subscription.updateOne(
                     { _id: sub._id },
                     { $set: { lastMatchingTickets: sub.lastMatchingTickets } }

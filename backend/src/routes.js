@@ -258,6 +258,26 @@ router.get('/tickets', verifyToken, async (req, res) => {
         if (conditions.length > 0) baseQuery.$or = conditions;
         else baseQuery = { _id: null }; // No access
 
+    } else if (filter === 'starred') {
+        baseQuery.starredBy = user.username;
+        if (!user.groups.includes('Administration')) {
+            const conditions = [];
+            const allWorkflows = workflowEngine.getWorkflows();
+            Object.values(allWorkflows).forEach(wf => {
+                if (workflowEngine.canRead(wf.type, user.groups)) {
+                    conditions.push({ type: wf.type });
+                }
+            });
+
+            const accessOr = [];
+            if (conditions.length > 0) accessOr.push(...conditions);
+            accessOr.push({ creator: user.username });
+            accessOr.push({ assignee: user.username });
+            accessOr.push({ starredBy: user.username });
+
+            baseQuery.$or = accessOr;
+        }
+
     } else if (filter === 'admin' && user.groups.includes('Administration')) {
         // Dedicated admin filter bypasses workflow restrictions entirely
         if (baseQuery.$or) delete baseQuery.$or;
@@ -382,6 +402,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
     if (req.query.id) sensitiveFilters.push({ id: req.query.id }); // Exact match for ID (e.e. ABW-1)
     if (assignmentType === 'personal') sensitiveFilters.push({ assignee: user.username }); // Filter for purely personal assignment
+    if (req.query.starred === 'true' || req.query.starred === true) sensitiveFilters.push({ starredBy: user.username });
 
     if (dateFrom || dateTo) {
         let dateQuery = {};
@@ -817,6 +838,63 @@ router.delete('/tickets/:id', verifyToken, async (req, res) => {
 
         res.json({ message: 'Ticket deleted' });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Star / Unstar ticket
+router.post('/tickets/:id/star', verifyToken, async (req, res) => {
+    try {
+        let ticket;
+        if (mongoose.isValidObjectId(req.params.id)) {
+            ticket = await Ticket.findById(req.params.id);
+        }
+        if (!ticket) {
+            ticket = await Ticket.findOne({ id: req.params.id });
+        }
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        const updatedTicket = await Ticket.findByIdAndUpdate(
+            ticket._id,
+            { $addToSet: { starredBy: req.user.username } },
+            { new: true }
+        );
+
+        res.json({
+            message: 'Ticket starred',
+            starred: true,
+            starredBy: updatedTicket.starredBy || []
+        });
+    } catch (err) {
+        console.error('Error starring ticket:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/tickets/:id/star', verifyToken, async (req, res) => {
+    try {
+        let ticket;
+        if (mongoose.isValidObjectId(req.params.id)) {
+            ticket = await Ticket.findById(req.params.id);
+        }
+        if (!ticket) {
+            ticket = await Ticket.findOne({ id: req.params.id });
+        }
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        const updatedTicket = await Ticket.findByIdAndUpdate(
+            ticket._id,
+            { $pull: { starredBy: req.user.username } },
+            { new: true }
+        );
+
+        res.json({
+            message: 'Ticket unstarred',
+            starred: false,
+            starredBy: updatedTicket.starredBy || []
+        });
+    } catch (err) {
+        console.error('Error unstarring ticket:', err);
         res.status(500).json({ error: err.message });
     }
 });

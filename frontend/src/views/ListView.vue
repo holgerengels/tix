@@ -46,9 +46,17 @@
                 <tr v-for="ticket in sortedTickets" :key="ticket._id">
                     <td v-for="col in visibleColumns" :key="col.id" :data-label="col.label" :class="{ 'title-cell': col.id === 'title', 'actions-cell': col.id === 'actions', 'has-actions': col.id === 'actions' && getActions(ticket).length > 0 }">
                         <template v-if="col.id === 'id'">
-                            <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
-                                {{ ticket.id }}
-                            </router-link>
+                            <span style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                <wa-icon 
+                                    :name="isTicketStarred(ticket) ? 'star-fill' : 'star'" 
+                                    :style="{ cursor: 'pointer', color: isTicketStarred(ticket) ? 'var(--wa-color-warning-50, #eab308)' : 'var(--wa-color-neutral-40, #9ca3af)', fontSize: '1.1rem' }"
+                                    :title="isTicketStarred(ticket) ? 'Favorit entfernen' : 'Zu Favoriten hinzufügen'"
+                                    @click.stop.prevent="toggleTicketStar(ticket)"
+                                ></wa-icon>
+                                <router-link :to="'/tickets/' + ticket.id + '/view'" @click.stop class="ticket-link">
+                                    {{ ticket.id }}
+                                </router-link>
+                            </span>
                         </template>
                         <template v-else-if="col.id === 'type'">{{ ticket.type }}</template>
                         <template v-else-if="col.id === 'title'">
@@ -212,10 +220,49 @@ const pageTitle = computed(() => {
     switch(currentFilter.value) {
         case 'my': return 'Meine Tickets';
         case 'assigned': return 'Mir zugewiesen';
+        case 'starred': return 'Favoriten';
         case 'all': return 'Alle Tickets';
         default: return 'Tickets';
     }
 });
+
+const isTicketStarred = (ticket) => {
+    return Array.isArray(ticket.starredBy) && ticket.starredBy.includes(user?.username);
+};
+
+const toggleTicketStar = async (ticket) => {
+    if (!ticket || !user?.username) return;
+    const currentlyStarred = isTicketStarred(ticket);
+    if (!Array.isArray(ticket.starredBy)) {
+        ticket.starredBy = [];
+    }
+    if (currentlyStarred) {
+        ticket.starredBy = ticket.starredBy.filter(u => u !== user.username);
+    } else {
+        ticket.starredBy.push(user.username);
+    }
+    try {
+        if (currentlyStarred) {
+            await axios.delete(`/api/tickets/${ticket._id}/star`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        } else {
+            await axios.post(`/api/tickets/${ticket._id}/star`, {}, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+        }
+        if (currentFilter.value === 'starred' && currentlyStarred) {
+            tickets.value = tickets.value.filter(t => t._id !== ticket._id);
+        }
+    } catch (err) {
+        if (currentlyStarred) {
+            ticket.starredBy.push(user.username);
+        } else {
+            ticket.starredBy = ticket.starredBy.filter(u => u !== user.username);
+        }
+        toast.error('Favorit konnte nicht aktualisiert werden: ' + (err.response?.data?.message || err.message));
+    }
+};
 
 const fetchTickets = async () => {
     if (debounceTimer) {

@@ -19,6 +19,9 @@
             <router-link to="/?filter=assigned" class="nav-item" :class="{ active: $route.query.filter === 'assigned' }">
                 <wa-icon name="list-task"></wa-icon> <span class="nav-text">Mir zugewiesen</span>
             </router-link>
+            <router-link to="/?filter=starred" class="nav-item" :class="{ active: $route.query.filter === 'starred' }">
+                <wa-icon name="star"></wa-icon> <span class="nav-text">Favoriten</span>
+            </router-link>
             <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
                 <wa-icon name="collection"></wa-icon> <span class="nav-text">Alle Tickets</span>
             </router-link>

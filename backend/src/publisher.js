@@ -76,7 +76,6 @@ async function checkUnpublishedLogs() {
         let nextRun = DELAY;
 
         // Find all logs that are not yet published
-        // We need to check explicitly for null or undefined (or missing)
         const unpublishedLogs = await Log.find({
             $and: [
                 {
@@ -87,73 +86,116 @@ async function checkUnpublishedLogs() {
                 },
                 { action: { $nin: ['created', 'Ticket erstellt'] } }
             ]
-        }).populate('ticket');
+        }).populate('ticket').sort({ timestamp: 1 });
 
         if (unpublishedLogs.length > 0) {
             console.log(`[Publisher] Checking ${unpublishedLogs.length} unpublished logs...`);
         }
 
-        let youngestLogTimestamp = null;
+        // Group unpublished logs by ticket
+        const logsByTicket = new Map();
+        const orphanedLogs = [];
 
         for (const log of unpublishedLogs) {
-            const logTime = new Date(log.timestamp).getTime();
-            const age = now.getTime() - logTime;
+            if (!log.ticket) {
+                orphanedLogs.push(log);
+                continue;
+            }
+            const ticketKey = log.ticket._id.toString();
+            if (!logsByTicket.has(ticketKey)) {
+                logsByTicket.set(ticketKey, []);
+            }
+            logsByTicket.get(ticketKey).push(log);
+        }
 
-            if (age >= DELAY) {
-                // Publish it
-                log.published = now;
-                await log.save();
+        // Mark orphaned logs (e.g. deleted tickets) as published immediately
+        if (orphanedLogs.length > 0) {
+            const orphanIds = orphanedLogs.map(l => l._id);
+            await Log.updateMany({ _id: { $in: orphanIds } }, { $set: { published: now } });
+        }
 
-                let message = `Log published: ${log._id}`;
-                if (log.ticket) {
-                    const ticket = log.ticket;
-                    const link = `${BASE_URL}/tickets/${ticket.id}/view`;
-                    // Format: Type TicketID Title - wurde von Editor bearbeitet
-                    message = `${ticket.type} [${ticket.id}](${link}): ${ticket.title} - wurde von ${log.editor} bearbeitet`;
+        const { getUserSettings } = require('./auth');
+
+        // Process each ticket's bundle of logs
+        for (const [ticketId, ticketLogs] of logsByTicket) {
+            // Find the most recent log timestamp for this ticket (debounce check)
+            const newestLogTime = Math.max(...ticketLogs.map(l => new Date(l.timestamp).getTime()));
+            const ageSinceLastChange = now.getTime() - newestLogTime;
+
+            if (ageSinceLastChange < DELAY) {
+                // The ticket has recent activity; wait until DELAY has passed since the latest change
+                const wait = (newestLogTime + DELAY) - now.getTime();
+                if (wait > 0 && wait < nextRun) {
+                    nextRun = wait;
+                }
+                continue;
+            }
+
+            // Ticket is ready for publication: mark all its unpublished logs as published
+            const logIds = ticketLogs.map(l => l._id);
+            await Log.updateMany({ _id: { $in: logIds } }, { $set: { published: now } });
+
+            const ticket = ticketLogs[0].ticket;
+            const link = `${BASE_URL}/tickets/${ticket.id}/view`;
+
+            // Identify candidate recipients (creator, assignee, and starredBy users)
+            const candidates = new Set();
+            if (ticket.creator) candidates.add(ticket.creator);
+            if (ticket.assignee) candidates.add(ticket.assignee);
+            if (Array.isArray(ticket.starredBy)) {
+                for (const u of ticket.starredBy) {
+                    if (u) candidates.add(u);
+                }
+            }
+
+            for (const targetUser of candidates) {
+                // Filter out actions performed by targetUser themselves
+                const relevantLogs = ticketLogs.filter(l => l.editor !== targetUser);
+                if (relevantLogs.length === 0) {
+                    continue; // targetUser did all these edits themselves
+                }
+
+                const editors = [...new Set(relevantLogs.map(l => l.editor))].join(', ');
+
+                let message;
+                let pushBody;
+
+                if (relevantLogs.length === 1) {
+                    const l = relevantLogs[0];
+                    const actionInfo = l.action && l.action !== 'state_changed' ? ` (${l.action})` : '';
+                    message = `${ticket.type} [${ticket.id}](${link}): ${ticket.title} - wurde von ${l.editor} bearbeitet${actionInfo}`;
+                    pushBody = `${ticket.id}: Wurde von ${l.editor} bearbeitet${actionInfo}`;
+                } else {
+                    const actionBullets = relevantLogs.map(l => `• ${l.action || 'Bearbeitet'} (${l.editor})`).join('\n');
+                    message = `${ticket.type} [${ticket.id}](${link}): ${ticket.title}\n${relevantLogs.length} Änderungen von ${editors}:\n${actionBullets}`;
+                    pushBody = `${ticket.id}: ${relevantLogs.length} Änderungen von ${editors}`;
                 }
 
                 try {
-                    // NEW: Dynamic Notification based on User Settings
-                    const targetUser = log.ticket.creator;
-
-                    // Skip notification if the editor is the creator (don't notify about own changes)
-                    if (log.editor === targetUser) {
-                        console.log(`[Publisher] Skipping notification: editor ${log.editor} is the creator`);
-                        continue;
-                    }
-
-                    const { getUserSettings } = require('./auth');
                     const userSettings = await getUserSettings(targetUser);
-                    const notificationUri = userSettings.notificationUri;
+                    const notificationUri = userSettings?.notificationUri;
 
                     if (notificationUri) {
                         const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
-                        
+
                         for (const targetUri of uris) {
                             const [protocol, address] = targetUri.split(':');
 
-                            // Handle nctalk
                             if (protocol === 'nctalk') {
                                 if (address) {
                                     await nextcloud(address, message);
                                 } else {
                                     console.warn(`[Publisher] Invalid nctalk URI: ${targetUri}`);
                                 }
-                            }
-                            // Handle mailto
-                            else if (protocol === 'mailto') {
+                            } else if (protocol === 'mailto') {
                                 if (address) {
-                                    await sendMail(address, `Ticket Update: ${log.ticket.title}`, message);
+                                    await sendMail(address, `Ticket Update: ${ticket.title}`, message);
                                 } else {
                                     console.warn(`[Publisher] Invalid mailto URI: ${targetUri}`);
                                 }
-                            }
-                            // Handle test
-                            else if (protocol === 'test') {
+                            } else if (protocol === 'test') {
                                 sendTest(targetUser, address, message);
-                            }
-                            // Unknown
-                            else {
+                            } else {
                                 console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
                             }
                         }
@@ -161,36 +203,20 @@ async function checkUnpublishedLogs() {
                         console.log(`[Publisher] No notification URI configured for ${targetUser}`);
                     }
 
-                    // NEW: Web Push Notifications
+                    // Web Push Notification (1 per ticket bundle)
                     await sendPush(targetUser, {
-                        title: `Ticket Update: ${log.ticket.title}`,
-                        body: message,
-                        url: `/tickets/${log.ticket.id}/view`
+                        title: `Ticket Update: ${ticket.title}`,
+                        body: pushBody,
+                        url: `/tickets/${ticket.id}/view`
                     });
 
                 } catch (notifyErr) {
-                    console.error('[Publisher] Notification failed:', notifyErr.message);
-                }
-
-            } else {
-                // Not old enough yet
-                // Calculate when it will be old enough
-                // timeToPublish = logTime + delayLimit
-                // wait = timeToPublish - now
-                const wait = (logTime + DELAY) - now.getTime();
-
-                // Track the earliest wakeup time needed (smallest wait > 0)
-                if (wait > 0 && wait < nextRun) {
-                    nextRun = wait;
+                    console.error(`[Publisher] Notification to ${targetUser} failed:`, notifyErr.message);
                 }
             }
         }
 
-        // Ensure we don't wait effectively 0 or negative time if logic was tight, though logic above prevents it mostly.
-        // Also ensure we wait at least a little bit to avoid hot loops if something is weird, 
-        // e.g. nextRun could be computed as 1ms. 
         if (nextRun < 1000) nextRun = 1000;
-
         return nextRun;
 
     } catch (err) {
