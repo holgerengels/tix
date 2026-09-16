@@ -29,8 +29,8 @@
         <div class="filters">
             <div class="filter-group">
                 <label>Typ:</label>
-                <div style="min-width: 200px;">
-                    <wa-select multiple clearable :value.prop="type" @change="type = $event.target.value; handleTypeChange()">
+                <div class="multi-select-wrapper">
+                    <wa-select multiple clearable size="small" placeholder="Alle" :value.prop="type" @change="type = $event.target.value; handleTypeChange()">
                         <wa-option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</wa-option>
                     </wa-select>
                 </div>
@@ -67,8 +67,8 @@
             </div>
             <div class="filter-group">
                 <label>Label:</label>
-                <div style="min-width: 200px;">
-                    <wa-select multiple clearable :value.prop="badges" @change="badges = $event.target.value; applyAll()">
+                <div class="multi-select-wrapper">
+                    <wa-select multiple clearable size="small" placeholder="Alle" :value.prop="badges" @change="badges = $event.target.value; applyAll()">
                         <wa-option v-for="badge in availableBadges" :key="badge" :value="badge">
                             <wa-badge :variant="getBadgeVariant(badge)" size="small" appearance="filled-outlined" pill>{{ badge }}</wa-badge>
                         </wa-option>
@@ -195,13 +195,13 @@ const availableStatuses = computed(() => {
         return ['offen.*', 'geschlossen.*'];
     }
     const types = Array.isArray(type.value) ? type.value : [type.value];
-    const states = new Set();
+    const states = new Set(['offen.*']);
     types.forEach(t => {
         if (config.value && config.value[t] && config.value[t].states) {
             config.value[t].states.forEach(s => states.add(s.name));
         }
     });
-    if (states.size === 0) return ['offen.*', 'geschlossen.*'];
+    states.add('geschlossen.*');
     return Array.from(states);
 });
 
@@ -263,7 +263,9 @@ const applyAllDebounced = () => {
 };
 
 const handleTypeChange = () => {
-    status.value = '';
+    if (status.value && !availableStatuses.value.includes(status.value)) {
+        status.value = '';
+    }
     applyAll();
 };
 
@@ -579,6 +581,21 @@ defineExpose({ toggleSort });
 
 .saved-filters {
     margin-left: 1rem;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.saved-filter-tag {
+    cursor: pointer;
+    font-size: var(--wa-font-size-s, 0.875rem);
+    transition: all 0.2s;
+}
+
+.saved-filter-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--wa-shadow-small);
 }
 
 .filter-actions {
@@ -602,14 +619,34 @@ defineExpose({ toggleSort });
 .filter-group wa-select,
 .filter-group wa-input {
     min-width: 140px;
+    font-size: var(--wa-font-size-s, 0.875rem);
+}
+
+.filter-group wa-select::part(combobox),
+.filter-group wa-select::part(display-input),
+.filter-group wa-input::part(input) {
+    font-size: var(--wa-font-size-s, 0.875rem);
+}
+
+.filter-group .multi-select-wrapper {
+    min-width: 200px;
+    display: flex;
+}
+
+.filter-group .multi-select-wrapper wa-select {
+    width: 100%;
 }
 
 .filter-group wa-select::part(tag) {
-    font-size: 0.75rem;
+    font-size: var(--wa-font-size-s, 0.875rem);
     font-weight: 500;
     padding: 2px 6px;
     border-radius: 9999px;
     border: 1px solid var(--wa-color-neutral-60);
+}
+
+.filter-group wa-select::part(tag__content) {
+    font-size: var(--wa-font-size-s, 0.875rem);
 }
 
 .columns-dnd-container {
@@ -632,17 +669,18 @@ defineExpose({ toggleSort });
 
 .dnd-header {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
     color: var(--wa-color-neutral-30);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     text-transform: uppercase;
 }
 
 .dnd-list {
-    min-height: 50px;
+    min-height: 40px;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
     flex: 1;
 }
 
@@ -650,10 +688,11 @@ defineExpose({ toggleSort });
     background: white;
     border: 1px solid var(--wa-color-neutral-70);
     border-radius: var(--wa-border-radius-small);
-    padding: 0.5rem 0.75rem;
+    padding: 0.35rem 0.6rem;
+    font-size: var(--wa-font-size-s, 0.875rem);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     cursor: grab;
     user-select: none;
     box-shadow: var(--wa-shadow-x-small);
@@ -669,12 +708,14 @@ defineExpose({ toggleSort });
 
 .drag-handle {
     color: var(--wa-color-neutral-50);
+    font-size: 0.85rem;
     cursor: grab;
 }
 
 .col-label {
     flex: 1;
     font-weight: 500;
+    font-size: var(--wa-font-size-s, 0.875rem);
 }
 
 .sort-toggles {
@@ -686,9 +727,9 @@ defineExpose({ toggleSort });
     background: transparent;
     border: 1px solid transparent;
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 1px 5px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--wa-color-neutral-50);
     transition: all 0.2s;
 }

@@ -166,7 +166,7 @@
     ],
     "states": [
         {
-            "name": "offen",
+            "name": "offen.*",
             "label": "offen (alle)",
             "color": "blue"
         },
