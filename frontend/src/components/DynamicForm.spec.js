@@ -130,3 +130,4 @@ describe('DynamicForm.vue', () => {
         expect(wrapper.find('.error-messages').exists()).toBe(false);
     });
 });
+

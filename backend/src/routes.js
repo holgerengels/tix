@@ -207,7 +207,7 @@ router.get('/config/:type/doc', verifyToken, async (req, res) => {
 
 // Tickets
 router.get('/tickets', verifyToken, async (req, res) => {
-    const { filter, type, status, creator, assignee, dateFrom, dateTo, badge, assignmentType, search } = req.query; // 'my', 'assigned', 'all' AND granular filters
+    const { filter, type, status, action, creator, assignee, dateFrom, dateTo, badge, assignmentType, search } = req.query; // 'my', 'assigned', 'all' AND granular filters
     const user = req.user;
 
     let baseQuery = {};
@@ -286,7 +286,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     // 2. Granular Filters (Applied on top of Base Query)
     let finalQuery = { ...baseQuery };
 
-    // If baseQuery has $or, we must use $and to combine with other filters
+    // 2. Granular Filters
     const sensitiveFilters = [];
 
     if (type) {
@@ -299,6 +299,49 @@ router.get('/tickets', verifyToken, async (req, res) => {
             sensitiveFilters.push({ state: { $regex: `^${prefix}`, $options: 'i' } });
         } else {
             sensitiveFilters.push({ state: status });
+        }
+    }
+    if (action) {
+        const escapedAction = action.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const actionRegex = new RegExp(escapedAction, 'i');
+        const allWorkflows = workflowEngine.getWorkflows();
+        const statesByType = {};
+
+        Object.values(allWorkflows).forEach(wf => {
+            if (wf.workflow) {
+                wf.workflow.forEach(stateBlock => {
+                    const hasAction = (stateBlock.actions || []).some(a => {
+                        const matchesName = (a.name && actionRegex.test(a.name)) || (a.label && actionRegex.test(a.label));
+                        if (!matchesName) return false;
+                        if (filter === 'assigned') {
+                            if (a.optional) return false;
+                            const userGroups = user.groups || [];
+                            const hasGroupAccess = (a.groups || []).some(g => userGroups.includes(g));
+                            const hasCreatorAccess = (a.groups || []).includes('@creator');
+                            const hasAssigneeAccess = (a.groups || []).includes('@assignee');
+                            if (!hasGroupAccess && !hasCreatorAccess && !hasAssigneeAccess) return false;
+                        }
+                        return true;
+                    });
+                    if (hasAction && stateBlock.states && stateBlock.states.length > 0) {
+                        if (!statesByType[wf.type]) {
+                            statesByType[wf.type] = new Set();
+                        }
+                        stateBlock.states.forEach(s => statesByType[wf.type].add(s));
+                    }
+                });
+            }
+        });
+
+        const actionConditions = Object.entries(statesByType).map(([wfType, stateSet]) => ({
+            type: wfType,
+            state: { $in: Array.from(stateSet) }
+        }));
+
+        if (actionConditions.length > 0) {
+            sensitiveFilters.push({ $or: actionConditions });
+        } else {
+            sensitiveFilters.push({ _id: null });
         }
     }
     if (creator) {

@@ -75,6 +75,7 @@
         :required="field.required === true"
         :modelValue="modelValue || ''"
         :hint="field.hint"
+        @change="updateValue"
         @update:modelValue="updateValue"
       />
 

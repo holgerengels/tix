@@ -50,6 +50,10 @@
                 </wa-select>
             </div>
             <div class="filter-group">
+                <label>Aktion:</label>
+                <wa-input type="text" v-model="action" @input="applyAllDebounced" placeholder="Aktion..." size="small" clearable></wa-input>
+            </div>
+            <div class="filter-group">
                 <label>Ersteller:</label>
                 <wa-input type="text" v-model="creator" @input="applyAllDebounced" placeholder="Name..." size="small" clearable></wa-input>
             </div>
@@ -152,6 +156,7 @@ const allColumns = [
 
 const type = ref([]);
 const status = ref('');
+const action = ref('');
 const creator = ref('');
 const assignee = ref('');
 const assignmentType = ref('');
@@ -239,6 +244,7 @@ const emitFetch = () => {
     emit('fetch', {
         type: type.value,
         status: status.value,
+        action: action.value,
         creator: creator.value,
         assignee: assignee.value,
         assignmentType: assignmentType.value,
@@ -287,6 +293,7 @@ const handleDateRangeChange = () => {
 const resetInternalFilters = () => {
     type.value = [];
     status.value = '';
+    action.value = '';
     creator.value = '';
     assignee.value = '';
     assignmentType.value = '';
@@ -306,6 +313,7 @@ const syncFiltersToRoute = () => {
     if (type.value.length) query.type = type.value;
     if (badges.value.length) query.badge = badges.value;
     if (status.value) query.status = status.value;
+    if (action.value) query.action = action.value;
     if (creator.value) query.creator = creator.value;
     if (assignee.value) query.assignee = assignee.value;
     if (assignmentType.value) query.assignmentType = assignmentType.value;
@@ -336,6 +344,7 @@ const initFiltersFromRoute = () => {
     badges.value = parseArray(route.query.badge);
     
     status.value = route.query.status || '';
+    action.value = route.query.action || '';
     creator.value = route.query.creator || '';
     assignee.value = route.query.assignee || '';
     assignmentType.value = route.query.assignmentType || '';
@@ -379,6 +388,7 @@ const saveCurrentFilter = async () => {
         name,
         type: type.value,
         status: status.value,
+        action: action.value,
         creator: creator.value,
         assignee: assignee.value,
         assignmentType: assignmentType.value,
@@ -435,6 +445,7 @@ const deleteSavedFilter = async (index) => {
 const applySavedFilter = (filter) => {
     type.value = filter.type || [];
     status.value = filter.status || '';
+    action.value = filter.action || '';
     creator.value = filter.creator || '';
     assignee.value = filter.assignee || '';
     assignmentType.value = filter.assignmentType || '';

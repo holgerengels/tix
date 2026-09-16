@@ -1,5 +1,5 @@
 <template>
-  <div class="rich-text-editor">
+  <div class="rich-text-editor" ref="wrapperRef" @focusout="onFocusout">
     <label v-if="label" class="editor-label" :class="{ 'label-required': required }">
         {{ label }}
     </label>
@@ -11,7 +11,7 @@
         contentType="html"
         :readOnly="disabled"
         @update:content="onEditorUpdate"
-        @blur="handleBlur"
+        @blur="commitChange"
         toolbar="essential"
       />
     </div>
@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, defineProps, defineEmits } from 'vue';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
@@ -32,8 +32,9 @@ const props = defineProps({
   hint: { type: String, default: '' }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'change']);
 
+const wrapperRef = ref(null);
 const quillEditor = ref(null);
 const editorContent = ref(props.modelValue || '');
 const latestHtml = ref(props.modelValue || '');
@@ -45,20 +46,46 @@ const normalizeHtml = (html) => {
   return html;
 };
 
+// Keep latest input in local state, but do not emit update:modelValue on every keystroke
+// (protects Safari on iOS from resetting composition and dropping typed letters)
 const onEditorUpdate = (content) => {
   latestHtml.value = content || '';
 };
 
-const handleBlur = () => {
+const commitChange = () => {
   let html = latestHtml.value;
   if (quillEditor.value && typeof quillEditor.value.getHTML === 'function') {
     html = quillEditor.value.getHTML();
   }
   const normalized = normalizeHtml(html);
+  latestHtml.value = normalized;
   if (normalized !== normalizeHtml(props.modelValue)) {
     emit('update:modelValue', normalized);
+    emit('change', normalized);
   }
 };
+
+const onFocusout = (e) => {
+  // If focus moved within the RichTextEditor (e.g. to the toolbar), do not commit yet
+  if (wrapperRef.value && e.relatedTarget && wrapperRef.value.contains(e.relatedTarget)) {
+    return;
+  }
+  commitChange();
+};
+
+const onPointerDownOutside = (e) => {
+  if (wrapperRef.value && !wrapperRef.value.contains(e.target)) {
+    commitChange();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDownOutside, true);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDownOutside, true);
+});
 
 watch(() => props.modelValue, (newVal) => {
   const incoming = newVal || '';

@@ -132,3 +132,48 @@ describe('Ticket Fulltext Search', () => {
         expect(res.body.length).toBe(0);
     });
 });
+
+describe('Ticket Filtering via Action', () => {
+    beforeEach(async () => {
+        // Hausmeisterauftrag:
+        // 'offen.neu' has actions: 'genehmigen', 'ablehnen', 'stornieren'
+        // 'offen.genehmigt' has actions: 'bearbeiten', 'stornieren'
+        // 'offen.inArbeit' has actions: 'bearbeiten'
+        // 'geschlossen.ok' has no active actions
+        await Ticket.create([
+            { id: 'ACT-1', type: 'Hausmeisterauftrag', title: 'Ticket Neu', creator: 'lehrer1', state: 'offen.neu' },
+            { id: 'ACT-2', type: 'Hausmeisterauftrag', title: 'Ticket In Arbeit', creator: 'lehrer1', state: 'offen.inArbeit' },
+            { id: 'ACT-3', type: 'Hausmeisterauftrag', title: 'Ticket Genehmigt', creator: 'lehrer1', state: 'offen.genehmigt' },
+            { id: 'ACT-4', type: 'Hausmeisterauftrag', title: 'Ticket Erledigt', creator: 'lehrer1', state: 'geschlossen.ok' }
+        ]);
+    });
+
+    it('should find tickets that support the given action in their current state', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&action=genehmigen')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(1);
+        expect(res.body[0].id).toBe('ACT-1');
+    });
+
+    it('should find multiple tickets if multiple states support the action', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&action=bearbeiten')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(2);
+        const ids = res.body.map(t => t.id);
+        expect(ids).toContain('ACT-2');
+        expect(ids).toContain('ACT-3');
+    });
+
+    it('should return empty list when no workflow supports the action', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&action=unbekannteAktion')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        expect(res.status).toBe(200);
+        expect(res.body.length).toBe(0);
+    });
+});
+

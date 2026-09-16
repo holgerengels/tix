@@ -26,10 +26,10 @@
         placeholder="Kommentar schreiben..." 
         rows="2"
         resize="auto"
-        @keydown.enter.exact.prevent="sendComment"
+        @keydown.enter.exact.prevent="() => sendComment()"
         :disabled="sending"
       ></wa-textarea>
-      <wa-button size="small" variant="primary" @click="sendComment" :loading="sending" :disabled="!newComment.trim()">
+      <wa-button size="small" variant="primary" @click="() => sendComment()" :loading="sending" :disabled="!newComment.trim()">
         Senden
       </wa-button>
     </div>
@@ -58,6 +58,26 @@ const textareaRef = ref(null);
 
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
+const focusTextarea = async () => {
+    await nextTick();
+    if (textareaRef.value) {
+        if (typeof textareaRef.value.focus === 'function') {
+            textareaRef.value.focus();
+        }
+        const inner = textareaRef.value.shadowRoot?.querySelector('textarea');
+        inner?.focus();
+    }
+    setTimeout(() => {
+        if (textareaRef.value) {
+            if (typeof textareaRef.value.focus === 'function') {
+                textareaRef.value.focus();
+            }
+            const inner = textareaRef.value.shadowRoot?.querySelector('textarea');
+            inner?.focus();
+        }
+    }, 50);
+};
+
 const fetchComments = async () => {
     if (!props.ticket || !props.ticket._id) return;
     
@@ -78,10 +98,11 @@ const fetchComments = async () => {
 const sendComment = async (silent = false) => {
     if (!newComment.value.trim()) return;
     
+    const isSilent = silent === true;
     sending.value = true;
     try {
         const res = await axios.post(`/api/tickets/${props.ticket._id}/comments`, {
-            text: newComment.value, silent
+            text: newComment.value, silent: isSilent
         }, {
              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
@@ -89,12 +110,11 @@ const sendComment = async (silent = false) => {
         comments.value.push(res.data);
         newComment.value = '';
         await scrollToBottom();
-        await nextTick();
-        textareaRef.value?.focus();
     } catch (err) {
         toast.error('Fehler beim Senden: ' + (err.response?.data?.message || err.message));
     } finally {
         sending.value = false;
+        await focusTextarea();
     }
 };
 
