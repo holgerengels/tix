@@ -83,6 +83,34 @@ describe('Ticket Filtering via Status', () => {
         expect(tickets.length).toBe(1);
         expect(tickets[0].title).toBe('Ticket 1');
     });
+
+    it('should find tickets matching multiple exact statuses', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&type=Hausmeisterauftrag&status=offen.neu&status=offen.inArbeit')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        
+        expect(res.status).toBe(200);
+        const tickets = res.body;
+        expect(tickets.length).toBe(2);
+        const titles = tickets.map(t => t.title);
+        expect(titles).toContain('Ticket 1');
+        expect(titles).toContain('Ticket 2');
+        expect(titles).not.toContain('Ticket 4');
+    });
+
+    it('should find tickets matching a mix of wildcard and exact status', async () => {
+        const res = await request(app)
+            .get('/api/tickets?filter=admin&type=Hausmeisterauftrag&status=geschlossen.*&status=offen.neu')
+            .set('Authorization', `Bearer ${tokens.admin}`);
+        
+        expect(res.status).toBe(200);
+        const tickets = res.body;
+        expect(tickets.length).toBe(2);
+        const titles = tickets.map(t => t.title);
+        expect(titles).toContain('Ticket 1');
+        expect(titles).toContain('Ticket 4');
+        expect(titles).not.toContain('Ticket 2');
+    });
 });
 
 describe('Ticket Fulltext Search', () => {

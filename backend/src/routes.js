@@ -314,11 +314,33 @@ router.get('/tickets', verifyToken, async (req, res) => {
         sensitiveFilters.push({ type: { $in: types } });
     }
     if (status) {
-        if (status.endsWith('.*')) {
-            const prefix = status.replace('.*', '');
-            sensitiveFilters.push({ state: { $regex: `^${prefix}`, $options: 'i' } });
-        } else {
-            sensitiveFilters.push({ state: status });
+        const statuses = Array.isArray(status) ? status : [status];
+        const exactStates = [];
+        const regexConditions = [];
+
+        statuses.forEach(s => {
+            if (typeof s === 'string' && s.endsWith('.*')) {
+                const prefix = s.replace('.*', '');
+                regexConditions.push({ state: { $regex: `^${prefix}`, $options: 'i' } });
+            } else if (s) {
+                exactStates.push(s);
+            }
+        });
+
+        const orClauses = [];
+        if (exactStates.length === 1) {
+            orClauses.push({ state: exactStates[0] });
+        } else if (exactStates.length > 1) {
+            orClauses.push({ state: { $in: exactStates } });
+        }
+        if (regexConditions.length > 0) {
+            orClauses.push(...regexConditions);
+        }
+
+        if (orClauses.length === 1) {
+            sensitiveFilters.push(orClauses[0]);
+        } else if (orClauses.length > 1) {
+            sensitiveFilters.push({ $or: orClauses });
         }
     }
     if (action) {

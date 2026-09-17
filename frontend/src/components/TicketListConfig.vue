@@ -10,6 +10,12 @@
             class="saved-filter-tag"
             variant="brand"
         >
+            <wa-icon 
+                :name="filter.pinned ? 'pin-angle-fill' : 'pin-angle'"
+                :style="{ cursor: 'pointer', marginRight: '0.35rem', fontSize: '0.95rem', color: filter.pinned ? 'var(--wa-color-warning-50, #f59e0b)' : 'inherit', opacity: filter.pinned ? '1' : '0.6' }"
+                :title="filter.pinned ? 'Aus Navigation lösen' : 'In Navigation anheften'"
+                @click.stop.prevent="togglePin(filter)"
+            ></wa-icon>
             {{ filter.name }}
         </wa-tag>
     </div>
@@ -30,39 +36,41 @@
             <div class="filter-group">
                 <label>Typ:</label>
                 <div class="multi-select-wrapper">
-                    <wa-select multiple clearable size="small" placeholder="Alle" :value.prop="type" @change="type = $event.target.value; handleTypeChange()">
+                    <wa-select multiple with-clear size="small" placeholder="Alle" :value.prop="type" @change="type = $event.target.value; handleTypeChange()">
                         <wa-option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</wa-option>
                     </wa-select>
                 </div>
             </div>
             <div class="filter-group">
                 <label>Status:</label>
-                <wa-select clearable :value.prop="status" @change="status = $event.target.value; applyAll()" placeholder="Status" size="small">
-                    <wa-option value=""></wa-option>
-                    <wa-option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</wa-option>
-                </wa-select>
+                <div class="multi-select-wrapper">
+                    <wa-select multiple with-clear size="small" placeholder="Alle" :value.prop="status" @change="status = $event.target.value; applyAll()">
+                        <wa-option v-for="s in availableStatuses" :key="s" :value="s">{{ stateTranslations[s] || s }}</wa-option>
+                    </wa-select>
+                </div>
             </div>
             <div class="filter-group" v-if="$route.query.filter === 'assigned' || $route.query.filter === 'all'">
                 <label>Zuweisung:</label>
-                <wa-select clearable :value.prop="assignmentType" @change="assignmentType = $event.target.value; applyAll()" size="small" placeholder="Alle">
+                <wa-select with-clear :value.prop="assignmentType" @change="assignmentType = $event.target.value; applyAll()" size="small" placeholder="Alle">
+                    <wa-option value="">Alle</wa-option>
                     <wa-option value="personal">Nur persönlich</wa-option>
                     <wa-option value="group">Persönlich oder Gruppe</wa-option>
                 </wa-select>
             </div>
             <div class="filter-group">
                 <label>Aktion:</label>
-                <wa-input type="text" v-model="action" @input="applyAllDebounced" placeholder="Aktion..." size="small" clearable></wa-input>
+                <wa-input type="text" v-model="action" @input="applyAllDebounced" placeholder="Aktion..." size="small" with-clear></wa-input>
             </div>
             <div class="filter-group">
                 <label>Ersteller:</label>
-                <wa-input type="text" v-model="creator" @input="applyAllDebounced" placeholder="Name..." size="small" clearable></wa-input>
+                <wa-input type="text" v-model="creator" @input="applyAllDebounced" placeholder="Name..." size="small" with-clear></wa-input>
             </div>
             <div class="filter-group">
                 <label>Zuständig:</label>
-                <wa-input type="text" v-model="assignee" @input="applyAllDebounced" placeholder="Name..." size="small" clearable></wa-input>
+                <wa-input type="text" v-model="assignee" @input="applyAllDebounced" placeholder="Name..." size="small" with-clear></wa-input>
             </div>
             <div class="filter-group">
-                <wa-select :value.prop="dateRange" @change="dateRange = $event.target.value; handleDateRangeChange()" placeholder="Zeitraum" size="small" clearable>
+                <wa-select with-clear :value.prop="dateRange" @change="dateRange = $event.target.value; handleDateRangeChange()" placeholder="Zeitraum" size="small">
                     <wa-option value="">Zeitraum wählen</wa-option>
                     <wa-option value="week">Letzte Woche</wa-option>
                     <wa-option value="month">Letzter Monat</wa-option>
@@ -72,7 +80,7 @@
             <div class="filter-group">
                 <label>Label:</label>
                 <div class="multi-select-wrapper">
-                    <wa-select multiple clearable size="small" placeholder="Alle" :value.prop="badges" @change="badges = $event.target.value; applyAll()">
+                    <wa-select multiple with-clear size="small" placeholder="Alle" :value.prop="badges" @change="badges = $event.target.value; applyAll()">
                         <wa-option v-for="badge in availableBadges" :key="badge" :value="badge">
                             <wa-badge :variant="getBadgeVariant(badge)" size="small" appearance="filled-outlined" pill>{{ badge }}</wa-badge>
                         </wa-option>
@@ -132,11 +140,13 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { useWorkflowStore } from '../stores/workflow';
+import { useViewsStore } from '../stores/views';
 import { format, subDays, subMonths } from 'date-fns';
 import { prompt, confirm } from '../composables/useToast';
 import draggable from 'vuedraggable';
 
 const workflow = useWorkflowStore();
+const viewsStore = useViewsStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -155,7 +165,7 @@ const allColumns = [
 ];
 
 const type = ref([]);
-const status = ref('');
+const status = ref([]);
 const action = ref('');
 const creator = ref('');
 const assignee = ref('');
@@ -169,10 +179,9 @@ const visibleColumns = ref([...allColumns]);
 const availableColumns = ref([]);
 const sort = ref('');
 
-const savedFilters = ref([]);
-
 const config = computed(() => workflow.config);
 const currentFilter = computed(() => route.query.filter || 'my');
+const savedFilters = computed(() => viewsStore.getFilters(currentFilter.value));
 
 const availableTypes = computed(() => {
     return config.value ? Object.keys(config.value) : [];
@@ -254,10 +263,16 @@ const emitFetch = () => {
     });
 };
 
+let isInternalUpdate = false;
+
 const applyAll = () => {
+    isInternalUpdate = true;
     syncFiltersToRoute();
     emitUpdate();
     emitFetch();
+    setTimeout(() => {
+        isInternalUpdate = false;
+    }, 150);
 };
 
 let debounceTimer = null;
@@ -269,8 +284,8 @@ const applyAllDebounced = () => {
 };
 
 const handleTypeChange = () => {
-    if (status.value && !availableStatuses.value.includes(status.value)) {
-        status.value = '';
+    if (status.value && status.value.length) {
+        status.value = status.value.filter(s => availableStatuses.value.includes(s));
     }
     applyAll();
 };
@@ -292,7 +307,7 @@ const handleDateRangeChange = () => {
 
 const resetInternalFilters = () => {
     type.value = [];
-    status.value = '';
+    status.value = [];
     action.value = '';
     creator.value = '';
     assignee.value = '';
@@ -312,7 +327,7 @@ const syncFiltersToRoute = () => {
     
     if (type.value.length) query.type = type.value;
     if (badges.value.length) query.badge = badges.value;
-    if (status.value) query.status = status.value;
+    if (status.value.length) query.status = status.value;
     if (action.value) query.action = action.value;
     if (creator.value) query.creator = creator.value;
     if (assignee.value) query.assignee = assignee.value;
@@ -342,8 +357,7 @@ const initFiltersFromRoute = () => {
 
     type.value = parseArray(route.query.type);
     badges.value = parseArray(route.query.badge);
-    
-    status.value = route.query.status || '';
+    status.value = parseArray(route.query.status);
     action.value = route.query.action || '';
     creator.value = route.query.creator || '';
     assignee.value = route.query.assignee || '';
@@ -365,29 +379,21 @@ const initFiltersFromRoute = () => {
     }
 };
 
-const allSavedFilters = ref({});
-
-const loadSavedFilters = async () => {
-    try {
-        const res = await axios.get('/api/settings/filters', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        allSavedFilters.value = res.data || {};
-        savedFilters.value = allSavedFilters.value[currentFilter.value] || [];
-    } catch (e) {
-        console.error('Error loading saved filters:', e);
-        savedFilters.value = [];
-    }
-};
-
 const saveCurrentFilter = async () => {
     const name = await prompt('Bitte gib einen Namen für diese Ansicht ein:');
     if (!name) return;
 
+    const existingFilter = savedFilters.value.find(f => f.name === name);
+    if (existingFilter) {
+        if (!await confirm(`Eine Ansicht mit dem Namen "${name}" existiert bereits. Überschreiben?`)) {
+            return;
+        }
+    }
+
     const newFilter = {
         name,
         type: type.value,
-        status: status.value,
+        status: [...status.value],
         action: action.value,
         creator: creator.value,
         assignee: assignee.value,
@@ -397,31 +403,12 @@ const saveCurrentFilter = async () => {
         dateTo: dateTo.value,
         badges: [...badges.value],
         sort: sort.value,
-        cols: visibleColumns.value.map(c => c.id).join(',')
+        cols: visibleColumns.value.map(c => c.id).join(','),
+        pinned: existingFilter ? existingFilter.pinned : false
     };
 
-    if (!allSavedFilters.value[currentFilter.value]) {
-        allSavedFilters.value[currentFilter.value] = [];
-    }
-
-    const currentFilters = allSavedFilters.value[currentFilter.value];
-    const existingIndex = currentFilters.findIndex(f => f.name === name);
-    if (existingIndex >= 0) {
-        if (await confirm(`Eine Ansicht mit dem Namen "${name}" existiert bereits. Überschreiben?`)) {
-            currentFilters[existingIndex] = newFilter;
-        } else {
-            return;
-        }
-    } else {
-        currentFilters.push(newFilter);
-    }
-
-    savedFilters.value = [...currentFilters];
-
     try {
-        await axios.post('/api/settings/filters', allSavedFilters.value, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await viewsStore.saveFilter(currentFilter.value, newFilter);
     } catch (e) {
         console.error('Error saving filter to backend:', e);
     }
@@ -429,22 +416,25 @@ const saveCurrentFilter = async () => {
 
 const deleteSavedFilter = async (index) => {
     if (await confirm('Soll die Ansicht wirklich gelöscht werden?')) {
-        const currentFilters = allSavedFilters.value[currentFilter.value] || [];
-        currentFilters.splice(index, 1);
-        savedFilters.value = [...currentFilters];
         try {
-            await axios.post('/api/settings/filters', allSavedFilters.value, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            await viewsStore.deleteFilter(currentFilter.value, index);
         } catch (e) {
             console.error('Error deleting filter from backend:', e);
         }
     }
 };
 
+const togglePin = async (filter) => {
+    try {
+        await viewsStore.togglePin(currentFilter.value, filter.name);
+    } catch (e) {
+        console.error('Error toggling pin:', e);
+    }
+};
+
 const applySavedFilter = (filter) => {
     type.value = filter.type || [];
-    status.value = filter.status || '';
+    status.value = filter.status ? (Array.isArray(filter.status) ? [...filter.status] : [filter.status]) : [];
     action.value = filter.action || '';
     creator.value = filter.creator || '';
     assignee.value = filter.assignee || '';
@@ -471,17 +461,17 @@ const applySavedFilter = (filter) => {
 
 onMounted(() => {
     initFiltersFromRoute();
-    loadSavedFilters();
+    viewsStore.loadSavedFilters();
     emitUpdate();
     emitFetch();
 });
 
-watch(currentFilter, () => {
+watch(() => route.query, () => {
+    if (isInternalUpdate) return;
     initFiltersFromRoute();
-    savedFilters.value = allSavedFilters.value[currentFilter.value] || [];
     emitUpdate();
     emitFetch();
-});
+}, { deep: true });
 
 const toggleSort = (colId) => {
     if (sort.value === colId) {

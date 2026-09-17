@@ -13,18 +13,90 @@
             <router-link to="/tickets/new" class="nav-item" :class="{ active: $route.path && $route.path.includes('/new') }">
                 <wa-icon name="plus-circle"></wa-icon> <span class="nav-text">Neues Ticket</span>
             </router-link>
-            <router-link to="/?filter=my" class="nav-item" :class="{ active: $route.query.filter === 'my' || (!$route.query.filter && $route.path === '/') }">
+
+            <!-- Meine Tickets -->
+            <router-link 
+                to="/?filter=my" 
+                class="nav-item" 
+                :class="{ active: ($route.query.filter === 'my' || (!$route.query.filter && $route.path === '/')) && !viewsStore.hasActivePinnedFilter('my', $route) }"
+            >
                 <wa-icon name="person"></wa-icon> <span class="nav-text">Meine Tickets</span>
             </router-link>
-            <router-link to="/?filter=assigned" class="nav-item" :class="{ active: $route.query.filter === 'assigned' }">
+            <div v-if="viewsStore.getPinned('my').length > 0" class="nav-sub-items">
+                <router-link 
+                    v-for="f in viewsStore.getPinned('my')" 
+                    :key="f.name"
+                    :to="{ path: '/', query: viewsStore.filterToQuery(f, 'my') }"
+                    class="nav-sub-item"
+                    :class="{ active: viewsStore.isFilterActive(f, 'my', $route) }"
+                    :title="f.name"
+                >
+                    <wa-icon name="pin-angle-fill"></wa-icon> <span class="nav-text">{{ f.name }}</span>
+                </router-link>
+            </div>
+
+            <!-- Mir zugewiesen -->
+            <router-link 
+                to="/?filter=assigned" 
+                class="nav-item" 
+                :class="{ active: $route.query.filter === 'assigned' && !viewsStore.hasActivePinnedFilter('assigned', $route) }"
+            >
                 <wa-icon name="list-task"></wa-icon> <span class="nav-text">Mir zugewiesen</span>
             </router-link>
-            <router-link to="/?filter=starred" class="nav-item" :class="{ active: $route.query.filter === 'starred' }">
+            <div v-if="viewsStore.getPinned('assigned').length > 0" class="nav-sub-items">
+                <router-link 
+                    v-for="f in viewsStore.getPinned('assigned')" 
+                    :key="f.name"
+                    :to="{ path: '/', query: viewsStore.filterToQuery(f, 'assigned') }"
+                    class="nav-sub-item"
+                    :class="{ active: viewsStore.isFilterActive(f, 'assigned', $route) }"
+                    :title="f.name"
+                >
+                    <wa-icon name="pin-angle-fill"></wa-icon> <span class="nav-text">{{ f.name }}</span>
+                </router-link>
+            </div>
+
+            <!-- Favoriten -->
+            <router-link 
+                to="/?filter=starred" 
+                class="nav-item" 
+                :class="{ active: $route.query.filter === 'starred' && !viewsStore.hasActivePinnedFilter('starred', $route) }"
+            >
                 <wa-icon name="star"></wa-icon> <span class="nav-text">Favoriten</span>
             </router-link>
-            <router-link to="/?filter=all" class="nav-item" :class="{ active: $route.query.filter === 'all' }">
+            <div v-if="viewsStore.getPinned('starred').length > 0" class="nav-sub-items">
+                <router-link 
+                    v-for="f in viewsStore.getPinned('starred')" 
+                    :key="f.name"
+                    :to="{ path: '/', query: viewsStore.filterToQuery(f, 'starred') }"
+                    class="nav-sub-item"
+                    :class="{ active: viewsStore.isFilterActive(f, 'starred', $route) }"
+                    :title="f.name"
+                >
+                    <wa-icon name="pin-angle-fill"></wa-icon> <span class="nav-text">{{ f.name }}</span>
+                </router-link>
+            </div>
+
+            <!-- Alle Tickets -->
+            <router-link 
+                to="/?filter=all" 
+                class="nav-item" 
+                :class="{ active: $route.query.filter === 'all' && !viewsStore.hasActivePinnedFilter('all', $route) }"
+            >
                 <wa-icon name="collection"></wa-icon> <span class="nav-text">Alle Tickets</span>
             </router-link>
+            <div v-if="viewsStore.getPinned('all').length > 0" class="nav-sub-items">
+                <router-link 
+                    v-for="f in viewsStore.getPinned('all')" 
+                    :key="f.name"
+                    :to="{ path: '/', query: viewsStore.filterToQuery(f, 'all') }"
+                    class="nav-sub-item"
+                    :class="{ active: viewsStore.isFilterActive(f, 'all', $route) }"
+                    :title="f.name"
+                >
+                    <wa-icon name="pin-angle-fill"></wa-icon> <span class="nav-text">{{ f.name }}</span>
+                </router-link>
+            </div>
             <router-link to="/logs" class="nav-item" :class="{ active: $route.path === '/logs' }">
                 <wa-icon name="journal-text"></wa-icon> <span class="nav-text">Protokoll</span>
             </router-link>
@@ -68,6 +140,7 @@ import { useAuthStore } from './stores/auth';
 import { useUiStore } from './stores/ui';
 import { useUsersStore } from './stores/users';
 import { useWorkflowStore } from './stores/workflow';
+import { useViewsStore } from './stores/views';
 import LoginOverlay from './components/LoginOverlay.vue';
 import { useRegisterSW } from 'virtual:pwa-register/vue';
 import { toast } from './composables/useToast';
@@ -77,6 +150,7 @@ const auth = useAuthStore();
 const ui = useUiStore();
 const usersStore = useUsersStore();
 const workflow = useWorkflowStore();
+const viewsStore = useViewsStore();
 
 // PWA Update Logic — auto-update + toast notification after update
 useRegisterSW({
@@ -160,17 +234,24 @@ const checkDevMode = async () => {
     }
 }
 
-onMounted(checkDevMode);
+onMounted(() => {
+    checkDevMode();
+    if (auth.isAuthenticated) {
+        viewsStore.loadSavedFilters();
+    }
+});
 
 // Re-check dev mode on login, re-subscribe push, navigate home on logout
 watch(() => auth.isAuthenticated, (newVal, oldVal) => {
     if (newVal) {
         checkDevMode();
+        viewsStore.loadSavedFilters();
         // Auto-re-subscribe push notifications if permission is granted but subscription was lost
         resubscribePush();
     } else if (oldVal) {
-        // User logged out — reset workflow config and go to list
+        // User logged out — reset workflow config, views and go to list
         workflow.reset();
+        viewsStore.reset();
         router.push('/');
     }
 }, { immediate: true });
@@ -330,6 +411,49 @@ body {
 }
 .nav-item.active wa-icon {
     opacity: 1;
+}
+
+.nav-sub-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1.25rem 0.35rem 2.5rem;
+    color: var(--wa-color-neutral-40);
+    text-decoration: none;
+    font-size: 0.825rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-sub-item:hover {
+    background: var(--wa-color-brand-90);
+    color: var(--wa-color-brand-20);
+    transform: translateX(2px);
+}
+
+.nav-sub-item.active {
+    background: var(--wa-color-brand-85);
+    color: var(--wa-color-brand-15);
+    font-weight: 600;
+}
+
+.nav-sub-item wa-icon {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.nav-sub-item.active wa-icon {
+    opacity: 1;
+    color: var(--wa-color-warning-50, #f59e0b);
 }
 
 .footer {
