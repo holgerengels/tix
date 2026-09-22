@@ -107,11 +107,11 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
+import { useTicketsStore } from '../stores/tickets';
 import TicketListConfig from '../components/TicketListConfig.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
@@ -120,6 +120,7 @@ import { useTicketAccess } from '../composables/useTicketAccess';
 const ui = useUiStore();
 const workflow = useWorkflowStore();
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -242,15 +243,7 @@ const toggleTicketStar = async (ticket) => {
         ticket.starredBy.push(user.username);
     }
     try {
-        if (currentlyStarred) {
-            await axios.delete(`/api/tickets/${ticket._id}/star`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        } else {
-            await axios.post(`/api/tickets/${ticket._id}/star`, {}, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        }
+        await ticketsStore.toggleStar(ticket._id, currentlyStarred);
         if (currentFilter.value === 'starred' && currentlyStarred) {
             tickets.value = tickets.value.filter(t => t._id !== ticket._id);
         }
@@ -281,16 +274,13 @@ const fetchTickets = async () => {
             const term = searchTerm.value.trim();
             if (term) params.search = term;
 
-            const [_, res] = await Promise.all([
+            const [_, data] = await Promise.all([
                 workflow.fetchConfig(),
-                axios.get('/api/tickets', {
-                    params: params,
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                })
+                ticketsStore.fetchTickets(params)
             ]);
             
             if (requestId === lastRequestId) {
-                tickets.value = res.data;
+                tickets.value = data;
                 loading.value = false;
             }
         } catch (err) {
@@ -380,9 +370,7 @@ const executeAction = async (ticket, action) => {
             }
         };
 
-        await axios.post(`/api/tickets/${ticket._id}/action`, payload, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.executeAction(ticket._id, payload);
         
         // Refresh list
         fetchTickets();

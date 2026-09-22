@@ -63,9 +63,9 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
+import { useTicketsStore } from '../stores/tickets';
 
 const props = defineProps({
   ticketId: {
@@ -92,6 +92,7 @@ const loading = ref(false);
 const error = ref(null);
 
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 
 const drawerTitle = computed(() => {
   if (props.ticketDisplayId) {
@@ -116,10 +117,8 @@ const fetchLogs = async () => {
   error.value = null;
 
   try {
-    const res = await axios.get(`/api/tickets/${props.ticketId}/logs`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    logs.value = res.data || [];
+    const data = await ticketsStore.fetchTicketLogs(props.ticketId);
+    logs.value = data || [];
   } catch (err) {
     console.error('Failed to fetch ticket logs:', err);
     error.value = 'Fehler beim Laden des Protokolls.';

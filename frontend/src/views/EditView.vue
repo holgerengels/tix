@@ -89,17 +89,18 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useUsersStore } from '../stores/users';
 import { useWorkflowStore } from '../stores/workflow';
+import { useTicketsStore } from '../stores/tickets';
 import { toast, confirm } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const usersStore = useUsersStore();
 const workflow = useWorkflowStore();
+const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketLogDrawer from '../components/TicketLogDrawer.vue';
 import { validateTicket } from '../utils/evaluation';
@@ -137,16 +138,13 @@ const fetchData = async () => {
     loading.value = true;
     error.value = null;
     try {
-        const [_, ticketRes] = await Promise.all([
+        const [_, loadedTicket] = await Promise.all([
             workflow.fetchConfig(),
-            axios.get('/api/tickets', {
-                params: { id: route.params.id },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            })
+            ticketsStore.fetchTicket(route.params.id)
         ]);
         
-        if (ticketRes.data && ticketRes.data.length > 0) {
-            ticket.value = ticketRes.data[0];
+        if (loadedTicket) {
+            ticket.value = loadedTicket;
             prepareForm();
         } else {
             error.value = "Ticket nicht gefunden.";
@@ -211,12 +209,9 @@ const save = async () => {
             formData: ticketData.value
         };
 
-        await axios.post(`/api/tickets/${ticket.value._id}/action`, payload, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.executeAction(ticket.value._id, payload);
         
         isDirty.value = false; // Reset dirty flag so we can navigate
-        isDirty.value = false; 
         if (window.history.length > 1) {
              router.back();
         } else {

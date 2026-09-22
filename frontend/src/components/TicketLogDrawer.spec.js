@@ -68,7 +68,7 @@ describe('TicketLogDrawer.vue', () => {
     });
 
     await vi.waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith('/api/tickets/ticket123/logs', expect.any(Object));
+      expect(axios.get).toHaveBeenCalledWith('/api/tickets/ticket123/logs');
       expect(wrapper.findAll('.timeline-item').length).toBe(2);
     });
 

@@ -18,13 +18,14 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
 import { format } from 'date-fns';
+import { useTicketsStore } from '../stores/tickets';
 
 const props = defineProps({
   ticketId: { type: String, required: true }
 });
 
+const ticketsStore = useTicketsStore();
 const logs = ref([]);
 const loading = ref(false);
 
@@ -34,10 +35,7 @@ const fetchLogs = async () => {
     if (!props.ticketId) return;
     loading.value = true;
     try {
-        const res = await axios.get(`/api/tickets/${props.ticketId}/logs`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        logs.value = res.data;
+        logs.value = await ticketsStore.fetchTicketLogs(props.ticketId);
     } catch (err) {
         console.error('Failed to load logs', err);
     } finally {

@@ -160,11 +160,11 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
+import { useTicketsStore } from '../stores/tickets';
 import { useTicketAccess } from '../composables/useTicketAccess';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
@@ -175,6 +175,7 @@ import { toast, confirm, prompt } from '../composables/useToast';
 const ui = useUiStore();
 const workflow = useWorkflowStore();
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -236,15 +237,7 @@ const toggleStar = async () => {
         ticket.value.starredBy.push(user.username);
     }
     try {
-        if (currentlyStarred) {
-            await axios.delete(`/api/tickets/${ticket.value._id}/star`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        } else {
-            await axios.post(`/api/tickets/${ticket.value._id}/star`, {}, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-        }
+        await ticketsStore.toggleStar(ticket.value._id, currentlyStarred);
     } catch (err) {
         if (currentlyStarred) {
             ticket.value.starredBy.push(user.username);
@@ -283,16 +276,13 @@ const fetchData = async () => {
     error.value = null;
     try {
         // Fetch Config and Ticket in parallel
-        const [_, ticketRes] = await Promise.all([
+        const [_, loadedTicket] = await Promise.all([
             workflow.fetchConfig(),
-            axios.get('/api/tickets', {
-                params: { id: route.params.id },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            })
+            ticketsStore.fetchTicket(route.params.id)
         ]);
         
-        if (ticketRes.data && ticketRes.data.length > 0) {
-            ticket.value = ticketRes.data[0];
+        if (loadedTicket) {
+            ticket.value = loadedTicket;
             prepareForm();
             checkUndo(); 
         } else {
@@ -309,10 +299,7 @@ const fetchData = async () => {
 
 const checkUndo = async () => {
     try {
-        const res = await axios.get(`/api/tickets/${ticket.value._id}/undoable`, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        undoAction.value = res.data;
+        undoAction.value = await ticketsStore.checkUndoable(ticket.value._id);
     } catch (err) {
         console.error("Error checking undo:", err);
     }
@@ -322,10 +309,7 @@ const executeUndo = async () => {
     if (!await confirm('Willst du die letzte Aktion wirklich rückgängig machen?')) return;
     
     try {
-        await axios.post(`/api/tickets/${ticket.value._id}/undo`, {}, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        // Reload data
+        await ticketsStore.executeUndo(ticket.value._id);
         fetchData();
     } catch (err) {
         toast.error('Undo fehlgeschlagen: ' + (err.response?.data?.message || err.message));
@@ -340,9 +324,7 @@ const deleteTicket = async () => {
     if (!await confirm('Bist Du sicher, dass Du dieses Ticket löschen möchtest?')) return;
     
     try {
-        await axios.delete(`/api/tickets/${ticket.value._id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.deleteTicket(ticket.value._id);
         router.push('/');
     } catch (err) {
         toast.error('Löschen fehlgeschlagen: ' + (err.response?.data?.message || err.message));
@@ -405,9 +387,7 @@ const executeActionDirect = async (ticketObj, action) => {
             }
         };
 
-        await axios.post(`/api/tickets/${ticketObj._id}/action`, payload, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.executeAction(ticketObj._id, payload);
         
         // Refresh data
         fetchData();

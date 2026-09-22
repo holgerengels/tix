@@ -58,13 +58,14 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
-import axios from 'axios';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
+import { useTicketsStore } from '../stores/tickets';
 import { toast, confirm } from '../composables/useToast';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
+const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
 import { validateTicket, evaluateTemplate } from '../utils/evaluation';
@@ -139,12 +140,9 @@ onMounted(async () => {
     // Load parent ticket data for subticket mapping
     if (parentTicket.value) {
         try {
-            const res = await axios.get('/api/tickets', {
-                params: { id: parentTicket.value },
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            if (res.data && res.data.length > 0) {
-                parentTicketData.value = res.data[0];
+            const parent = await ticketsStore.fetchTicket(parentTicket.value);
+            if (parent) {
+                parentTicketData.value = parent;
                 applySubticketMapping();
             }
         } catch (err) {
@@ -186,10 +184,8 @@ const fetchWorkflowDoc = async (type) => {
     }
     loadingDoc.value = true;
     try {
-        const res = await axios.get(`/api/config/${type}/doc`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        workflowDocHtml.value = marked(res.data);
+        const docMarkdown = await workflow.fetchDoc(type);
+        workflowDocHtml.value = marked(docMarkdown || '');
     } catch (err) {
         console.error("Doc fetch error", err);
         workflowDocHtml.value = '<p>Dokumentation konnte nicht geladen werden.</p>';
@@ -240,9 +236,7 @@ const createTicket = async () => {
             payload.parentTicket = parentTicket.value;
         }
         
-        await axios.post('/api/tickets', payload, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.createTicket(payload);
         // Success
         isDirty.value = false;
         router.push('/');  

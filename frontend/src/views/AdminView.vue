@@ -89,11 +89,11 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import { format, subDays, subMonths } from 'date-fns';
 import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useUsersStore } from '../stores/users';
+import { useTicketsStore } from '../stores/tickets';
 import TicketListConfig from '../components/TicketListConfig.vue';
 import { toast, confirm } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
@@ -101,6 +101,7 @@ import { useTicketAccess } from '../composables/useTicketAccess';
 const ui = useUiStore();
 const workflow = useWorkflowStore();
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -147,13 +148,10 @@ const fetchTickets = async () => {
                 ...fetchParams.value
             };
 
-            const res = await axios.get('/api/tickets', {
-                params: params,
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
+            const data = await ticketsStore.fetchTickets(params);
             
             if (requestId === lastRequestId) {
-                tickets.value = res.data;
+                tickets.value = data;
                 loading.value = false;
                 // Clear selection on reload/filter change? Maybe better UX to keep if possible, but IDs might disappear.
                 // For now, let's keep IDs in selection even if not visible, or filter them out.
@@ -257,9 +255,7 @@ const deleteSelected = async () => {
     try {
         // Execute deletions in parallel
         const promises = selectedTickets.value.map(id => 
-            axios.delete(`/api/tickets/${id}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            })
+            ticketsStore.deleteTicket(id)
         );
 
         await Promise.all(promises);

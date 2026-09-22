@@ -74,9 +74,9 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import axios from 'axios';
 import { useUsersStore } from '../stores/users';
 import { useWorkflowStore } from '../stores/workflow';
+import { useTicketsStore } from '../stores/tickets';
 import { toast } from '../composables/useToast';
 
 const props = defineProps({
@@ -88,6 +88,7 @@ const props = defineProps({
 const emit = defineEmits(['done']);
 
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 const workflow = useWorkflowStore();
 
 // Generiere IDs anhand der Ticket-ID und Aktion, plus einen Random-Suffix falls ein Ticket mehrfach auftaucht
@@ -156,9 +157,7 @@ const executeActionDirect = async (ticketObj, actionDef) => {
             }
         };
 
-        await axios.post(`/api/tickets/${ticketObj._id}/action`, payload, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+        await ticketsStore.executeAction(ticketObj._id, payload);
         
         close();
         emit('done');
@@ -173,11 +172,9 @@ const submitComment = async () => {
     if (comment.value && comment.value.trim()) {
         loading.value = true;
         try {
-            await axios.post(`/api/tickets/${props.ticket._id}/comments`, {
+            await ticketsStore.addComment(props.ticket._id, {
                 text: comment.value, 
                 silent: true
-            }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
         } catch (err) {
             console.error(err);

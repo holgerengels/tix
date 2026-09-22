@@ -38,12 +38,13 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, defineProps } from 'vue';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
+import { useTicketsStore } from '../stores/tickets';
 import { toast } from '../composables/useToast';
 
 const usersStore = useUsersStore();
+const ticketsStore = useTicketsStore();
 
 const props = defineProps({
   ticket: { type: Object, required: true }
@@ -83,10 +84,8 @@ const fetchComments = async () => {
     
     loading.value = true;
     try {
-        const res = await axios.get(`/api/tickets/${props.ticket._id}/comments`, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        comments.value = res.data;
+        const data = await ticketsStore.fetchComments(props.ticket._id);
+        comments.value = data || [];
         await scrollToBottom();
     } catch (err) {
         console.error('Failed to load comments', err);
@@ -101,13 +100,12 @@ const sendComment = async (silent = false) => {
     const isSilent = silent === true;
     sending.value = true;
     try {
-        const res = await axios.post(`/api/tickets/${props.ticket._id}/comments`, {
-            text: newComment.value, silent: isSilent
-        }, {
-             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        const created = await ticketsStore.addComment(props.ticket._id, {
+            text: newComment.value,
+            silent: isSilent
         });
         
-        comments.value.push(res.data);
+        comments.value.push(created);
         newComment.value = '';
         await scrollToBottom();
     } catch (err) {

@@ -23,9 +23,7 @@ export const useWorkflowStore = defineStore('workflow', {
             this.loading = true;
             this.error = null;
 
-            _configPromise = axios.get('/api/config', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            }).then(res => {
+            _configPromise = axios.get('/api/config').then(res => {
                 this.config = res.data;
                 return this.config;
             }).catch(err => {
@@ -38,6 +36,12 @@ export const useWorkflowStore = defineStore('workflow', {
             });
 
             return _configPromise;
+        },
+
+        async fetchDoc(type) {
+            if (!type) return '';
+            const res = await axios.get(`/api/config/${type}/doc`);
+            return res.data;
         },
 
         reset() {

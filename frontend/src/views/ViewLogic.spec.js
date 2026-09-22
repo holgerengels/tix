@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import ViewView from './ViewView.vue';
 import ActionView from './ActionView.vue';
 import axios from 'axios';
@@ -95,6 +96,7 @@ const CardStub = {
 describe('View Logic & Constraints', () => {
 
     beforeEach(() => {
+        setActivePinia(createPinia());
         vi.clearAllMocks();
         _mockWorkflowConfig = mockConfig;
         // Default axios responses
