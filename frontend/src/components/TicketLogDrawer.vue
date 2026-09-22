@@ -5,6 +5,7 @@
     ref="drawerRef"
     class="ticket-log-drawer"
     :open="open"
+    light-dismiss
     @wa-after-hide="handleClose"
   >
     <div slot="header-actions">
@@ -61,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
@@ -127,22 +128,24 @@ const fetchLogs = async () => {
   }
 };
 
-const handleClose = () => {
+const handleClose = (event) => {
+  if (event && event.target && drawerRef.value) {
+    const drawerEl = drawerRef.value.$el || drawerRef.value;
+    if (event.target !== drawerEl && event.target !== drawerRef.value) {
+      return;
+    }
+  }
   emit('close');
 };
 
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) {
-      if (props.ticketId) {
-        fetchLogs();
-      }
-      drawerRef.value?.show?.();
-    } else {
-      drawerRef.value?.hide?.();
+    if (isOpen && props.ticketId) {
+      fetchLogs();
     }
-  }
+  },
+  { immediate: true }
 );
 
 watch(
@@ -153,15 +156,6 @@ watch(
     }
   }
 );
-
-onMounted(() => {
-  if (props.open) {
-    if (props.ticketId) {
-      fetchLogs();
-    }
-    drawerRef.value?.show?.();
-  }
-});
 </script>
 
 <style scoped>
