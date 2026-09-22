@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
@@ -134,11 +134,15 @@ const handleClose = () => {
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen && props.ticketId) {
-      fetchLogs();
+    if (isOpen) {
+      if (props.ticketId) {
+        fetchLogs();
+      }
+      drawerRef.value?.show?.();
+    } else {
+      drawerRef.value?.hide?.();
     }
-  },
-  { immediate: true }
+  }
 );
 
 watch(
@@ -149,6 +153,15 @@ watch(
     }
   }
 );
+
+onMounted(() => {
+  if (props.open) {
+    if (props.ticketId) {
+      fetchLogs();
+    }
+    drawerRef.value?.show?.();
+  }
+});
 </script>
 
 <style scoped>

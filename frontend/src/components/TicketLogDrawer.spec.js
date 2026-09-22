@@ -69,11 +69,9 @@ describe('TicketLogDrawer.vue', () => {
 
     await vi.waitFor(() => {
       expect(axios.get).toHaveBeenCalledWith('/api/tickets/ticket123/logs', expect.any(Object));
+      expect(wrapper.findAll('.timeline-item').length).toBe(2);
     });
 
-    // Check timeline items
-    const timelineItems = wrapper.findAll('.timeline-item');
-    expect(timelineItems.length).toBe(2);
     expect(wrapper.text()).toContain('Ticket erstellt');
     expect(wrapper.text()).toContain('Status geändert');
   });
