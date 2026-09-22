@@ -229,5 +229,32 @@ describe('API Routes', () => {
             
             expect(logs.length).toBeGreaterThanOrEqual(1);
         });
+
+        it('should get logs for a specific ticket', async () => {
+            const testTicket = await Ticket.create({ type: 'IT-Ticket', title: 'specific log test', creator: 'admin' });
+
+            await Log.create({
+                editor: 'admin',
+                ticket: testTicket._id,
+                action: 'Ticket erstellt',
+                timestamp: new Date()
+            });
+
+            // Admin can read
+            let res = await request(app)
+                .get(`/api/tickets/${testTicket._id}/logs`)
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(res.status).toBe(200);
+            expect(Array.isArray(res.body)).toBe(true);
+            expect(res.body.length).toBe(1);
+            expect(res.body[0].action).toBe('Ticket erstellt');
+
+            // Non-existent ticket returns 404
+            const fakeId = new mongoose.Types.ObjectId();
+            let res404 = await request(app)
+                .get(`/api/tickets/${fakeId}/logs`)
+                .set('Authorization', `Bearer ${tokens.admin}`);
+            expect(res404.status).toBe(404);
+        });
     });
 });

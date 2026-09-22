@@ -9,6 +9,9 @@
         </wa-button>
         <h2>Ticket editieren</h2>
         <p>(Korrektur fehlerhafter Eingaben / fehlgeleiteter Tickets)</p>
+        <wa-button v-if="ticket" variant="neutral" size="small" appearance="outlined" @click="showLogDrawer = true" style="margin-left: auto;">
+             <wa-icon slot="start" name="clock-history"></wa-icon> Protokoll
+        </wa-button>
     </div>
 
     <div v-if="loading" class="loading">
@@ -73,6 +76,13 @@
         <!-- Dummy to force Web Awesome to render the card footer container -->
         <div slot="footer" style="display: none;"></div>
     </wa-card>
+
+    <TicketLogDrawer
+      :ticket-id="ticket?._id"
+      :ticket-display-id="ticket?.id"
+      :open="showLogDrawer"
+      @close="showLogDrawer = false"
+    />
   </div>
 </template>
 
@@ -91,6 +101,7 @@ const ui = useUiStore();
 const usersStore = useUsersStore();
 const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
+import TicketLogDrawer from '../components/TicketLogDrawer.vue';
 import { validateTicket } from '../utils/evaluation';
 
 const route = useRoute();
@@ -103,6 +114,7 @@ const error = ref(null);
 const isDirty = ref(false);
 const formRef = ref(null);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
+const showLogDrawer = ref(false);
 
 const ticketData = ref({});
 const formFields = ref([]);

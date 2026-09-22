@@ -8,6 +8,9 @@
             <wa-icon name="arrow-left"></wa-icon>
         </wa-button>
         <h2>{{ actionTitle }}</h2>
+        <wa-button v-if="ticket" variant="neutral" size="small" appearance="outlined" @click="showLogDrawer = true" style="margin-left: auto;">
+             <wa-icon slot="start" name="clock-history"></wa-icon> Protokoll
+        </wa-button>
     </div>
 
     <div v-if="loading" class="loading">
@@ -99,6 +102,13 @@
             <!-- Dummy to force Web Awesome to render the card footer container -->
             <div slot="footer" style="display: none;"></div>
     </wa-card>
+
+    <TicketLogDrawer
+      :ticket-id="ticket?._id"
+      :ticket-display-id="ticket?.id"
+      :open="showLogDrawer"
+      @close="showLogDrawer = false"
+    />
   </div>
 </template>
 
@@ -118,6 +128,7 @@ const usersStore = useUsersStore();
 const workflow = useWorkflowStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
+import TicketLogDrawer from '../components/TicketLogDrawer.vue';
 import { validateTicket, computeFills } from '../utils/evaluation';
 
 const route = useRoute();
@@ -134,6 +145,7 @@ const isDirty = ref(false);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const commentsRef = ref(null);
 const formRef = ref(null);
+const showLogDrawer = ref(false);
 
 const {
     canComment, allowedSubticketTypes,

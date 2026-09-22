@@ -17,6 +17,9 @@
         <wa-button v-if="canDelete" variant="danger" size="small" appearance="filled" @click="deleteTicket">
              <wa-icon slot="start" name="x-lg"></wa-icon> Löschen
         </wa-button>
+        <wa-button v-if="ticket" variant="neutral" size="small" appearance="outlined" @click="showLogDrawer = true" style="margin-left: auto;">
+             <wa-icon slot="start" name="clock-history"></wa-icon> Protokoll
+        </wa-button>
     </div>
 
     <div v-if="loading" class="loading">
@@ -141,9 +144,16 @@
                         {{ action.name }}
                     </wa-button>
                 </template>
-                <!-- Dummy to force Web Awesome to render the card footer container -->
+                 <!-- Dummy to force Web Awesome to render the card footer container -->
                 <div slot="footer" style="display: none;"></div>
     </wa-card>
+
+    <TicketLogDrawer
+      :ticket-id="ticket?._id"
+      :ticket-display-id="ticket?.id"
+      :open="showLogDrawer"
+      @close="showLogDrawer = false"
+    />
   </div>
 </template>
 
@@ -159,6 +169,7 @@ import { useTicketAccess } from '../composables/useTicketAccess';
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
+import TicketLogDrawer from '../components/TicketLogDrawer.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
 
 const ui = useUiStore();
@@ -175,6 +186,7 @@ const user = JSON.parse(localStorage.getItem('user') || '{}');
 const undoAction = ref(null);
 const executingActionId = ref(null);
 const showHelp = ref(false);
+const showLogDrawer = ref(false);
 
 const ticketData = ref({});
 const formFields = ref([]);

@@ -1069,6 +1069,43 @@ router.get('/logs', verifyToken, async (req, res) => {
 });
 
 
+// GET TICKET LOGS
+router.get('/tickets/:id/logs', verifyToken, async (req, res) => {
+    try {
+        const ticketId = req.params.id;
+        const user = req.user;
+        const workflowEngine = require('./workflow');
+
+        // 1. Fetch Ticket
+        const ticket = await Ticket.findById(ticketId);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        // 2. Access Control
+        let authorized = false;
+        if (user.groups && user.groups.includes('Administration')) authorized = true;
+        if (ticket.creator === user.username) authorized = true;
+        if (ticket.assignee === user.username) authorized = true;
+        if (!authorized && workflowEngine.canRead(ticket.type, user.groups || [])) {
+            authorized = true;
+        }
+
+        if (!authorized) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        // 3. Fetch Logs
+        const logs = await Log.find({ ticket: ticketId })
+            .select('-published')
+            .sort({ timestamp: -1 });
+
+        res.json(logs);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // Undo Check
 router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
     try {
