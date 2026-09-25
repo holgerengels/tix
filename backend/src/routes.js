@@ -100,6 +100,9 @@ router.post('/settings', verifyToken, async (req, res) => {
         await updateUserSettings(req.user.username, req.body);
         res.json({ message: 'Settings saved' });
     } catch (err) {
+        if (err.statusCode === 400 || err.isValidationError) {
+            return res.status(400).json({ error: err.message });
+        }
         console.error('Error saving settings:', err);
         res.status(500).json({ error: err.message });
     }

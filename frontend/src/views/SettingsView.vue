@@ -158,18 +158,54 @@ function normalizeNotificationUri(uri) {
     if (!uri) return '';
     return uri.split(',')
         .map(item => {
-            const trimmed = item.trim();
+            let trimmed = item.trim();
+            if (!trimmed) return '';
             const colonIndex = trimmed.indexOf(':');
-            if (colonIndex === -1) return trimmed;
+            if (colonIndex === -1) {
+                // Autokorrektur im Frontend: E-Mails ohne Präfix erhalten mailto:
+                if (trimmed.includes('@')) {
+                    return `mailto:${trimmed.toLowerCase()}`;
+                }
+                return trimmed;
+            }
             const protocol = trimmed.substring(0, colonIndex).toLowerCase();
-            const address = trimmed.substring(colonIndex + 1);
+            const address = trimmed.substring(colonIndex + 1).trim();
             return `${protocol}:${address}`;
         })
+        .filter(Boolean)
         .join(', ');
+}
+
+function validateNotificationUri(uri) {
+    if (!uri) return null;
+    const parts = uri.split(',').map(s => s.trim()).filter(Boolean);
+    for (const part of parts) {
+        const colonIndex = part.indexOf(':');
+        if (colonIndex === -1) {
+            return `Ungültiger Benachrichtigungskanal '${part}'. Bitte Präfix wie 'mailto:' oder 'nctalk:' angeben.`;
+        }
+        const protocol = part.substring(0, colonIndex).toLowerCase();
+        const address = part.substring(colonIndex + 1).trim();
+        if (!['mailto', 'nctalk'].includes(protocol)) {
+            return `Unbekanntes Protokoll '${protocol}:'. Erlaubt sind 'mailto:' und 'nctalk:'.`;
+        }
+        if (!address) {
+            return `Die Adresse für '${protocol}:' darf nicht leer sein.`;
+        }
+        if (protocol === 'mailto' && (!address.includes('@') || !address.includes('.'))) {
+            return `Ungültige E-Mail-Adresse für 'mailto:${address}'.`;
+        }
+    }
+    return null;
 }
 
 const save = async () => {
     notificationUri.value = normalizeNotificationUri(notificationUri.value);
+    const errorMsg = validateNotificationUri(notificationUri.value);
+    if (errorMsg) {
+        toast.error(errorMsg);
+        return;
+    }
     loading.value = true;
     try {
         await axios.post('/api/settings', {

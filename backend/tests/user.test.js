@@ -64,6 +64,25 @@ describe('User Persistence & Pruning', () => {
             expect(dbUser).not.toBeNull();
             expect(dbUser.notificationUri).toBe('mailto:lehrer1@example.com');
         });
+
+        it('should reject notificationUri without protocol prefix with 400', async () => {
+            const username = 'lehrer1';
+            await expect(updateUserSettings(username, { notificationUri: 'lehrer1@example.com' }))
+                .rejects.toThrow(/Protokoll-Präfix fehlt/);
+        });
+
+        it('should reject notificationUri with unknown protocol with 400', async () => {
+            const username = 'lehrer1';
+            await expect(updateUserSettings(username, { notificationUri: 'ftp:server/path' }))
+                .rejects.toThrow(/Unbekanntes Protokoll/);
+        });
+
+        it('should accept valid nctalk and mailto channels', async () => {
+            const username = 'lehrer1';
+            await updateUserSettings(username, { notificationUri: 'nctalk:m.mustermann, mailto:m.mustermann@example.com' });
+            const settings = await getUserSettings(username);
+            expect(settings.notificationUri).toBe('nctalk:m.mustermann, mailto:m.mustermann@example.com');
+        });
     });
 
     describe('API Saved Filters Routes', () => {

@@ -624,17 +624,48 @@ const getUserSettings = async (username) => {
     }
 };
 
+const ALLOWED_NOTIFICATION_PROTOCOLS = ['mailto', 'nctalk', 'test'];
+
 function normalizeNotificationUri(uri) {
-    if (!uri) return '';
+    if (!uri || typeof uri !== 'string' || uri.trim() === '') return '';
     return uri.split(',')
         .map(item => {
             const trimmed = item.trim();
+            if (!trimmed) return '';
             const colonIndex = trimmed.indexOf(':');
-            if (colonIndex === -1) return trimmed;
+            if (colonIndex === -1) {
+                const err = new Error(`Ungültiger Benachrichtigungskanal '${trimmed}': Protokoll-Präfix fehlt (z. B. 'mailto:' oder 'nctalk:').`);
+                err.statusCode = 400;
+                err.isValidationError = true;
+                throw err;
+            }
             const protocol = trimmed.substring(0, colonIndex).toLowerCase();
-            const address = trimmed.substring(colonIndex + 1);
+            const address = trimmed.substring(colonIndex + 1).trim();
+
+            if (!ALLOWED_NOTIFICATION_PROTOCOLS.includes(protocol)) {
+                const err = new Error(`Unbekanntes Protokoll '${protocol}:' im Benachrichtigungskanal. Erlaubt sind: ${ALLOWED_NOTIFICATION_PROTOCOLS.filter(p => p !== 'test').join(', ')}.`);
+                err.statusCode = 400;
+                err.isValidationError = true;
+                throw err;
+            }
+
+            if (!address) {
+                const err = new Error(`Ungültige Adresse für Kanal '${protocol}:'. Die Adresse darf nicht leer sein.`);
+                err.statusCode = 400;
+                err.isValidationError = true;
+                throw err;
+            }
+
+            if (protocol === 'mailto' && (!address.includes('@') || !address.includes('.'))) {
+                const err = new Error(`Ungültige E-Mail-Adresse '${address}' für mailto: Kanal.`);
+                err.statusCode = 400;
+                err.isValidationError = true;
+                throw err;
+            }
+
             return `${protocol}:${address}`;
         })
+        .filter(Boolean)
         .join(', ');
 }
 
@@ -660,4 +691,4 @@ const updateUserSettings = async (username, newSettings) => {
     }
 };
 
-module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, refreshAccessToken, extendAccessToken };
+module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, normalizeNotificationUri, refreshAccessToken, extendAccessToken };
