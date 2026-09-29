@@ -57,11 +57,27 @@ const addRefreshSubscriber = (callback) => {
     refreshSubscribers.push(callback);
 };
 
+const setAuthHeader = (requestConfig, token) => {
+    if (!requestConfig.headers) {
+        requestConfig.headers = {};
+    }
+    if (typeof requestConfig.headers.set === 'function') {
+        requestConfig.headers.set('Authorization', `Bearer ${token}`);
+    } else {
+        requestConfig.headers.Authorization = `Bearer ${token}`;
+    }
+};
+
 // Response interceptor to handle 401 — try silent refresh first
 axios.interceptors.response.use(
     response => response,
     async error => {
-        if (error.response && error.response.status === 401 && !error.config.url.endsWith('/login') && !error.config.url.endsWith('/refresh')) {
+        const status = error.response?.status;
+        const msg = error.response?.data?.message || error.response?.data?.error || '';
+        const isAuthError = (status === 401 || (status === 403 && (msg === 'No token provided' || msg === 'Invalid token format')))
+            && error.config && !error.config.url?.endsWith('/login') && !error.config.url?.endsWith('/refresh');
+
+        if (isAuthError) {
             const auth = useAuthStore();
             const requestQueue = useRequestQueueStore();
             const originalRequest = error.config;
@@ -72,7 +88,7 @@ axios.interceptors.response.use(
                     // Another refresh is already in progress — wait for it
                     return new Promise((resolve, reject) => {
                         addRefreshSubscriber((newToken) => {
-                            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                            setAuthHeader(originalRequest, newToken);
                             axios(originalRequest).then(resolve).catch(reject);
                         });
                     });
@@ -87,7 +103,7 @@ axios.interceptors.response.use(
                     onRefreshed(token);
 
                     // Retry the original request
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    setAuthHeader(originalRequest, token);
                     return axios(originalRequest);
                 } catch (refreshError) {
                     isRefreshing = false;
@@ -100,7 +116,7 @@ axios.interceptors.response.use(
             auth.triggerLogin();
             return new Promise((resolve, reject) => {
                 requestQueue.add((token) => {
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    setAuthHeader(originalRequest, token);
                     axios(originalRequest).then(resolve).catch(reject);
                 });
             });
@@ -108,14 +124,10 @@ axios.interceptors.response.use(
         
         // Centralized Error Handling for all other API errors
         // Skip if explicitly marked as silent in config
-        if (!error.config?.silent) {
-            const status = error.response?.status;
-            // Ignore 401s handled above, or other expected silent statuses if added
-            if (status !== 401) {
-                 const msg = error.response?.data?.message || error.response?.data?.error || error.message;
-                 showErrorDialog(msg);
-                 error.isHandled = true;
-            }
+        if (!error.config?.silent && !isAuthError) {
+             const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+             showErrorDialog(errorMsg);
+             error.isHandled = true;
         }
         
         return Promise.reject(error);

@@ -127,7 +127,7 @@
     </aside>
 
     <main class="main-content" ref="mainContent">
-      <router-view :key="auth.user?.username || ''" />
+      <router-view v-if="auth.isAuthenticated" :key="auth.user?.username || ''" />
     </main>
   </div>
 </template>
