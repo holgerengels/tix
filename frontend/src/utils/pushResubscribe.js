@@ -8,6 +8,8 @@ import axios from 'axios';
 export async function resubscribePush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (Notification.permission !== 'granted') return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
     try {
         const registration = await navigator.serviceWorker.ready;

@@ -144,4 +144,31 @@ describe('Security and Authorization', () => {
             .set('Authorization', `Bearer ${tokens.hausmeister}`);
         expect(dlUnauthorizedRes.status).toBe(403);
     });
+
+    it('should return 401 when no token is provided to protected routes', async () => {
+        const resTickets = await request(app).get('/api/tickets');
+        expect(resTickets.status).toBe(401);
+        expect(resTickets.body.message).toBe('No token provided');
+
+        const resConfig = await request(app).get('/api/config');
+        expect(resConfig.status).toBe(401);
+        expect(resConfig.body.message).toBe('No token provided');
+    });
+
+    it('should return 401 when invalid token format or signature is provided', async () => {
+        // Missing "Bearer " prefix
+        const resNoBearer = await request(app)
+            .get('/api/tickets')
+            .set('Authorization', 'InvalidFormatToken');
+        expect(resNoBearer.status).toBe(401);
+        expect(resNoBearer.body.message).toBe('Invalid token format');
+
+        // Invalid signature
+        const resInvalidSig = await request(app)
+            .get('/api/tickets')
+            .set('Authorization', 'Bearer invalid.jwt.token');
+        expect(resInvalidSig.status).toBe(401);
+        expect(resInvalidSig.body.message).toBe('Failed to authenticate token');
+    });
 });
+

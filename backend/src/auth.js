@@ -276,10 +276,15 @@ const login = async (username, password, isPwa) => {
 };
 
 const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) return res.status(403).json({ message: 'No token provided' });
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).json({ message: 'No token provided' });
 
-    jwt.verify(token.split(' ')[1], SECRET_KEY, (err, decoded) => {
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        return res.status(401).json({ message: 'Invalid token format' });
+    }
+
+    jwt.verify(parts[1], SECRET_KEY, (err, decoded) => {
         if (err) return res.status(401).json({ message: 'Failed to authenticate token' });
         req.user = decoded;
         next();
