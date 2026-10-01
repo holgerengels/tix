@@ -21,13 +21,13 @@ export default defineConfig({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.png', 'badge-96x96.png', 'badge.png'],
       manifest: {
         name: 'TIX',
         short_name: 'TIX',
         description: 'Ticket-System für Schulen',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#5B6B6D',
+        background_color: '#5B6B6D',
         display: 'standalone',
         icons: [
           {
@@ -41,6 +41,12 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          },
+          {
+            src: '/masked-icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
