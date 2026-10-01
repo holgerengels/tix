@@ -25,13 +25,21 @@ connectDB();
 // Serve Static Frontend (for Docker/Production)
 const path = require('path');
 
-// Service worker must never be cached by the browser
-app.use('/sw.js', (req, res, next) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+// Service worker and HTML entry point must never be cached by the browser
+app.use((req, res, next) => {
+    if (req.path === '/sw.js' || req.path === '/' || req.path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
     next();
 });
 
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}));
 
 // Routes
 app.use('/api', attachments);
@@ -39,6 +47,7 @@ app.use('/api', routes);
 
 // SPA Catch-All
 app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
