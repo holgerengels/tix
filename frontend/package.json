@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:icons": "node build-icons.cjs",
     "preview": "vite preview",
     "test:unit": "vitest"
   },

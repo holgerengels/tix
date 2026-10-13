@@ -30,7 +30,7 @@ self.addEventListener('push', function (event) {
             const options = {
                 body: data.body,
                 icon: '/pwa-192x192.png',
-                badge: '/masked-icon.png',
+                badge: '/badge-96x96.png',
                 data: {
                     url: data.url || '/'
                 }
@@ -41,7 +41,8 @@ self.addEventListener('push', function (event) {
             event.waitUntil(
                 self.registration.showNotification('TIX', {
                     body: event.data.text(),
-                    icon: '/pwa-192x192.png'
+                    icon: '/pwa-192x192.png',
+                    badge: '/badge-96x96.png'
                 })
             )
         }
