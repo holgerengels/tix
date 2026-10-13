@@ -956,11 +956,24 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
 
         if (!authorized) return res.status(403).json({ message: 'Not authorized to comment' });
 
+        // Extract @mentions from comment text
+        const mentionMatches = [...text.matchAll(/(?:^|[\s(])@([a-zA-Z0-9_]+(?:[.-][a-zA-Z0-9_]+)*)/g)];
+        const candidateMentions = [...new Set(mentionMatches.map(m => m[1].toLowerCase()))];
+        if (Array.isArray(req.body.mentions)) {
+            for (const m of req.body.mentions) {
+                if (typeof m === 'string' && m.trim()) {
+                    candidateMentions.push(m.trim().toLowerCase());
+                }
+            }
+        }
+        const mentions = [...new Set(candidateMentions)];
+
         const comment = new Comment({
             ticket: ticket._id,
             text,
             creator: req.user.username,
-            created: new Date()
+            created: new Date(),
+            mentions
         });
         await comment.save();
 
@@ -973,6 +986,20 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
                 timestamp: new Date(),
                 dataAfter: ticket.toObject() // Snapshot (unchanged, but current state)
             }).save();
+
+            // Immediately notify mentioned users
+            if (mentions.length > 0) {
+                const { notifyMentionedUser } = require('./publisher');
+                for (const username of mentions) {
+                    if (username !== req.user.username.toLowerCase()) {
+                        notifyMentionedUser(username, {
+                            ticket,
+                            editor: req.user.username,
+                            commentText: text
+                        }).catch(err => console.error(`[Comment] Error notifying mentioned user ${username}:`, err.message));
+                    }
+                }
+            }
         }
 
         res.status(201).json(comment);

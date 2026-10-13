@@ -171,48 +171,12 @@ async function checkUnpublishedLogs() {
                     pushBody = `${ticket.id}: ${relevantLogs.length} Änderungen von ${editors}`;
                 }
 
-                try {
-                    const userSettings = await getUserSettings(targetUser);
-                    const notificationUri = userSettings?.notificationUri;
-
-                    if (notificationUri) {
-                        const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
-
-                        for (const targetUri of uris) {
-                            const [protocol, address] = targetUri.split(':');
-
-                            if (protocol === 'nctalk') {
-                                if (address) {
-                                    await nextcloud(address, message);
-                                } else {
-                                    console.warn(`[Publisher] Invalid nctalk URI: ${targetUri}`);
-                                }
-                            } else if (protocol === 'mailto') {
-                                if (address) {
-                                    await sendMail(address, `Ticket Update: ${ticket.title}`, message);
-                                } else {
-                                    console.warn(`[Publisher] Invalid mailto URI: ${targetUri}`);
-                                }
-                            } else if (protocol === 'test') {
-                                sendTest(targetUser, address, message);
-                            } else {
-                                console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
-                            }
-                        }
-                    } else {
-                        console.log(`[Publisher] No notification URI configured for ${targetUser}`);
-                    }
-
-                    // Web Push Notification (1 per ticket bundle)
-                    await sendPush(targetUser, {
-                        title: `Ticket Update: ${ticket.title}`,
-                        body: pushBody,
-                        url: `/tickets/${ticket.id}/view`
-                    });
-
-                } catch (notifyErr) {
-                    console.error(`[Publisher] Notification to ${targetUser} failed:`, notifyErr.message);
-                }
+                await notifyUser(targetUser, {
+                    subject: `Ticket Update: ${ticket.title}`,
+                    message,
+                    pushBody,
+                    url: `/tickets/${ticket.id}/view`
+                });
             }
         }
 
@@ -325,9 +289,69 @@ async function sendPush(userId, payloadObj) {
     }
 }
 
+async function notifyUser(targetUser, { subject, message, pushBody, url }) {
+    try {
+        const { getUserSettings } = require('./auth');
+        const userSettings = await getUserSettings(targetUser);
+        const notificationUri = userSettings?.notificationUri;
+
+        if (notificationUri) {
+            const uris = notificationUri.split(',').map(s => s.trim()).filter(Boolean);
+
+            for (const targetUri of uris) {
+                const [protocol, address] = targetUri.split(':');
+
+                if (protocol === 'nctalk') {
+                    if (address) {
+                        await nextcloud(address, message);
+                    } else {
+                        console.warn(`[Publisher] Invalid nctalk URI: ${targetUri}`);
+                    }
+                } else if (protocol === 'mailto') {
+                    if (address) {
+                        await sendMail(address, subject, message);
+                    } else {
+                        console.warn(`[Publisher] Invalid mailto URI: ${targetUri}`);
+                    }
+                } else if (protocol === 'test') {
+                    sendTest(targetUser, address, message);
+                } else {
+                    console.warn(`[Publisher] Unknown notification protocol: ${protocol}`);
+                }
+            }
+        } else {
+            console.log(`[Publisher] No notification URI configured for ${targetUser}`);
+        }
+
+        // Web Push Notification
+        await sendPush(targetUser, {
+            title: subject,
+            body: pushBody,
+            url: url || '/'
+        });
+
+    } catch (notifyErr) {
+        console.error(`[Publisher] Notification to ${targetUser} failed:`, notifyErr.message);
+    }
+}
+
+async function notifyMentionedUser(targetUser, { ticket, editor, commentText }) {
+    const link = `${BASE_URL}/tickets/${ticket.id}/view`;
+    const textSnippet = commentText && commentText.length > 100 ? commentText.slice(0, 97) + '...' : (commentText || '');
+    const message = `${ticket.type} [${ticket.id}](${link}): ${ticket.title} - ${editor} hat dich in einem Kommentar erwähnt${textSnippet ? `: "${textSnippet}"` : ''}`;
+    const pushBody = `${ticket.id}: ${editor} hat dich in einem Kommentar erwähnt`;
+
+    await notifyUser(targetUser, {
+        subject: `Ticket Update: ${ticket.title}`,
+        message,
+        pushBody,
+        url: `/tickets/${ticket.id}/view`
+    });
+}
+
 function startPublisher() {
     console.log('[Publisher] Starting background publisher service...');
     processLogs();
 }
 
-module.exports = { startPublisher, sendMail, nextcloud, checkUnpublishedLogs, getTestNotifications, clearTestNotifications, sendPush, sendTest };
+module.exports = { startPublisher, sendMail, nextcloud, checkUnpublishedLogs, getTestNotifications, clearTestNotifications, sendPush, sendTest, notifyUser, notifyMentionedUser };

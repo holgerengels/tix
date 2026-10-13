@@ -1,0 +1,217 @@
+{
+    "type": "Prüfungsplanung",
+    "typeVerbose": "Prüfungsplanung",
+    "abbreviation": "PFP",
+    "template": "{{ ((ticket.dateFrom ? ticket.dateFrom : '') + (ticket.dateUntil ? ' - ' : '') + (ticket.dateUntil ? ticket.dateUntil : '')).trim() }}",
+    "fields": [
+        {
+            "name": "assignee",
+            "groups": [
+                "Vertretungsplanung"
+            ],
+            "readonly": "{{ !(currentUser().groups || []).includes('Vertretungsplanung') }}",
+            "visible": "{{ (currentUser().groups || []).includes('Vertretungsplanung') }}"
+        },
+        {
+            "name": "description",
+            "required": true
+        },
+        {
+            "name": "dateFrom",
+            "label": "Datum von",
+            "type": "Date",
+            "required": false,
+            "validation": {
+                "actions": [
+                    "create"
+                ],
+                "expression": "!ticket.dateFrom || ticket.dateFrom >= format(now, 'yyyy-MM-dd')",
+                "message": "Datum von kann nicht in der Vergangenheit liegen"
+            }
+        },
+        {
+            "name": "dateUntil",
+            "label": "Datum bis",
+            "type": "Date",
+            "required": false
+        }
+    ],
+    "validations": [
+        {
+            "name": "dateRange",
+            "expression": "!ticket.dateFrom || !ticket.dateUntil || ticket.dateFrom <= ticket.dateUntil",
+            "message": "Datum von kann nicht nach Datum bis liegen"
+        }
+    ],
+    "grid": [
+        "title title title title",
+        "badges badges badges badges",
+        "description description description description",
+        "dateFrom dateFrom dateUntil dateUntil",
+        "assignee assignee assignee assignee"
+    ],
+    "workflow": [
+        {
+            "states": [
+                "offen.neu",
+                "offen.inArbeit"
+            ],
+            "actions": [
+                {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "@assignee",
+                        "Schulleitung",
+                        "Vertretungsplanung"
+                    ],
+                    "form": "aufgabe.bearbeiten"
+                },
+                {
+                    "name": "zuweisen",
+                    "groups": [
+                        "Vertretungsplanung"
+                    ],
+                    "inline": "assign"
+                },
+                {
+                    "name": "ablehnen",
+                    "groups": [
+                        "Schulleitung",
+                        "Vertretungsplanung"
+                    ],
+                    "script": "ticket.state = 'geschlossen.abgelehnt'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.neu"
+            ],
+            "actions": [
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'geschlossen.storniert'"
+                }
+            ]
+        }
+    ],
+    "bots": [],
+    "access": [
+        {
+            "name": "create",
+            "groups": [
+                "Abteilungsleitung",
+                "Vertretungsplanung",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "edit",
+            "groups": [
+                "Vertretungsplanung"
+            ]
+        },
+        {
+            "name": "read",
+            "groups": [
+                "@creator",
+                "Vertretungsplanung",
+                "Schulleitung"
+            ]
+        },
+        {
+            "name": "undo",
+            "groups": [
+                "Schulleitung",
+                "Vertretungsplanung"
+            ]
+        },
+        {
+            "name": "delete",
+            "groups": [
+                "Schulleitung",
+                "Vertretungsplanung"
+            ]
+        },
+        {
+            "name": "comment",
+            "groups": [
+                "@creator",
+                "Vertretungsplanung",
+                "Schulleitung"
+            ]
+        }
+    ],
+    "forms": [
+        {
+            "name": "aufgabe.bearbeiten",
+            "title": "Aufgabe bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "abgelehnt",
+                    "script": "ticket.state = 'geschlossen.abgelehnt'"
+                },
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'geschlossen.erledigt'"
+                },
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                }
+            ]
+        }
+    ],
+    "states": [
+        {
+            "name": "offen.*",
+            "label": "offen (alle)",
+            "color": "blue"
+        },
+        {
+            "name": "offen.neu",
+            "label": "neu",
+            "color": "blue"
+        },
+        {
+            "name": "offen.inArbeit",
+            "label": "in Arbeit",
+            "color": "yellow"
+        },
+        {
+            "name": "geschlossen.erledigt",
+            "label": "erledigt",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.abgelehnt",
+            "label": "abgelehnt",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.storniert",
+            "label": "storniert",
+            "color": "red"
+        },
+        {
+            "name": "geschlossen.ok",
+            "label": "ok",
+            "color": "green"
+        },
+        {
+            "name": "geschlossen.*",
+            "label": "geschlossen (alle)",
+            "color": "green"
+        }
+    ]
+}

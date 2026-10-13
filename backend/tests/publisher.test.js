@@ -1,4 +1,4 @@
-const { checkUnpublishedLogs, sendMail, nextcloud, getTestNotifications, clearTestNotifications } = require('../src/publisher');
+const { checkUnpublishedLogs, sendMail, nextcloud, getTestNotifications, clearTestNotifications, notifyMentionedUser, notifyUser } = require('../src/publisher');
 const Log = require('../src/models/log');
 const Ticket = require('../src/models/ticket');
 const PushSubscription = require('../src/models/pushSubscription');
@@ -333,6 +333,28 @@ describe('Publisher Service', () => {
             expect(notifsAfterWait[0].message).toContain('2 Änderungen von admin');
             expect(notifsAfterWait[0].message).toContain('Änderung 1');
             expect(notifsAfterWait[0].message).toContain('Änderung 2');
+        });
+
+        it('should send immediate mention notification via notifyMentionedUser', async () => {
+            const ticket = {
+                id: 'IT-200',
+                type: 'IT-Ticket',
+                title: 'Mention Test Ticket'
+            };
+
+            auth.getUserSettings.mockResolvedValueOnce({ notificationUri: 'test:col1@example.com' });
+
+            await notifyMentionedUser('col1', {
+                ticket,
+                editor: 'admin',
+                commentText: 'Hallo @col1 bitte prüfen'
+            });
+
+            const notifs = getTestNotifications();
+            expect(notifs.length).toBe(1);
+            expect(notifs[0].targetUser).toBe('col1');
+            expect(notifs[0].message).toContain('admin hat dich in einem Kommentar erwähnt');
+            expect(notifs[0].message).toContain('Hallo @col1 bitte prüfen');
         });
     });
 

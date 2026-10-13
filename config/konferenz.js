@@ -120,7 +120,7 @@ async function stornieren(ticket) {
  * Propagates date, room, catering, and attendee changes to all open sub-tickets and CalDAV.
  */
 async function syncDate(ticket) {
-    if (ticket.state !== 'offen.eingetragen') return;
+    if (!['offen.eingetragen', 'offen.durchgeführt', 'offen.protokolliert'].includes(ticket.state)) return;
 
     const date = ticket.get('date');
     if (!date) return;
@@ -187,29 +187,6 @@ async function syncDate(ticket) {
     }
 }
 
-/**
- * Bot: abschliessen
- * Scheduled daily. Closes conferences whose date has passed.
- */
-async function abschliessen(ticket) {
-    if (ticket.state !== 'offen.eingetragen') return;
-
-    const date = ticket.get('date');
-    if (!date) return;
-
-    const ticketDate = parseISO(date);
-    ticketDate.setHours(23, 59, 59, 999);
-
-    if (isBefore(ticketDate, new Date())) {
-        ticket.state = 'geschlossen.ok';
-        console.log(`[Konferenz] Datums-Timeout erreicht. Ticket ${ticket.id} abgeschlossen.`);
-    }
-}
-
-/**
- * Bot: checkResponses
- * Triggered periodically. Queries CalDAV event for attendee responses and updates participant statuses.
- */
 async function checkResponses(ticket) {
     if (ticket.state !== 'offen.eingetragen') return;
 
@@ -269,6 +246,5 @@ module.exports = {
     eintragen,
     stornieren,
     syncDate,
-    abschliessen,
     checkResponses
 };
