@@ -135,4 +135,74 @@ describe('TicketComments.vue', () => {
     expect(wrapper.find('.comment-input').exists()).toBe(false);
     expect(wrapper.find('.comment-closed-hint').exists()).toBe(false);
   });
+
+  it('renders mentions with mention-tag in comments', async () => {
+    const mockComments = [
+      {
+        _id: 'c3',
+        creator: 'lehrer1',
+        text: 'Hallo @col1 bitte prüfen',
+        created: '2026-09-22T14:00:00.000Z'
+      }
+    ];
+
+    axios.get.mockResolvedValueOnce({ data: mockComments });
+
+    const wrapper = mount(TicketComments, {
+      props: {
+        ticket: { _id: 'tkt123' }
+      },
+      global: { stubs: globalStubs }
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.comment-item').exists()).toBe(true);
+    });
+
+    const mentionTag = wrapper.find('.mention-tag');
+    expect(mentionTag.exists()).toBe(true);
+    expect(mentionTag.text()).toBe('@col1');
+  });
+
+  it('shows mention suggestions when typing @ and allows selecting a user', async () => {
+    // 1st call: fetchComments
+    axios.get.mockResolvedValueOnce({ data: [] });
+    // 2nd call: fetchUsersByGroup
+    axios.get.mockResolvedValueOnce({
+      data: [
+        { username: 'col1', displayName: 'Colleague One' },
+        { username: 'admin', displayName: 'Administrator' }
+      ]
+    });
+
+    const wrapper = mount(TicketComments, {
+      props: {
+        ticket: { _id: 'tkt123' }
+      },
+      global: { stubs: globalStubs }
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.empty').exists()).toBe(true);
+    });
+
+    const textarea = wrapper.find('textarea');
+    // Simulate typing "@col"
+    await textarea.setValue('Hallo @col');
+    await textarea.trigger('input');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.mention-suggestions').exists()).toBe(true);
+    });
+
+    const items = wrapper.findAll('.mention-item');
+    expect(items.length).toBe(1);
+    expect(items[0].text()).toContain('Colleague One');
+
+    // Click suggestion
+    await items[0].trigger('mousedown');
+
+    // Textarea value should be updated with mention
+    expect(textarea.element.value).toBe('Hallo @col1 ');
+  });
 });

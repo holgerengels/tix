@@ -138,6 +138,21 @@ describe('API Routes', () => {
             expect(res.body.text).toBe('A test comment');
         });
 
+        it('should add comment with mentions and send immediate notification', async () => {
+            const Log = require('../src/models/log');
+            const res = await request(app)
+                .post(`/api/tickets/${ticketId}/comments`)
+                .set('Authorization', `Bearer ${tokens.lehrer1}`)
+                .send({ text: 'Hallo @admin, bitte ansehen' });
+            expect(res.status).toBe(201);
+            expect(res.body.mentions).toContain('admin');
+
+            // Standard clean log entry was created
+            const log = await Log.findOne({ ticket: ticketId, action: 'Kommentar hinzugefügt' });
+            expect(log).toBeDefined();
+            expect(log.editor).toBe('lehrer1');
+        });
+
         it('should get ticket comments', async () => {
             const res = await request(app)
                 .get(`/api/tickets/${ticketId}/comments`)

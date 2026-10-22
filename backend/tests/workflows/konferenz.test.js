@@ -230,32 +230,80 @@ describe('Workflow: Konferenz', () => {
         const knf = res.body;
         expect(knf.state).toBe('offen.eingetragen');
 
-        // --- Protokollieren ---
-        const protoRes = await request(app)
+        // --- Durchführen ---
+        const conductRes = await request(app)
+            .post(`/api/tickets/${knf._id}/action`)
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send({
+                actionName: 'durchführen'
+            });
+
+        expect(conductRes.status).toBe(200);
+        expect(conductRes.body.state).toBe('offen.durchgeführt');
+
+        // --- Protokollieren (Zwischenspeichern) ---
+        const draftRes = await request(app)
             .post(`/api/tickets/${knf._id}/action`)
             .set('Authorization', `Bearer ${tokens.schulleiter}`)
             .send({
                 actionName: 'protokollieren',
-                formButtonName: 'Konferenz abschließen',
+                formButtonName: 'Zwischenspeichern',
                 formData: {
                     participants: [
                         { name: 'lehrer1', status: 'anwesend' },
                         { name: 'lehrer2', status: 'entschuldigt' }
                     ],
-                    protocol: '<p>Tagesordnung besprochen. Nächste Sitzung am Montag.</p>'
+                    protocol: '<p>Stichpunkte...</p>'
+                }
+            });
+
+        expect(draftRes.status).toBe(200);
+        expect(draftRes.body.state).toBe('offen.durchgeführt');
+
+        // --- Protokollieren (Protokoll finalisieren) ---
+        const protoRes = await request(app)
+            .post(`/api/tickets/${knf._id}/action`)
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send({
+                actionName: 'protokollieren',
+                formButtonName: 'Protokoll finalisieren',
+                formData: {
+                    participants: [
+                        { name: 'lehrer1', status: 'anwesend' },
+                        { name: 'lehrer2', status: 'entschuldigt' }
+                    ],
+                    protocol: '<p>Tagesordnung besprochen. Nächste Sitzung am Montag.</p>',
+                    protocolFinalized: true
                 }
             });
 
         expect(protoRes.status).toBe(200);
-        expect(protoRes.body.state).toBe('geschlossen.ok');
+        expect(protoRes.body.state).toBe('offen.protokolliert');
 
-        // Verify attendance data was saved
+        // --- Absegnen ---
+        const approveRes = await request(app)
+            .post(`/api/tickets/${knf._id}/action`)
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send({
+                actionName: 'absegnen',
+                formButtonName: 'Absegnen & abschließen',
+                formData: {
+                    protocolApproved: true
+                }
+            });
+
+        expect(approveRes.status).toBe(200);
+        expect(approveRes.body.state).toBe('geschlossen.ok');
+
+        // Verify attendance data and approval were saved
         const updated = await Ticket.findById(knf._id);
         expect(updated.get('participants')).toEqual([
             { name: 'lehrer1', status: 'anwesend' },
             { name: 'lehrer2', status: 'entschuldigt' }
         ]);
         expect(updated.get('protocol')).toContain('Tagesordnung besprochen');
+        expect(updated.get('protocolFinalized')).toBe(true);
+        expect(updated.get('protocolApproved')).toBe(true);
     });
 
     it('should reject creation of a Konferenz by a non-Schulleitung user', async () => {

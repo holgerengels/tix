@@ -82,7 +82,8 @@
                             "abwesend"
                         ],
                         "default": "eingeladen",
-                        "visible": "{{ ticket.state === 'geschlossen.ok' }}"
+                        "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}",
+                        "readonly": "{{ ticket.state?.startsWith('geschlossen.') }}"
                     }
                 ],
                 "validation": {
@@ -103,6 +104,20 @@
             "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
         },
         {
+            "name": "protocolFinalized",
+            "label": "Protokoll freigegeben",
+            "type": "Boolean",
+            "readonly": true,
+            "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+        },
+        {
+            "name": "protocolApproved",
+            "label": "Protokoll abgesegnet",
+            "type": "Boolean",
+            "readonly": true,
+            "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+        },
+        {
             "name": "attachments",
             "label": "Anhänge",
             "type": "Attachments",
@@ -119,6 +134,7 @@
         "participants participants participants participants",
         "agenda agenda agenda agenda",
         "protocol protocol protocol protocol",
+        "protocolFinalized protocolFinalized protocolApproved protocolApproved",
         "attachments attachments attachments attachments"
     ],
     "workflow": [
@@ -128,6 +144,15 @@
             ],
             "actions": [
                 {
+                    "name": "durchführen",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "script": "ticket.state = 'offen.durchgeführt'"
+                },
+                {
                     "name": "ändern",
                     "groups": [
                         "@creator",
@@ -136,15 +161,6 @@
                     ],
                     "optional": true,
                     "form": "aendern"
-                },
-                {
-                    "name": "protokollieren",
-                    "groups": [
-                        "@creator",
-                        "Schulleitung",
-                        "Netzwerkteam"
-                    ],
-                    "form": "protokollieren"
                 },
                 {
                     "name": "stornieren",
@@ -167,6 +183,69 @@
                         "Raumreservierung",
                         "Bewirtungsauftrag"
                     ]
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.durchgeführt"
+            ],
+            "actions": [
+                {
+                    "name": "protokollieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "form": "protokollieren"
+                },
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'offen.storniert'"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.protokolliert"
+            ],
+            "actions": [
+                {
+                    "name": "absegnen",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "form": "absegnen"
+                },
+                {
+                    "name": "protokollieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "form": "protokollieren"
+                },
+                {
+                    "name": "stornieren",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "script": "ticket.state = 'offen.storniert'"
                 }
             ]
         }
@@ -228,19 +307,12 @@
         {
             "name": "syncDate",
             "states": [
-                "offen.eingetragen"
+                "offen.eingetragen",
+                "offen.durchgeführt",
+                "offen.protokolliert"
             ],
             "onChange": "insync",
             "script": "await syncDate(ticket)"
-        },
-        {
-            "name": "abschliessen",
-            "states": [
-                "offen.eingetragen"
-            ],
-            "onChange": "async",
-            "schedule": "0 1 * * *",
-            "script": "await abschliessen(ticket)"
         },
         {
             "name": "checkResponses",
@@ -270,7 +342,6 @@
                 {
                     "name": "participants",
                     "label": "Anwesenheit prüfen",
-                    "required": true,
                     "fixedLength": true,
                     "fixedOrder": true,
                     "items": {
@@ -296,8 +367,11 @@
                     }
                 },
                 {
-                    "name": "protocol",
-                    "required": true
+                    "name": "protocol"
+                },
+                {
+                    "name": "protocolFinalized",
+                    "readonly": false
                 },
                 {
                     "name": "attachments"
@@ -305,8 +379,36 @@
             ],
             "actions": [
                 {
-                    "name": "Konferenz abschließen",
-                    "script": "ticket.state = 'geschlossen.ok'"
+                    "name": "Zwischenspeichern",
+                    "script": "ticket.state = 'offen.durchgeführt'"
+                },
+                {
+                    "name": "Protokoll finalisieren",
+                    "script": "ticket.state = 'offen.protokolliert'; ticket.set('protocolFinalized', true)"
+                }
+            ]
+        },
+        {
+            "name": "absegnen",
+            "title": "Protokoll absegnen",
+            "fields": [
+                {
+                    "name": "protocol",
+                    "readonly": true
+                },
+                {
+                    "name": "protocolApproved",
+                    "readonly": false
+                },
+                {
+                    "name": "attachments",
+                    "readonly": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "Absegnen & abschließen",
+                    "script": "ticket.state = 'geschlossen.ok'; ticket.set('protocolApproved', true)"
                 }
             ]
         }
@@ -326,6 +428,16 @@
             "name": "offen.eingetragen",
             "label": "eingetragen",
             "color": "green"
+        },
+        {
+            "name": "offen.durchgeführt",
+            "label": "durchgeführt",
+            "color": "yellow"
+        },
+        {
+            "name": "offen.protokolliert",
+            "label": "protokolliert",
+            "color": "blue"
         },
         {
             "name": "offen.storniert",

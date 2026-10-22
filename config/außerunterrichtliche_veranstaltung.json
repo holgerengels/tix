@@ -44,6 +44,12 @@
             "required": true
         },
         {
+            "name": "estimatedCosts",
+            "label": "Voraussichtliche Kosten",
+            "type": "Text",
+            "required": true
+        },
+        {
             "name": "students",
             "label": "Beteiligte Schüler*innen",
             "hint": "Klasse(n), Kurs(e), Anzahl Schüler*innen",
@@ -107,7 +113,7 @@
         "badges badges badges badges",
         "dateFrom dateFrom lessonFrom lessonFrom",
         "dateUntil dateUntil lessonUntil lessonUntil",
-        "location location location location",
+        "location location location estimatedCosts",
         "students students students students",
         "teachers teachers teachers teachers",
         "colleaguesAgree colleaguesAgree acrossDepartments acrossDepartments",
