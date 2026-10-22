@@ -89,6 +89,7 @@
                             ⮡ {{ sub.id }} ({{ getStatusLabel(sub) }})
                         </wa-tag>
                     </template>
+                    <RelatedTicketTags :tickets="ticket.relatedTickets" />
                 </div>
 
                 <wa-dropdown v-if="allowedSubticketTypes.length > 0">
@@ -118,7 +119,7 @@
             </div>
 
             <aside class="comments-sidebar">
-                <TicketComments v-if="canComment" :ticket="ticket" />
+                <TicketComments :ticket="ticket" :readonly="!canComment" />
             </aside>
         </div>
                 <wa-button slot="footer-actions" size="small" @click="goBack" variant="neutral" appearance="filled">Abbrechen</wa-button>
@@ -170,6 +171,8 @@ import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
 import TicketLogDrawer from '../components/TicketLogDrawer.vue';
+import RelatedTicketTags from '../components/RelatedTicketTags.vue';
+import { getReopenRoute } from '../composables/useTicketAccess';
 import { toast, confirm, prompt } from '../composables/useToast';
 
 const ui = useUiStore();
@@ -358,7 +361,9 @@ const prepareForm = () => {
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const handleAction = async (ticket, action) => {
-    if (action.form === 'read') {
+    if (action.reopen) {
+        router.push(getReopenRoute(ticket));
+    } else if (action.form === 'read') {
         fetchData();
     } else if (action.form === 'edit') {
         router.push(`/tickets/${ticket.id}/edit`);

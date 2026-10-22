@@ -265,7 +265,7 @@ Access rights determine which user groups can perform specific operations on the
   * **`read`**: Permission to view the ticket and its history.
   * **`edit`**: Permission to modify form fields in an open state.
   * **`delete`**: Permission to permanently delete the ticket.
-  * **`comment`**: Permission to add comments.
+  * **`comment`**: Permission to add comments. Comments can be **read** by everyone who can read the ticket. **Closed tickets (`geschlossen.*`) cannot be commented** at all (backend responds `409`); use a reopen action instead.
   * **`undo`**: Permission to roll back the most recent workflow action or state change via `/api/tickets/:id/undo`.
 * **Dynamic Roles**:
   * **`@creator`**: Grants permission to the user who initially filed the ticket.
@@ -321,6 +321,60 @@ Actions represent user-triggered state transitions in the ticket detail view:
   * `"comment"`: Prompts for a mandatory/optional comment before executing the action.
   * `"assign"`: Prompts for assignee selection.
 * **`subTickets`**: Array of ticket types that can be spawned from this action (see [Subtickets](#7-subtickets)).
+* **`reopen`**: Turns the action into a reopen action (see [Reopen](#61-reopen-reopen)). Such actions don't run a `script`.
+
+### 6.1 Reopen (`reopen`)
+
+Closed tickets are final. Instead of reopening the ticket itself, a reopen action creates a **copy in state `offen.neu`** that links back to the closed predecessor.
+
+```json
+{
+    "states": ["geschlossen.erledigt", "geschlossen.abgelehnt"],
+    "actions": [
+        {
+            "name": "wiedereröffnen",
+            "groups": ["@creator", "Netzwerkteam"],
+            "optional": true,
+            "reopen": {
+                "closeAs": "geschlossen.wiedereröffnet",
+                "exclude": ["raumbelegung"],
+                "mapping": { "date": "" }
+            }
+        }
+    ]
+}
+```
+
+* **`closeAs`** *(default `geschlossen.wiedereröffnet`)*: State the predecessor is moved to. It must be listed in `states` and must **not** offer a reopen action itself – this is what prevents reopening the same ticket twice. A chain `ITT-7 → ITT-12 → ITT-20` is possible: only the newest ticket is reopenable.
+* **`exclude`** *(optional)*: Additional fields not copied. Never copied: `state`, `assignee`/`assigned` (re-triage), `parentTicket`, comments, logs, subtickets.
+* **`mapping`** *(optional)*: `{{ ... }}` expressions evaluated against the predecessor; an empty result clears the field.
+* `reopen: true` is a shorthand for the defaults.
+
+**Flow**
+
+1. The action navigates to `/tickets/new?type=<type>&reopen=<id>`; the form is prefilled with the copy and can be adjusted (e.g. describe why it is reopened – closed tickets can't be commented).
+2. `POST /api/tickets` with `reopenOf: "<id>"`. Authorization comes from the predecessor's reopen action (`groups`, incl. `@creator`/`@assignee`) instead of `create` access.
+3. The backend atomically moves the predecessor to `closeAs` (concurrent second reopen → `409`), creates the copy and logs `Wiedereröffnet als <newId>` on the predecessor. This log entry cannot be undone.
+
+**Ownership**: The copy keeps the **original `creator`** (rights + notifications). The reopening user is stored as `reopenedBy` and added to `starredBy`, so both receive notifications.
+
+Check consistency with `node config/check_workflows.js`.
+
+### 6.2 Ticket Links (`links`)
+
+Non-hierarchical relations are stored as directed links on the **source** ticket only; the inverse direction is derived when loading:
+
+```js
+links: [{ type: 'follows' | 'duplicates' | 'relates', ticket: 'ITT-7', created, creator }]
+```
+
+| Type | Stored on | Outgoing label | Incoming label |
+| :-- | :-- | :-- | :-- |
+| `follows` | reopened copy | ↶ Fortsetzung von X | ↷ Wiedereröffnet als Y |
+| `duplicates` | duplicate | ⧉ Duplikat von X | ⧉ Duplikat: Y |
+| `relates` | either | ↔ Verwandt mit X | ↔ Verwandt mit Y |
+
+`GET /api/tickets` attaches `relatedTickets: [{ id, type, state, title, linkType, direction: 'out' | 'in' }]` (analogous to `subTickets`). Parent/subticket relations remain in `parentTicket`. Currently only `follows` is created (by reopen); `duplicates` and `relates` are prepared in the data model.
 
 ---
 

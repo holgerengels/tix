@@ -42,6 +42,7 @@
                             ⮡ {{ sub.id }} ({{ getStatusLabel(sub) }})
                         </wa-tag>
                     </template>
+                    <RelatedTicketTags :tickets="ticket.relatedTickets" />
                 </div>
 
                 <wa-dropdown v-if="allowedSubticketTypes.length > 0">
@@ -103,6 +104,7 @@ const workflow = useWorkflowStore();
 const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketLogDrawer from '../components/TicketLogDrawer.vue';
+import RelatedTicketTags from '../components/RelatedTicketTags.vue';
 import { validateTicket } from '../utils/evaluation';
 
 const route = useRoute();

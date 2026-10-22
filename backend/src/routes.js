@@ -14,7 +14,73 @@ const vm = require('vm');
 const { runBotsForTicket } = require('./bots');
 const { evaluateTemplate, computeSummary } = require('./validation');
 
+const DEFAULT_REOPEN_STATE = 'geschlossen.wiedereröffnet';
+// Log entry written to the predecessor on reopen. It must never be undone,
+// otherwise the predecessor would be reopenable again while its copy exists.
+const REOPEN_LOG_PREFIX = 'Wiedereröffnet als';
 
+// Closed tickets (geschlossen.*) are final: no comments, only a configured reopen action.
+const isClosedState = (state) => typeof state === 'string' && state.startsWith('geschlossen.');
+
+// Checks whether a user matches an action's groups (incl. dynamic roles @creator / @assignee).
+const matchesActionGroups = (groups, ticket, user) => {
+    const userGroups = user.groups || [];
+    return (groups || []).some(g => {
+        if (g === '@creator') return ticket.creator === user.username;
+        if (g === '@assignee') return ticket.assignee === user.username;
+        return userGroups.includes(g);
+    });
+};
+
+// Returns the first action with a `reopen` definition that is available in the ticket's current state.
+const findReopenAction = (ticket) => {
+    const wf = workflowEngine.getWorkflowForType(ticket.type);
+    if (!wf || !Array.isArray(wf.workflow)) return null;
+    for (const block of wf.workflow.filter(b => (b.states || []).includes(ticket.state))) {
+        const action = (block.actions || []).find(a => a.reopen);
+        if (action) return action;
+    }
+    return null;
+};
+
+const getReopenConfig = (action) => (action && typeof action.reopen === 'object') ? action.reopen : {};
+
+// Fields that must never be taken over from the client payload when creating a ticket.
+const PROTECTED_CREATE_FIELDS = ['_id', '__v', 'links', 'reopenedBy', 'starredBy', 'updated', 'summary', 'reopenOf', 'subTickets', 'relatedTickets'];
+// Additional fields that are not copied into a reopened ticket (re-triage, fresh hierarchy).
+const REOPEN_EXCLUDED_FIELDS = ['assignee', 'assigned', 'parentTicket'];
+
+/**
+ * Attaches `relatedTickets` to each ticket (plain objects):
+ *   [{ id, type, state, title, linkType, direction: 'out' | 'in' }]
+ * Outgoing links are stored on the ticket itself, incoming links are derived
+ * from other tickets referencing it via `links.ticket`.
+ */
+const attachRelatedTickets = async (tickets, ticketIds) => {
+    const projection = { id: 1, type: 1, state: 1, title: 1, links: 1 };
+    const outgoingIds = [...new Set(tickets.flatMap(t => (t.links || []).map(l => l.ticket)))];
+
+    const [targets, referencing] = await Promise.all([
+        outgoingIds.length > 0 ? Ticket.find({ id: { $in: outgoingIds } }, projection).lean() : [],
+        Ticket.find({ 'links.ticket': { $in: ticketIds } }, projection).lean()
+    ]);
+    const targetsById = Object.fromEntries(targets.map(t => [t.id, t]));
+    const summarize = (t, linkType, direction) => ({
+        id: t.id, type: t.type, state: t.state, title: t.title, linkType, direction
+    });
+
+    tickets.forEach(t => {
+        const related = [];
+        (t.links || []).forEach(l => {
+            const target = targetsById[l.ticket];
+            related.push(target ? summarize(target, l.type, 'out') : { id: l.ticket, linkType: l.type, direction: 'out' });
+        });
+        referencing.forEach(src => {
+            (src.links || []).filter(l => l.ticket === t.id).forEach(l => related.push(summarize(src, l.type, 'in')));
+        });
+        if (related.length > 0) t.relatedTickets = related;
+    });
+};
 
 // Auth
 router.post('/login', async (req, res) => {
@@ -523,6 +589,8 @@ router.get('/tickets', verifyToken, async (req, res) => {
                     }
                 });
             }
+
+            await attachRelatedTickets(tickets, ticketIds);
         }
 
         res.json(tickets);
@@ -537,8 +605,29 @@ router.post('/tickets', verifyToken, async (req, res) => {
 
         const wf = workflowEngine.getWorkflowForType(type);
 
+        // Reopen: the new ticket is a copy of a closed predecessor. Permission is granted
+        // by the predecessor's `reopen` action instead of the generic `create` access.
+        let predecessor = null;
+        let reopenAction = null;
+        if (req.body.reopenOf) {
+            predecessor = await Ticket.findOne({ id: req.body.reopenOf });
+            if (!predecessor) {
+                return res.status(400).json({ message: 'Ticket to reopen not found' });
+            }
+            if (predecessor.type !== type) {
+                return res.status(400).json({ message: 'A reopened ticket must have the same type as its predecessor' });
+            }
+            reopenAction = findReopenAction(predecessor);
+            if (!reopenAction) {
+                return res.status(409).json({ message: `Ticket ${predecessor.id} kann im Status '${predecessor.state}' nicht wiedereröffnet werden.` });
+            }
+            if (!matchesActionGroups(reopenAction.groups, predecessor, req.user)) {
+                return res.status(403).json({ message: 'Not authorized to reopen this ticket' });
+            }
+        }
+
         // Access Control
-        if (wf && wf.access) {
+        if (!reopenAction && wf && wf.access) {
             const createAccess = wf.access.find(a => a.name === 'create');
             if (createAccess && createAccess.groups) {
                 const userGroups = req.user.groups || [];
@@ -563,7 +652,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
             }
         }
 
-        if (req.body.parentTicket) {
+        if (req.body.parentTicket && !reopenAction) {
             const parent = await Ticket.findOne({ id: req.body.parentTicket });
             if (!parent) {
                 return res.status(400).json({ message: 'Parent ticket not found' });
@@ -600,37 +689,77 @@ router.post('/tickets', verifyToken, async (req, res) => {
             }
         }
 
+        const body = { ...req.body };
+        PROTECTED_CREATE_FIELDS.forEach(f => delete body[f]);
+
         const ticketData = {
             type: type,
-            title: req.body.titel || req.body.title,
-            description: req.body.beschreibung || req.body.description,
-            ...req.body,
+            title: body.titel || body.title,
+            description: body.beschreibung || body.description,
+            ...body,
             creator: req.user.username,
             created: new Date(),
             state: 'offen.neu'
         };
 
-        // Generate ID if abbreviation exists
-        if (wf && wf.abbreviation) {
-            try {
-                const counter = await Counter.findByIdAndUpdate(
-                    wf.abbreviation,
-                    { $inc: { seq: 1 } },
-                    { new: true, upsert: true }
-                );
-                ticketData.id = `${wf.abbreviation}-${counter.seq}`;
-            } catch (err) {
-                console.error('Error generating ticket ID:', err);
-                // Continue without ID or handle error? 
-                // Better to log and maybe fail if ID is critical, but for now let's proceed or maybe fallback?
-                // If ID is required by business logic, we should probably fail. 
-                // But schema didn't mark it required.
+        let closeAs = null;
+        let predecessorBefore = null;
+        if (reopenAction) {
+            const reopenCfg = getReopenConfig(reopenAction);
+            [...REOPEN_EXCLUDED_FIELDS, ...(reopenCfg.exclude || [])].forEach(f => delete ticketData[f]);
+
+            // The original creator keeps ownership (rights + notifications);
+            // the reopening user follows the ticket via starredBy.
+            ticketData.creator = predecessor.creator;
+            ticketData.reopenedBy = req.user.username;
+            ticketData.starredBy = predecessor.creator !== req.user.username ? [req.user.username] : [];
+            ticketData.links = [{ type: 'follows', ticket: predecessor.id, created: new Date(), creator: req.user.username }];
+
+            // Atomically move the predecessor out of its reopenable state. A concurrent
+            // second reopen fails here because the state no longer matches.
+            closeAs = reopenCfg.closeAs || DEFAULT_REOPEN_STATE;
+            predecessorBefore = predecessor.toObject();
+            const claimed = await Ticket.findOneAndUpdate(
+                { _id: predecessor._id, state: predecessor.state },
+                { $set: { state: closeAs } },
+                { new: true }
+            );
+            if (!claimed) {
+                return res.status(409).json({ message: `Ticket ${predecessor.id} wurde bereits wiedereröffnet.` });
             }
+            predecessor = claimed;
         }
 
-        const newTicket = new Ticket(ticketData);
-        newTicket.summary = computeSummary(newTicket, wf) || '';
-        await newTicket.save();
+        let newTicket;
+        try {
+            // Generate ID if abbreviation exists
+            if (wf && wf.abbreviation) {
+                try {
+                    const counter = await Counter.findByIdAndUpdate(
+                        wf.abbreviation,
+                        { $inc: { seq: 1 } },
+                        { new: true, upsert: true }
+                    );
+                    ticketData.id = `${wf.abbreviation}-${counter.seq}`;
+                } catch (err) {
+                    console.error('Error generating ticket ID:', err);
+                    // Continue without ID or handle error? 
+                    // Better to log and maybe fail if ID is critical, but for now let's proceed or maybe fallback?
+                    // If ID is required by business logic, we should probably fail. 
+                    // But schema didn't mark it required.
+                }
+            }
+
+            newTicket = new Ticket(ticketData);
+            newTicket.summary = computeSummary(newTicket, wf) || '';
+            await newTicket.save();
+        } catch (err) {
+            // Roll back the predecessor's state if the copy could not be created
+            if (predecessorBefore) {
+                await Ticket.updateOne({ _id: predecessorBefore._id }, { $set: { state: predecessorBefore.state } });
+            }
+            throw err;
+        }
 
         // Run bots immediately
         await runBotsForTicket(newTicket);
@@ -638,12 +767,23 @@ router.post('/tickets', verifyToken, async (req, res) => {
         // Log creation
         const log = new Log({
             ticket: newTicket._id,
-            action: 'Ticket erstellt',
+            action: predecessor ? `Ticket erstellt (Wiedereröffnung von ${predecessor.id})` : 'Ticket erstellt',
             editor: req.user.username, // Changed from 'user' to 'editor' to match existing log structure
             timestamp: new Date(),
             dataAfter: newTicket.toObject() // Added dataAfter to match existing log structure
         });
         await log.save();
+
+        if (predecessor) {
+            await new Log({
+                ticket: predecessor._id,
+                action: `${REOPEN_LOG_PREFIX} ${newTicket.id}`,
+                editor: req.user.username,
+                timestamp: new Date(),
+                dataBefore: predecessorBefore,
+                dataAfter: predecessor.toObject()
+            }).save();
+        }
 
         res.status(201).json(newTicket);
     } catch (err) {
@@ -678,6 +818,10 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                 action = found;
                 break;
             }
+        }
+
+        if (action && action.reopen) {
+            return res.status(400).json({ message: `Aktion '${actionName}' erzeugt ein neues Ticket und wird über POST /tickets mit 'reopenOf' ausgeführt.` });
         }
 
         if (!action) {
@@ -734,7 +878,9 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         if (formData) {
-            Object.keys(formData).forEach(key => {
+            // Response-only / relation fields must not be written back through action forms
+            const NON_FORM_FIELDS = ['subTickets', 'relatedTickets', 'links', 'reopenedBy'];
+            Object.keys(formData).filter(key => !NON_FORM_FIELDS.includes(key)).forEach(key => {
                 ticket.set(key, formData[key]);
                 ticket.markModified(key);
             });
@@ -925,9 +1071,23 @@ router.delete('/tickets/:id/star', verifyToken, async (req, res) => {
 });
 
 // Comments
+// Reading comments follows ticket read access (same rules as the ticket list).
+const canReadTicket = (ticket, user) => {
+    if (ticket.creator === user.username) return true;
+    if (ticket.assignee === user.username) return true;
+    if (Array.isArray(ticket.starredBy) && ticket.starredBy.includes(user.username)) return true;
+    const groups = user.groups || [];
+    return workflowEngine.canRead(ticket.type, groups) || canComment(ticket.type, groups);
+};
+
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
 
     try {
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Ticket not found' });
+        const ticket = await Ticket.findById(req.params.id);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        if (!canReadTicket(ticket, req.user)) return res.status(403).json({ message: 'Not authorized to read comments' });
+
         const comments = await Comment.find({ ticket: req.params.id }).sort({ created: 1 });
         res.json(comments);
     } catch (err) {
@@ -943,6 +1103,11 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
 
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+        // Closed tickets are final and cannot be commented (use reopen instead)
+        if (isClosedState(ticket.state)) {
+            return res.status(409).json({ message: 'Geschlossene Tickets können nicht kommentiert werden.' });
+        }
 
         // Access Control
         let authorized = false;
@@ -1128,6 +1293,7 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
         if (!latestLog) return res.json(null); // No actions yet
         if (latestLog.published) return res.json(null); // Already published
         if (latestLog.action.trim().startsWith('Ticket erstellt')) return res.json(null);
+        if (latestLog.action.trim().startsWith(REOPEN_LOG_PREFIX)) return res.json(null);
 
         // 3. User undo permission
         const wf = wfConfig[ticket.type];
@@ -1215,6 +1381,9 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
         // Checks
         if (!latestLog) return res.status(400).json({ message: 'No actions to undo' });
         if (latestLog.published) return res.status(400).json({ message: 'Kann nicht mehr rückgängig gemacht werden' });
+        if (latestLog.action.trim().startsWith(REOPEN_LOG_PREFIX)) {
+            return res.status(400).json({ message: 'Wiedereröffnen kann nicht rückgängig gemacht werden' });
+        }
 
         // Ensure no new actions appeared (trivial since we fetched latestLog just now, 
         // effectively checking if "latestLog" IS the one user wants to undo? 

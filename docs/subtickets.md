@@ -159,6 +159,7 @@ parentTicket: { type: String, index: true }
 * **Single Source of Truth**: The parent ticket does **not** store an array of child IDs.
 * **Fast Querying**: Children are queried on demand via `Ticket.find({ parentTicket: parentId })`.
 * **API Integration**: When retrieving a ticket via `/api/tickets/:id`, the backend automatically queries for child tickets and attaches them as `subTickets: [...]` in the JSON response.
+* **Non-hierarchical relations** (reopened copies, duplicates, related tickets) are not modelled via `parentTicket` but via `links` / `relatedTickets` – see [Ticket Links](workflow_configuration.md#62-ticket-links-links).
 
 ---
 

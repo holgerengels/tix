@@ -91,4 +91,48 @@ describe('TicketComments.vue', () => {
 
     expect(wrapper.find('.comment-body').text()).toBe('Neuer Test-Kommentar');
   });
+
+  it('shows comments but no input for closed tickets in readonly mode', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: [{ _id: 'c1', creator: 'lehrer1', text: 'Alter Kommentar', created: '2026-09-22T12:00:00.000Z' }]
+    });
+
+    const wrapper = mount(TicketComments, {
+      props: {
+        ticket: { _id: 'tkt123', state: 'geschlossen.erledigt' },
+        readonly: true
+      },
+      global: { stubs: globalStubs }
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.comment-item').exists()).toBe(true);
+    });
+
+    expect(wrapper.find('.comment-input').exists()).toBe(false);
+    expect(wrapper.find('.comment-closed-hint').exists()).toBe(true);
+    expect(wrapper.vm.hasPendingComment()).toBe(false);
+
+    await wrapper.vm.sendComment();
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('hides the input without closed hint when readonly on an open ticket', async () => {
+    axios.get.mockResolvedValueOnce({ data: [] });
+
+    const wrapper = mount(TicketComments, {
+      props: {
+        ticket: { _id: 'tkt123', state: 'offen.neu' },
+        readonly: true
+      },
+      global: { stubs: globalStubs }
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.empty').exists()).toBe(true);
+    });
+
+    expect(wrapper.find('.comment-input').exists()).toBe(false);
+    expect(wrapper.find('.comment-closed-hint').exists()).toBe(false);
+  });
 });

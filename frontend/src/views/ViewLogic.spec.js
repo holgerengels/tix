@@ -86,7 +86,7 @@ const FormStub = {
 
 const CommentsStub = {
     template: '<div class="stub-ticket-comments"></div>',
-    props: ['ticket']
+    props: ['ticket', 'readonly']
 };
 
 const CardStub = {
@@ -145,9 +145,10 @@ describe('View Logic & Constraints', () => {
             expect(wrapper.vm.canComment).toBe(true);
             const commentsComp = wrapper.findComponent(CommentsStub);
             expect(commentsComp.exists()).toBe(true);
+            expect(commentsComp.props('readonly')).toBe(false);
         });
 
-        it('should normally NOT allow comments if user is unauthorized', async () => {
+        it('should show comments readonly if user is unauthorized', async () => {
             // Mock user not in 'TestGroup' and not creator/assignee
             localStorage.getItem.mockImplementation((key) => {
                 if (key === 'user') return JSON.stringify({ username: 'baduser', groups: [] });
@@ -156,7 +157,36 @@ describe('View Logic & Constraints', () => {
 
             const wrapper = mount(ViewView, {
                 global: {
-                    stubs: { 'DynamicForm': FormStub, 'TicketComments': CommentsStub, 'wa-card': true, 'wa-button': true, 'wa-icon': true, 'wa-tag': true, 'wa-spinner': true, 'wa-tab-group': true, 'wa-tab-panel': true, 'wa-tab': true }
+                    stubs: { 'DynamicForm': FormStub, 'TicketComments': CommentsStub, 'wa-card': CardStub, 'wa-button': true, 'wa-icon': true, 'wa-tag': true, 'wa-spinner': true, 'wa-tab-group': true, 'wa-tab-panel': true, 'wa-tab': true }
+                }
+            });
+
+            await new Promise(r => setTimeout(r, 0));
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.vm.canComment).toBe(false);
+            // Reading is not restricted by comment permission
+            const commentsComp = wrapper.findComponent(CommentsStub);
+            expect(commentsComp.exists()).toBe(true);
+            expect(commentsComp.props('readonly')).toBe(true);
+
+            // Restore mock
+            localStorage.getItem.mockImplementation((key) => {
+                if (key === 'user') return JSON.stringify(mockUser);
+                return null;
+            });
+        });
+
+        it('should not allow comments on closed tickets, even for authorized users', async () => {
+            const closedTicket = { ...mockTicket, state: 'geschlossen.erledigt' };
+            axios.get.mockImplementation(async (url) => {
+                if (url === '/api/tickets') return { data: [closedTicket] };
+                return { data: [] };
+            });
+
+            const wrapper = mount(ViewView, {
+                global: {
+                    stubs: { 'DynamicForm': FormStub, 'TicketComments': CommentsStub, 'wa-card': CardStub, 'wa-button': true, 'wa-icon': true, 'wa-tag': true, 'wa-spinner': true, 'wa-tab-group': true, 'wa-tab-panel': true, 'wa-tab': true }
                 }
             });
 
@@ -165,13 +195,25 @@ describe('View Logic & Constraints', () => {
 
             expect(wrapper.vm.canComment).toBe(false);
             const commentsComp = wrapper.findComponent(CommentsStub);
-            expect(commentsComp.exists()).toBe(false);
+            expect(commentsComp.exists()).toBe(true);
+            expect(commentsComp.props('readonly')).toBe(true);
+        });
 
-            // Restore mock
-            localStorage.getItem.mockImplementation((key) => {
-                if (key === 'user') return JSON.stringify(mockUser);
-                return null;
+        it('should navigate to the prefilled creation form for reopen actions', async () => {
+            const wrapper = mount(ViewView, {
+                global: {
+                    stubs: { 'DynamicForm': FormStub, 'TicketComments': CommentsStub, 'wa-card': CardStub, 'wa-button': true, 'wa-icon': true, 'wa-tag': true, 'wa-spinner': true, 'wa-tab-group': true, 'wa-tab-panel': true, 'wa-tab': true }
+                }
             });
+            await flushPromises();
+
+            await wrapper.vm.handleAction(
+                { ...mockTicket, state: 'geschlossen.erledigt' },
+                { name: 'wiedereröffnen', groups: ['@creator'], reopen: { closeAs: 'geschlossen.wiedereröffnet' } }
+            );
+
+            expect(mockRouter.push).toHaveBeenCalledWith({ path: '/tickets/new', query: { type: 'TestTicket', reopen: 'TKT-1' } });
+            expect(axios.post).not.toHaveBeenCalled();
         });
     });
 

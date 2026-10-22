@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <div class="comment-input">
+    <div v-if="!readonly" class="comment-input">
       <wa-textarea 
         ref="textareaRef"
         v-model="newComment" 
@@ -33,22 +33,31 @@
         Senden
       </wa-button>
     </div>
+    <div v-else-if="closed" class="comment-closed-hint">
+      <wa-icon name="lock"></wa-icon>
+      Geschlossene Tickets können nicht kommentiert werden.
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, defineProps } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, defineProps } from 'vue';
 import { format } from 'date-fns';
 import { useUsersStore } from '../stores/users';
 import { useTicketsStore } from '../stores/tickets';
 import { toast } from '../composables/useToast';
+import { isClosedState } from '../composables/useTicketAccess';
 
 const usersStore = useUsersStore();
 const ticketsStore = useTicketsStore();
 
 const props = defineProps({
-  ticket: { type: Object, required: true }
+  ticket: { type: Object, required: true },
+  // Hide the input (e.g. closed ticket or no comment permission); comments stay readable
+  readonly: { type: Boolean, default: false }
 });
+
+const closed = computed(() => isClosedState(props.ticket?.state));
 
 const comments = ref([]);
 const newComment = ref('');
@@ -95,7 +104,7 @@ const fetchComments = async () => {
 };
 
 const sendComment = async (silent = false) => {
-    if (!newComment.value.trim()) return;
+    if (props.readonly || !newComment.value.trim()) return;
     
     const isSilent = silent === true;
     sending.value = true;
@@ -200,6 +209,18 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+.comment-closed-hint {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: var(--wa-border-radius-medium);
+    background-color: var(--wa-color-neutral-95);
+    color: var(--wa-color-neutral-40);
+    font-size: 0.85rem;
 }
 
 .loading, .empty {

@@ -18,5 +18,8 @@ Ein Stundenplan-Ticket wird verwendet, um langfristige Stundenplanänderungen zu
 
 [neu] → [storniert]
 
+[erledigt] / [abgelehnt] → [wiedereröffnet] ↷ neues Ticket [neu]
+
 * Die Bearbeitung oder Ablehnung erfolgt durch das Stundenplanteam oder die Schulleitung
 * Die Stornierung erfolgt durch den Ersteller
+* Das Wiedereröffnen erfolgt durch den Ersteller oder das Stundenplanteam (es entsteht ein neues, verknüpftes Ticket)

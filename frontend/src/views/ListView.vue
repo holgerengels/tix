@@ -115,7 +115,7 @@ import { useTicketsStore } from '../stores/tickets';
 import TicketListConfig from '../components/TicketListConfig.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
-import { useTicketAccess } from '../composables/useTicketAccess';
+import { useTicketAccess, getReopenRoute } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -382,7 +382,9 @@ const executeAction = async (ticket, action) => {
 };
 
 const handleAction = async (ticket, action) => {
-    if (action.form === 'read') {
+    if (action.reopen) {
+        router.push(getReopenRoute(ticket));
+    } else if (action.form === 'read') {
         router.push(`/tickets/${ticket.id}/view`);
     } else if (action.form === 'edit') {
         router.push(`/tickets/${ticket.id}/edit`);

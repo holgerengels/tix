@@ -5,8 +5,9 @@
             <wa-icon name="list" style="font-size: 1.5rem;"></wa-icon>
         </wa-button>
         <h2 style="display: flex; align-items: center; gap: 1ch;">
-            Neues Ticket
+            {{ reopenOf ? 'Ticket wiedereröffnen' : 'Neues Ticket' }}
             <wa-tag v-if="parentTicket" variant="brand" size="small">⮤ {{ parentTicket }}</wa-tag>
+            <wa-tag v-if="reopenOf" variant="neutral" size="small">↶ Fortsetzung von {{ reopenOf }}</wa-tag>
         </h2>
     </div>
 
@@ -15,7 +16,7 @@
     </div>
 
     <wa-card v-else class="ticket-card" with-footer with-footer-actions>
-        <div slot="header" class="card-header">Typ<wa-select :value.prop="newTicketType" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen" style="width: 100%;">
+        <div slot="header" class="card-header">Typ<wa-select :value.prop="newTicketType" :disabled="!!reopenOf" @change="newTicketType = $event.target.value; resetForm()" placeholder="Bitte wählen" style="width: 100%;">
            <wa-option v-for="type in availableTypes" :key="type" :value="type">
               {{ config[type]?.typeVerbose || type }}
            </wa-option>
@@ -50,7 +51,7 @@
         <div slot="footer" style="display: none;"></div>
         <wa-button slot="footer-actions" v-if="newTicketType" size="small" variant="neutral" appearance="filled" @click="cancelCreation">Abbrechen</wa-button>
         <wa-divider slot="footer-actions" v-if="newTicketType" orientation="vertical"></wa-divider>
-        <wa-button slot="footer-actions" size="small" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">Ticket erstellen</wa-button>
+        <wa-button slot="footer-actions" size="small" variant="primary" @click="createTicket" :loading="creating" :disabled="!newTicketType">{{ reopenOf ? 'Wiedereröffnen' : 'Ticket erstellen' }}</wa-button>
     </wa-card>
   </div>
 </template>
@@ -92,6 +93,10 @@ const loadingDoc = ref(false);
 const route = useRoute();
 const parentTicket = computed(() => route.query.parent);
 const parentTicketData = ref(null);
+const reopenOf = computed(() => route.query.reopen);
+
+// Fields never copied into a reopened ticket (fresh state, re-triage)
+const REOPEN_EXCLUDED_FIELDS = ['state', 'assignee', 'assigned'];
 
 /**
  * Resolves dot-notation keys into nested objects.
@@ -132,9 +137,59 @@ const applySubticketMapping = () => {
     newTicketData.value = { ...defaults, ...newTicketData.value };
 };
 
+/**
+ * Prefills the form with a copy of the closed predecessor. All configured form fields
+ * are copied except REOPEN_EXCLUDED_FIELDS and the action's `reopen.exclude`.
+ * `reopen.mapping` overrides values; an empty result clears the field.
+ */
+const applyReopenCopy = (source) => {
+    const wf = config.value[source.type];
+    if (!wf) return;
+
+    const reopenAction = (wf.workflow || [])
+        .filter(b => (b.states || []).includes(source.state))
+        .flatMap(b => b.actions || [])
+        .find(a => a.reopen);
+    const reopenCfg = (reopenAction && typeof reopenAction.reopen === 'object') ? reopenAction.reopen : {};
+    const excluded = new Set([...REOPEN_EXCLUDED_FIELDS, ...(reopenCfg.exclude || [])]);
+
+    const copy = {};
+    (wf.fields || []).forEach(f => {
+        if (excluded.has(f.name) || source[f.name] === undefined) return;
+        copy[f.name] = JSON.parse(JSON.stringify(source[f.name]));
+    });
+
+    for (const [field, expression] of Object.entries(reopenCfg.mapping || {})) {
+        const value = evaluateTemplate(expression, source);
+        if (value === undefined || value === null || value === '') {
+            delete copy[field];
+        } else {
+            setNestedValue(copy, field, value);
+        }
+    }
+
+    newTicketData.value = copy;
+};
+
 onMounted(async () => {
     if (route.query.type) {
         newTicketType.value = route.query.type;
+    }
+
+    // Load the closed predecessor for a reopen
+    if (reopenOf.value) {
+        try {
+            await workflow.fetchConfig();
+            const source = await ticketsStore.fetchTicket(reopenOf.value);
+            if (source) {
+                newTicketType.value = source.type;
+                applyReopenCopy(source);
+            } else {
+                toast.error(`Ticket ${reopenOf.value} nicht gefunden.`);
+            }
+        } catch (err) {
+            console.warn('Failed to load ticket to reopen:', err.message);
+        }
     }
 
     // Load parent ticket data for subticket mapping
@@ -159,6 +214,8 @@ watch(newTicketData, () => {
 
 const availableTypes = computed(() => {
     return Object.keys(config.value).filter(type => {
+        // A reopen is authorized by the reopen action, not by create access
+        if (reopenOf.value && type === newTicketType.value) return true;
         const wf = config.value[type];
         if (!wf.access) return true; 
         const rule = wf.access.find(z => z.name === 'create');
@@ -235,11 +292,18 @@ const createTicket = async () => {
         if (parentTicket.value) {
             payload.parentTicket = parentTicket.value;
         }
+        if (reopenOf.value) {
+            payload.reopenOf = reopenOf.value;
+        }
         
-        await ticketsStore.createTicket(payload);
+        const created = await ticketsStore.createTicket(payload);
         // Success
         isDirty.value = false;
-        router.push('/');  
+        if (reopenOf.value && created?.id) {
+            router.replace(`/tickets/${created.id}/view`);
+        } else {
+            router.push('/');
+        }
     } catch (err) {
         console.error(err);
     } finally {

@@ -89,6 +89,25 @@
                     "script": "ticket.state = 'geschlossen.storniert'"
                 }
             ]
+        },
+        {
+            "states": [
+                "geschlossen.erledigt",
+                "geschlossen.abgelehnt"
+            ],
+            "actions": [
+                {
+                    "name": "wiedereröffnen",
+                    "groups": [
+                        "@creator",
+                        "Stundenplanung"
+                    ],
+                    "optional": true,
+                    "reopen": {
+                        "closeAs": "geschlossen.wiedereröffnet"
+                    }
+                }
+            ]
         }
     ],
     "bots": [
@@ -261,6 +280,11 @@
             "name": "geschlossen.storniert",
             "label": "storniert",
             "color": "red"
+        },
+        {
+            "name": "geschlossen.wiedereröffnet",
+            "label": "wiedereröffnet",
+            "color": "gray"
         },
         {
             "name": "geschlossen.*",

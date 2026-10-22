@@ -41,6 +41,7 @@
                             ⮡ {{ sub.id }} ({{ getStatusLabel(sub) }})
                         </wa-tag>
                     </template>
+                    <RelatedTicketTags :tickets="ticket.relatedTickets" />
                 </div>
 
                 <wa-dropdown v-if="allowedSubticketTypes.length > 0">
@@ -76,8 +77,8 @@
                 Sicher, dass die Aktion <strong>{{ actionDef.name }}</strong> ausgeführt werden soll?
             </div>
 
-            <aside class="comments-sidebar" v-if="canComment">
-                <TicketComments ref="commentsRef" :ticket="ticket" />
+            <aside class="comments-sidebar">
+                <TicketComments ref="commentsRef" :ticket="ticket" :readonly="!canComment" />
             </aside>
         </div>
 
@@ -130,6 +131,7 @@ const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import TicketComments from '../components/TicketComments.vue';
 import TicketLogDrawer from '../components/TicketLogDrawer.vue';
+import RelatedTicketTags from '../components/RelatedTicketTags.vue';
 import { validateTicket, computeFills } from '../utils/evaluation';
 
 const route = useRoute();

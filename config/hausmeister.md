@@ -16,6 +16,9 @@ Ein Hausmeisterauftrag wird verwendet, um Arbeitsaufträge, Reparaturen oder Vor
 
 [neu] / [genehmigt] → [storniert]
 
+[erledigt] / [abgelehnt] → [wiedereröffnet] ↷ neues Ticket [neu]
+
 * Die Genehmigung erfolgt durch die Schulleitung
 * Die Bearbeitung erfolgt durch das Hausmeisterteam
 * Die Stornierung erfolgt durch den Ersteller
+* Das Wiedereröffnen erfolgt durch den Ersteller, das Hausmeisterteam oder die Schulleitung (es entsteht ein neues, verknüpftes Ticket)

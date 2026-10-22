@@ -1,5 +1,11 @@
 import { computed } from 'vue';
 
+// Closed tickets (geschlossen.*) are final: they can be read but not commented.
+export const isClosedState = (state) => typeof state === 'string' && state.startsWith('geschlossen.');
+
+// Reopen actions don't change the ticket; they open the creation form prefilled with a copy.
+export const getReopenRoute = (t) => ({ path: '/tickets/new', query: { type: t.type, reopen: t.id } });
+
 export function useTicketAccess(ticket, config, user) {
     if (!user) {
         user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -39,8 +45,12 @@ export function useTicketAccess(ticket, config, user) {
         return rule.groups.some(g => uGroups.includes(g));
     });
 
+    const isClosed = computed(() => isClosedState(ticket.value?.state));
+
+    // Controls writing comments only. Reading comments follows ticket read access.
     const canComment = computed(() => {
         if (!ticket.value || !config.value) return false;
+        if (isClosed.value) return false;
         const conf = config.value[ticket.value.type];
         if (!conf) return false;
         
@@ -138,6 +148,7 @@ export function useTicketAccess(ticket, config, user) {
         canEdit,
         canDelete,
         canComment,
+        isClosed,
         allowedSubticketTypes,
         getStatusColor,
         getStatusLabel,

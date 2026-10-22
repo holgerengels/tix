@@ -18,5 +18,8 @@ Ein Vertretungsplan-Ticket wird verwendet, um kurzfristige Vertretungen oder ein
 
 [neu] → [storniert]
 
+[erledigt] / [ok] / [abgelehnt] → [wiedereröffnet] ↷ neues Ticket [neu]
+
 * Die Bearbeitung oder Ablehnung erfolgt durch das Vertretungsplanteam oder die Schulleitung
 * Die Stornierung erfolgt durch den Ersteller
+* Das Wiedereröffnen erfolgt durch den Ersteller oder das Vertretungsplanteam (es entsteht ein neues, verknüpftes Ticket)
