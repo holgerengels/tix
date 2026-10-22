@@ -279,9 +279,11 @@
             "name": "read",
             "groups": [
                 "@creator",
+                "Schulleitung",
                 "Lehrkräfte",
                 "Sekretariat",
                 "Hausmeister",
+                "Netzwerkteam",
                 "Mensa",
                 "IT-Support"
             ]
