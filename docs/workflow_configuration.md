@@ -335,28 +335,22 @@ Closed tickets are final. Instead of reopening the ticket itself, a reopen actio
             "name": "wiedereröffnen",
             "groups": ["@creator", "Netzwerkteam"],
             "optional": true,
-            "reopen": {
-                "closeAs": "geschlossen.wiedereröffnet",
-                "exclude": ["raumbelegung"],
-                "mapping": { "date": "" }
-            }
+            "reopen": true
         }
     ]
 }
 ```
 
-* **`closeAs`** *(default `geschlossen.wiedereröffnet`)*: State the predecessor is moved to. It must be listed in `states` and must **not** offer a reopen action itself – this is what prevents reopening the same ticket twice. A chain `ITT-7 → ITT-12 → ITT-20` is possible: only the newest ticket is reopenable.
-* **`exclude`** *(optional)*: Additional fields not copied. Never copied: `state`, `assignee`/`assigned` (re-triage), `parentTicket`, comments, logs, subtickets.
-* **`mapping`** *(optional)*: `{{ ... }}` expressions evaluated against the predecessor; an empty result clears the field.
-* `reopen: true` is a shorthand for the defaults.
+* The predecessor is moved to **`geschlossen.wiedereröffnet`**. This state must be listed in `states` and must **not** offer a reopen action itself – this is what prevents reopening the same ticket twice. A chain `ITT-7 → ITT-12 → ITT-20` is possible: only the newest ticket is reopenable.
+* All form fields are copied, except `state`, `assignee`/`assigned` (re-triage) and `parentTicket`. Comments, logs and subtickets are not copied.
 
 **Flow**
 
 1. The action navigates to `/tickets/new?type=<type>&reopen=<id>`; the form is prefilled with the copy and can be adjusted (e.g. describe why it is reopened – closed tickets can't be commented).
 2. `POST /api/tickets` with `reopenOf: "<id>"`. Authorization comes from the predecessor's reopen action (`groups`, incl. `@creator`/`@assignee`) instead of `create` access.
-3. The backend atomically moves the predecessor to `closeAs` (concurrent second reopen → `409`), creates the copy and logs `Wiedereröffnet als <newId>` on the predecessor. This log entry cannot be undone.
+3. The backend atomically moves the predecessor to `geschlossen.wiedereröffnet` (concurrent second reopen → `409`), creates the copy and logs `Wiedereröffnet als <newId>` on the predecessor. This log entry cannot be undone.
 
-**Ownership**: The copy keeps the **original `creator`** (rights + notifications). The reopening user is stored as `reopenedBy` and added to `starredBy`, so both receive notifications.
+**Ownership**: The copy keeps the **original `creator`** (rights + notifications). The reopening user is recorded as `creator` of the `follows` link and added to `starredBy`, so both receive notifications. Note that `starredBy` is only a bookmark and grants **no read access**: the reopening user only sees the copy (and gets notified) if they may read it anyway.
 
 Check consistency with `node config/check_workflows.js`.
 

@@ -138,13 +138,21 @@ async function checkUnpublishedLogs() {
             const ticket = ticketLogs[0].ticket;
             const link = `${BASE_URL}/tickets/${ticket.id}/view`;
 
-            // Identify candidate recipients (creator, assignee, and starredBy users)
+            // Identify candidate recipients (creator, assignee, and starredBy users).
+            // starredBy grants no read access, so those users are only notified
+            // if they may read the ticket (groups from the user DB).
             const candidates = new Set();
             if (ticket.creator) candidates.add(ticket.creator);
             if (ticket.assignee) candidates.add(ticket.assignee);
             if (Array.isArray(ticket.starredBy)) {
+                const { canReadTicket } = require('./workflow');
+                const User = require('./models/user');
                 for (const u of ticket.starredBy) {
-                    if (u) candidates.add(u);
+                    if (!u || candidates.has(u)) continue;
+                    const dbUser = await User.findOne({ username: u }).lean();
+                    if (dbUser && canReadTicket(ticket, { username: u, groups: dbUser.groups || [] })) {
+                        candidates.add(u);
+                    }
                 }
             }
 

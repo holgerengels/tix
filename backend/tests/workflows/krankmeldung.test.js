@@ -51,7 +51,7 @@ beforeAll(async () => {
 
     // Set up test notification channels
     await updateUserSettings('lehrer1', { notificationUri: 'test:lehrer1@local' });
-    await updateUserSettings('stundenplaner', { notificationUri: 'test:stundenplaner@local' });
+    await updateUserSettings('vertretungsplaner', { notificationUri: 'test:vertretungsplaner@local' });
 });
 
 beforeEach(async () => {
@@ -60,7 +60,7 @@ beforeEach(async () => {
     // Set up subscriptions
     await Subscription.create([
         { userId: 'lehrer1', name: 'Meine Tickets', filter: { creator: 'lehrer1' }, lastMatchingTickets: [] },
-        { userId: 'stundenplaner', name: 'Mir Zugewiesen', filter: { assignmentType: 'group' }, lastMatchingTickets: [] }
+        { userId: 'vertretungsplaner', name: 'Mir Zugewiesen', filter: { assignmentType: 'group' }, lastMatchingTickets: [] }
     ]);
 });
 
@@ -120,19 +120,19 @@ describe('Workflow: Krankmeldung', () => {
         notifs = getTestNotifications();
         // lehrer1 sees 2 tickets in Meine Tickets
         expect(notifs.some(n => n.targetUser === 'lehrer1' && n.message.includes('Meine Tickets'))).toBe(true);
-        // stundenplaner sees 2 tickets in Mir Zugewiesen because states is offen.neu and action bearbeiten allows group Stundenplanung
-        expect(notifs.some(n => n.targetUser === 'stundenplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
+        // vertretungsplaner sees 2 tickets in Mir Zugewiesen because states is offen.neu and action bearbeiten allows group Vertretungsplanung
+        expect(notifs.some(n => n.targetUser === 'vertretungsplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
         clearTestNotifications();
 
-        // --- 2. stundenplaner processes t1 ---
-        // Verify what actions stundenplaner has via list logic
-        const stundenplanerUser = { username: 'stundenplaner', groups: ['Stundenplanung'] };
-        const stundenplanerActions = getActionsForTicket(t1, stundenplanerUser, 'assigned');
-        expect(stundenplanerActions.map(a => a.name)).toContain('bearbeiten');
+        // --- 2. vertretungsplaner processes t1 ---
+        // Verify what actions vertretungsplaner has via list logic
+        const vertretungsplanerUser = { username: 'vertretungsplaner', groups: ['Vertretungsplanung'] };
+        const vertretungsplanerActions = getActionsForTicket(t1, vertretungsplanerUser, 'assigned');
+        expect(vertretungsplanerActions.map(a => a.name)).toContain('bearbeiten');
 
         const resDone = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'erledigt',
@@ -155,8 +155,8 @@ describe('Workflow: Krankmeldung', () => {
         // Subscription check updates
         await runSubscriptionCheck();
         notifs = getTestNotifications();
-        // stundenplaner no longer sees t1 (because erledigt action has no stundenplaner group assigned for next steps) -> actually wait, `offen.erledigt` has action `ok` for `@creator`. So `stundenplaner` will see -1 ticket -> notification.
-        expect(notifs.some(n => n.targetUser === 'stundenplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
+        // vertretungsplaner loses t1 from Mir Zugewiesen; subscriptions only notify about added tickets
+        expect(notifs.some(n => n.targetUser === 'vertretungsplaner')).toBe(false);
         clearTestNotifications();
 
 
@@ -198,10 +198,10 @@ describe('Workflow: Krankmeldung', () => {
 
         expect(failEdit.status).toBe(403);
 
-        // stundenplaner should be able to bearbeiten
+        // vertretungsplaner should be able to bearbeiten
         const successEdit = await request(app)
             .post(`/api/tickets/${ticket._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'erledigt',

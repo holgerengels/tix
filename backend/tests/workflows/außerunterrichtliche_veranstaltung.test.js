@@ -8,6 +8,7 @@ const Subscription = require('../../src/models/subscription');
 const { runSubscriptionCheck } = require('../../src/subscriptionWorker');
 const { loadBots } = require('../../src/bots');
 const Log = require('../../src/models/log');
+const { format, addDays } = require('date-fns');
 
 let tokens;
 
@@ -22,7 +23,7 @@ beforeAll(async () => {
 
     await updateUserSettings('lehrer1', { notificationUri: 'test:lehrer1@local' });
     await updateUserSettings('abteilungsleiter', { notificationUri: 'test:abteilungsleiter@local' });
-    await updateUserSettings('stundenplaner', { notificationUri: 'test:stundenplaner@local' });
+    await updateUserSettings('vertretungsplaner', { notificationUri: 'test:vertretungsplaner@local' });
 });
 
 beforeEach(async () => {
@@ -40,14 +41,19 @@ afterAll(async () => {
 
 describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
 
+    // Dates must not be in the past
+    const dateLater = format(addDays(new Date(), 30), 'yyyy-MM-dd');
+
     const ticketPayload = {
         type: 'Außerunterrichtliche Veranstaltung',
         title: 'Exkursion Museum',
-        dateFrom: '2026-10-20',
+        dateFrom: dateLater,
         lessonFrom: '1',
-        dateUntil: '2026-10-20',
+        dateUntil: dateLater,
         lessonUntil: '6',
         location: 'Stadtmuseum',
+        estimatedCosts: '5 € pro Person',
+        students: '10a, 25 Schüler*innen',
         assignee: 'abteilungsleiter',
         colleaguesAgree: true,
         acrossDepartments: false,
@@ -75,10 +81,10 @@ describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
         expect(resApprove.status).toBe(200);
         expect(resApprove.body.state).toBe('offen.genehmigt');
 
-        // --- 3. Stundenplanung processes the ticket ---
+        // --- 3. Vertretungsplanung processes the ticket ---
         const resDone = await request(app)
             .post(`/api/tickets/${resApprove.body._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'erledigt',
@@ -97,6 +103,7 @@ describe('Workflow: Außerunterrichtliche Veranstaltung', () => {
             .set('Authorization', `Bearer ${tokens.lehrer1}`)
             .send({ ...ticketPayload, typ: 'Außerunterrichtliche Veranstaltung' });
 
+        expect(res.status).toBe(201);
         const t1 = res.body;
 
         const resReject = await request(app)

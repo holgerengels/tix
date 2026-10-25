@@ -64,52 +64,46 @@ const getWorkflows = () => workflows;
 
 const getWorkflowForType = (type) => workflows[type];
 
-const canCreate = (type, userGroups) => {
-    const wf = workflows[type];
-    if (!wf) return false;
-    const rule = wf.access.find(z => z.name === 'create');
-    if (!rule) return false;
-    return rule.groups.some(g => userGroups.includes(g));
+// Administration may do everything (access rules, workflow actions, undo).
+const isAdmin = (userGroups) => (userGroups || []).includes('Administration');
+
+// Generic access check against the workflow's `access` rule `name` (create, read, edit, delete, comment, undo).
+// Missing workflows or rules deny access.
+const hasAccess = (type, name, userGroups = []) => {
+    if (isAdmin(userGroups)) return true;
+    const rule = workflows[type]?.access?.find(z => z.name === name);
+    return !!rule && (rule.groups || []).some(g => userGroups.includes(g));
 };
+
+const canCreate = (type, userGroups) => hasAccess(type, 'create', userGroups);
+const canRead = (type, userGroups) => hasAccess(type, 'read', userGroups);
+const canEdit = (type, userGroups) => hasAccess(type, 'edit', userGroups);
+const canDelete = (type, userGroups) => hasAccess(type, 'delete', userGroups);
+const canComment = (type, userGroups) => hasAccess(type, 'comment', userGroups);
+const canUndo = (type, userGroups) => hasAccess(type, 'undo', userGroups);
 
 const getVisibleTicketTypes = (userGroups) => {
     return Object.keys(workflows).filter(type => canCreate(type, userGroups));
 };
 
-const canComment = (type, userGroups) => {
-    const wf = workflows[type];
-    if (!wf) return false;
-    // Default to strict: explicit comment permission required
-    const rule = wf.access.find(z => z.name === 'comment');
-    if (!rule) return false;
-    return rule.groups.some(g => userGroups.includes(g));
+// Checks whether a user matches an action's groups (incl. dynamic roles @creator / @assignee).
+// `ticket` may also be a log snapshot (e.g. dataBefore).
+const matchesActionGroups = (groups, ticket, user) => {
+    const userGroups = user.groups || [];
+    if (isAdmin(userGroups)) return true;
+    return (groups || []).some(g => {
+        if (g === '@creator') return ticket.creator === user.username;
+        if (g === '@assignee') return ticket.assignee === user.username;
+        return userGroups.includes(g);
+    });
 };
 
-const canEdit = (type, userGroups) => {
-    if (userGroups.includes('Administration')) return true;
-    const wf = workflows[type];
-    if (!wf) return false;
-    const rule = wf.access.find(z => z.name === 'edit');
-    if (!rule) return false;
-    return rule.groups.some(g => userGroups.includes(g));
-};
-
-const canDelete = (type, userGroups) => {
-    if (userGroups.includes('Administration')) return true;
-    const wf = workflows[type];
-    if (!wf) return false;
-    const rule = wf.access.find(z => z.name === 'delete');
-    if (!rule) return false;
-    return rule.groups.some(g => userGroups.includes(g));
-};
-
-const canRead = (type, userGroups) => {
-    if (userGroups.includes('Administration')) return true;
-    const wf = workflows[type];
-    if (!wf) return false;
-    const rule = wf.access.find(z => z.name === 'read');
-    if (!rule) return false;
-    return rule.groups.some(g => userGroups.includes(g));
+// Read access to a single ticket (and thus its comments, logs and attachments).
+// Note: starredBy is a mere bookmark and deliberately grants NO read access.
+const canReadTicket = (ticket, user) => {
+    if (ticket.creator === user.username) return true;
+    if (ticket.assignee === user.username) return true;
+    return canRead(ticket.type, user.groups || []);
 };
 
 module.exports = {
@@ -117,9 +111,15 @@ module.exports = {
     getWorkflowForType,
     getVisibleTicketTypes,
     loadWorkflows,
+    isAdmin,
+    hasAccess,
+    canCreate,
     canComment,
     canEdit,
     canDelete,
-    canRead
+    canRead,
+    canUndo,
+    canReadTicket,
+    matchesActionGroups
 };
 

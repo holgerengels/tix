@@ -22,6 +22,7 @@ const generateToken = (username, groups) => {
 const getTokens = () => {
     return {
         admin: generateToken('admin', ['Administration', 'Schulleitung', 'Stundenplanung']),
+        adminOnly: generateToken('adminonly', ['Administration']),
         lehrer1: generateToken('lehrer1', ['Lehrkräfte']),
         lehrer2: generateToken('lehrer2', ['Lehrkräfte', 'Mensateam']),
         schulleiter: generateToken('schulleiter', ['Schulleitung', 'Lehrkräfte']),

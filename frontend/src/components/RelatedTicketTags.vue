@@ -1,6 +1,6 @@
 <template>
     <wa-tag
-        v-for="rel in related"
+        v-for="rel in tickets"
         :key="`${rel.direction}-${rel.linkType}-${rel.id}`"
         class="related-ticket-tag"
         variant="neutral"
@@ -13,14 +13,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 /**
  * Renders non-hierarchical ticket links (`relatedTickets` from the API).
  * Parent/subticket relations are rendered separately (⮤ / ⮡).
  */
-const props = defineProps({
+defineProps({
     tickets: { type: Array, default: () => [] }
 });
 
@@ -32,8 +31,6 @@ const LABELS = {
     duplicates: { out: '⧉ Duplikat von', in: '⧉ Duplikat:' },
     relates: { out: '↔ Verwandt mit', in: '↔ Verwandt mit' }
 };
-
-const related = computed(() => Array.isArray(props.tickets) ? props.tickets : []);
 
 const labelFor = (rel) => {
     const prefix = LABELS[rel.linkType]?.[rel.direction] || '↔';

@@ -63,6 +63,7 @@ import { useUiStore } from '../stores/ui';
 import { useWorkflowStore } from '../stores/workflow';
 import { useTicketsStore } from '../stores/tickets';
 import { toast, confirm } from '../composables/useToast';
+import { hasAccess } from '../composables/useTicketAccess';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -95,8 +96,9 @@ const parentTicket = computed(() => route.query.parent);
 const parentTicketData = ref(null);
 const reopenOf = computed(() => route.query.reopen);
 
-// Fields never copied into a reopened ticket (fresh state, re-triage)
-const REOPEN_EXCLUDED_FIELDS = ['state', 'assignee', 'assigned'];
+// Fields never copied into a reopened ticket (fresh state, re-triage, fresh hierarchy).
+// Keep in sync with REOPEN_EXCLUDED_FIELDS in backend/src/routes.js.
+const REOPEN_EXCLUDED_FIELDS = ['state', 'assignee', 'assigned', 'parentTicket'];
 
 /**
  * Resolves dot-notation keys into nested objects.
@@ -138,35 +140,18 @@ const applySubticketMapping = () => {
 };
 
 /**
- * Prefills the form with a copy of the closed predecessor. All configured form fields
- * are copied except REOPEN_EXCLUDED_FIELDS and the action's `reopen.exclude`.
- * `reopen.mapping` overrides values; an empty result clears the field.
+ * Prefills the form with a copy of the closed predecessor.
+ * All configured form fields are copied except REOPEN_EXCLUDED_FIELDS.
  */
 const applyReopenCopy = (source) => {
     const wf = config.value[source.type];
     if (!wf) return;
 
-    const reopenAction = (wf.workflow || [])
-        .filter(b => (b.states || []).includes(source.state))
-        .flatMap(b => b.actions || [])
-        .find(a => a.reopen);
-    const reopenCfg = (reopenAction && typeof reopenAction.reopen === 'object') ? reopenAction.reopen : {};
-    const excluded = new Set([...REOPEN_EXCLUDED_FIELDS, ...(reopenCfg.exclude || [])]);
-
     const copy = {};
     (wf.fields || []).forEach(f => {
-        if (excluded.has(f.name) || source[f.name] === undefined) return;
+        if (REOPEN_EXCLUDED_FIELDS.includes(f.name) || source[f.name] === undefined) return;
         copy[f.name] = JSON.parse(JSON.stringify(source[f.name]));
     });
-
-    for (const [field, expression] of Object.entries(reopenCfg.mapping || {})) {
-        const value = evaluateTemplate(expression, source);
-        if (value === undefined || value === null || value === '') {
-            delete copy[field];
-        } else {
-            setNestedValue(copy, field, value);
-        }
-    }
 
     newTicketData.value = copy;
 };
@@ -216,10 +201,7 @@ const availableTypes = computed(() => {
     return Object.keys(config.value).filter(type => {
         // A reopen is authorized by the reopen action, not by create access
         if (reopenOf.value && type === newTicketType.value) return true;
-        const wf = config.value[type];
-        if (!wf.access) return true; 
-        const rule = wf.access.find(z => z.name === 'create');
-        return rule && rule.groups.some(g => (user.groups || []).includes(g));
+        return hasAccess(config.value[type], 'create', user);
     });
 });
 

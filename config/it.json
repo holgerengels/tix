@@ -265,9 +265,7 @@
                         "IT-Support"
                     ],
                     "optional": true,
-                    "reopen": {
-                        "closeAs": "geschlossen.wiedereröffnet"
-                    }
+                    "reopen": true
                 }
             ]
         }

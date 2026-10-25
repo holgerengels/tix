@@ -8,31 +8,29 @@ const Log = require('./models/log');
 const Subscription = require('./models/subscription');
 const User = require('./models/user');
 const workflowEngine = require('./workflow');
-const { canComment, canDelete } = require('./workflow');
+const { canComment, canDelete, canReadTicket, matchesActionGroups } = require('./workflow');
 const mongoose = require('mongoose');
 const vm = require('vm');
 const { runBotsForTicket } = require('./bots');
 const { evaluateTemplate, computeSummary } = require('./validation');
 
-const DEFAULT_REOPEN_STATE = 'geschlossen.wiedereröffnet';
+// State the predecessor is moved to on reopen. It must not offer a reopen action itself,
+// which prevents reopening the same ticket twice.
+const REOPEN_STATE = 'geschlossen.wiedereröffnet';
 // Log entry written to the predecessor on reopen. It must never be undone,
 // otherwise the predecessor would be reopenable again while its copy exists.
 const REOPEN_LOG_PREFIX = 'Wiedereröffnet als';
 
+// Log entries that can never be undone: ticket creation and the reopen entry on the predecessor.
+const isUndoBlocked = (log) => {
+    const action = (log.action || '').trim();
+    return action.startsWith('Ticket erstellt') || action.startsWith(REOPEN_LOG_PREFIX);
+};
+
 // Closed tickets (geschlossen.*) are final: no comments, only a configured reopen action.
 const isClosedState = (state) => typeof state === 'string' && state.startsWith('geschlossen.');
 
-// Checks whether a user matches an action's groups (incl. dynamic roles @creator / @assignee).
-const matchesActionGroups = (groups, ticket, user) => {
-    const userGroups = user.groups || [];
-    return (groups || []).some(g => {
-        if (g === '@creator') return ticket.creator === user.username;
-        if (g === '@assignee') return ticket.assignee === user.username;
-        return userGroups.includes(g);
-    });
-};
-
-// Returns the first action with a `reopen` definition that is available in the ticket's current state.
+// Returns the first action marked with `reopen` that is available in the ticket's current state.
 const findReopenAction = (ticket) => {
     const wf = workflowEngine.getWorkflowForType(ticket.type);
     if (!wf || !Array.isArray(wf.workflow)) return null;
@@ -43,12 +41,11 @@ const findReopenAction = (ticket) => {
     return null;
 };
 
-const getReopenConfig = (action) => (action && typeof action.reopen === 'object') ? action.reopen : {};
-
 // Fields that must never be taken over from the client payload when creating a ticket.
-const PROTECTED_CREATE_FIELDS = ['_id', '__v', 'links', 'reopenedBy', 'starredBy', 'updated', 'summary', 'reopenOf', 'subTickets', 'relatedTickets'];
+const PROTECTED_CREATE_FIELDS = ['_id', '__v', 'links', 'starredBy', 'updated', 'summary', 'reopenOf', 'subTickets', 'relatedTickets'];
 // Additional fields that are not copied into a reopened ticket (re-triage, fresh hierarchy).
-const REOPEN_EXCLUDED_FIELDS = ['assignee', 'assigned', 'parentTicket'];
+// Keep in sync with REOPEN_EXCLUDED_FIELDS in frontend/src/views/NewTicketView.vue.
+const REOPEN_EXCLUDED_FIELDS = ['state', 'assignee', 'assigned', 'parentTicket'];
 
 /**
  * Attaches `relatedTickets` to each ticket (plain objects):
@@ -342,7 +339,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
             if (conditions.length > 0) accessOr.push(...conditions);
             accessOr.push({ creator: user.username });
             accessOr.push({ assignee: user.username });
-            accessOr.push({ starredBy: user.username });
+            // starredBy is only a bookmark, it grants no read access
 
             baseQuery.$or = accessOr;
         }
@@ -627,18 +624,8 @@ router.post('/tickets', verifyToken, async (req, res) => {
         }
 
         // Access Control
-        if (!reopenAction && wf && wf.access) {
-            const createAccess = wf.access.find(a => a.name === 'create');
-            if (createAccess && createAccess.groups) {
-                const userGroups = req.user.groups || [];
-                // Anyone can create if no specific groups required, else must match
-                if (createAccess.groups.length > 0) {
-                    const hasAccess = createAccess.groups.some(g => userGroups.includes(g));
-                    if (!hasAccess) {
-                        return res.status(403).json({ message: 'Not authorized to create tickets of this type' });
-                    }
-                }
-            }
+        if (!reopenAction && wf && !workflowEngine.canCreate(type, req.user.groups || [])) {
+            return res.status(403).json({ message: 'Not authorized to create tickets of this type' });
         }
 
         // Validation
@@ -660,29 +647,11 @@ router.post('/tickets', verifyToken, async (req, res) => {
             const parentWf = workflowEngine.getWorkflowForType(parent.type);
             const parentMatchingBlocks = parentWf?.workflow?.filter(w => w.states.includes(parent.state)) || [];
 
-            let allowed = false;
-            for (const block of parentMatchingBlocks) {
-                const subActions = (block.actions || []).filter(a => a.subTickets && a.subTickets.includes(type));
-                for (const action of subActions) {
-                    const groups = action.groups || [];
-                    const isCreator = parent.creator === req.user.username;
-                    const isAssignee = parent.assignee === req.user.username;
-                    const userGroups = req.user.groups || [];
-
-                    const allowedGroup = groups.some(g => {
-                        if (g === '@creator' && isCreator) return true;
-                        if (g === '@assignee' && isAssignee) return true;
-                        if (userGroups.includes(g)) return true;
-                        return false;
-                    });
-
-                    if (allowedGroup || groups.length === 0) {
-                        allowed = true;
-                        break;
-                    }
-                }
-                if (allowed) break;
-            }
+            // Actions without groups allow everyone to create the subticket
+            const allowed = parentMatchingBlocks.some(block => (block.actions || []).some(a =>
+                a.subTickets && a.subTickets.includes(type) &&
+                ((a.groups || []).length === 0 || matchesActionGroups(a.groups, parent, req.user))
+            ));
 
             if (!allowed) {
                 return res.status(400).json({ message: 'This ticket type is not allowed as a subticket for the given parent in its current state or you do not have permission' });
@@ -691,6 +660,7 @@ router.post('/tickets', verifyToken, async (req, res) => {
 
         const body = { ...req.body };
         PROTECTED_CREATE_FIELDS.forEach(f => delete body[f]);
+        if (reopenAction) REOPEN_EXCLUDED_FIELDS.forEach(f => delete body[f]);
 
         const ticketData = {
             type: type,
@@ -702,26 +672,21 @@ router.post('/tickets', verifyToken, async (req, res) => {
             state: 'offen.neu'
         };
 
-        let closeAs = null;
         let predecessorBefore = null;
         if (reopenAction) {
-            const reopenCfg = getReopenConfig(reopenAction);
-            [...REOPEN_EXCLUDED_FIELDS, ...(reopenCfg.exclude || [])].forEach(f => delete ticketData[f]);
-
             // The original creator keeps ownership (rights + notifications);
-            // the reopening user follows the ticket via starredBy.
+            // the reopening user follows the ticket via starredBy and is recorded
+            // as creator of the 'follows' link.
             ticketData.creator = predecessor.creator;
-            ticketData.reopenedBy = req.user.username;
             ticketData.starredBy = predecessor.creator !== req.user.username ? [req.user.username] : [];
             ticketData.links = [{ type: 'follows', ticket: predecessor.id, created: new Date(), creator: req.user.username }];
 
             // Atomically move the predecessor out of its reopenable state. A concurrent
             // second reopen fails here because the state no longer matches.
-            closeAs = reopenCfg.closeAs || DEFAULT_REOPEN_STATE;
             predecessorBefore = predecessor.toObject();
             const claimed = await Ticket.findOneAndUpdate(
                 { _id: predecessor._id, state: predecessor.state },
-                { $set: { state: closeAs } },
+                { $set: { state: REOPEN_STATE } },
                 { new: true }
             );
             if (!claimed) {
@@ -795,6 +760,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
     try {
         const { actionName, formData, formButtonName } = req.body;
 
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Ticket not found' });
         const ticket = await Ticket.findById(req.params.id);
 
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
@@ -849,14 +815,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         }
 
         // Check permission
-        const userGroups = req.user.groups;
-        let authorized = false;
-
-        if (action.groups.includes('@creator') && ticket.creator === req.user.username) authorized = true;
-        if (action.groups.includes('@assignee') && ticket.assignee === req.user.username) authorized = true;
-        if (action.groups.some(g => userGroups.includes(g))) authorized = true;
-
-        if (!authorized) return res.status(403).json({ message: 'Not authorized' });
+        if (!matchesActionGroups(action.groups, ticket, req.user)) return res.status(403).json({ message: 'Not authorized' });
 
         // Determine Script to run
         let scriptToRun = null;
@@ -879,7 +838,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         if (formData) {
             // Response-only / relation fields must not be written back through action forms
-            const NON_FORM_FIELDS = ['subTickets', 'relatedTickets', 'links', 'reopenedBy'];
+            const NON_FORM_FIELDS = ['subTickets', 'relatedTickets', 'links'];
             Object.keys(formData).filter(key => !NON_FORM_FIELDS.includes(key)).forEach(key => {
                 ticket.set(key, formData[key]);
                 ticket.markModified(key);
@@ -1024,6 +983,8 @@ router.post('/tickets/:id/star', verifyToken, async (req, res) => {
             ticket = await Ticket.findOne({ id: req.params.id });
         }
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        // Only readable tickets can be bookmarked (avoids leaking titles/notifications)
+        if (!canReadTicket(ticket, req.user)) return res.status(403).json({ message: 'Forbidden' });
 
         const updatedTicket = await Ticket.findByIdAndUpdate(
             ticket._id,
@@ -1071,15 +1032,7 @@ router.delete('/tickets/:id/star', verifyToken, async (req, res) => {
 });
 
 // Comments
-// Reading comments follows ticket read access (same rules as the ticket list).
-const canReadTicket = (ticket, user) => {
-    if (ticket.creator === user.username) return true;
-    if (ticket.assignee === user.username) return true;
-    if (Array.isArray(ticket.starredBy) && ticket.starredBy.includes(user.username)) return true;
-    const groups = user.groups || [];
-    return workflowEngine.canRead(ticket.type, groups) || canComment(ticket.type, groups);
-};
-
+// Reading comments follows ticket read access.
 router.get('/tickets/:id/comments', verifyToken, async (req, res) => {
 
     try {
@@ -1101,6 +1054,7 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
 
         if (!text) return res.status(400).json({ message: 'Text required' });
 
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Ticket not found' });
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
@@ -1121,9 +1075,9 @@ router.post('/tickets/:id/comments', verifyToken, async (req, res) => {
 
         if (!authorized) return res.status(403).json({ message: 'Not authorized to comment' });
 
-        // Extract @mentions from comment text
+        // Extract @mentions from comment text (plus explicitly selected users)
         const mentionMatches = [...text.matchAll(/(?:^|[\s(])@([a-zA-Z0-9_]+(?:[.-][a-zA-Z0-9_]+)*)/g)];
-        const candidateMentions = [...new Set(mentionMatches.map(m => m[1].toLowerCase()))];
+        const candidateMentions = mentionMatches.map(m => m[1].toLowerCase());
         if (Array.isArray(req.body.mentions)) {
             for (const m of req.body.mentions) {
                 if (typeof m === 'string' && m.trim()) {
@@ -1276,15 +1230,7 @@ router.get('/tickets/:id/logs', verifyToken, async (req, res) => {
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
         // 2. Access Control
-        let authorized = false;
-        if (user.groups && user.groups.includes('Administration')) authorized = true;
-        if (ticket.creator === user.username) authorized = true;
-        if (ticket.assignee === user.username) authorized = true;
-        if (!authorized && workflowEngine.canRead(ticket.type, user.groups || [])) {
-            authorized = true;
-        }
-
-        if (!authorized) {
+        if (!canReadTicket(ticket, user)) {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
@@ -1310,6 +1256,7 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
         const wfConfig = workflowEngine.getWorkflows();
 
         // 1. Fetch Ticket
+        if (!mongoose.isValidObjectId(ticketId)) return res.status(404).json({ message: 'Ticket not found' });
         const ticket = await Ticket.findById(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
@@ -1319,15 +1266,13 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
         // Checks
         if (!latestLog) return res.json(null); // No actions yet
         if (latestLog.published) return res.json(null); // Already published
-        if (latestLog.action.trim().startsWith('Ticket erstellt')) return res.json(null);
-        if (latestLog.action.trim().startsWith(REOPEN_LOG_PREFIX)) return res.json(null);
+        if (isUndoBlocked(latestLog)) return res.json(null);
 
         // 3. User undo permission
         const wf = wfConfig[ticket.type];
         if (!wf) return res.json(null);
 
-        const undoAccess = wf.access ? wf.access.find(a => a.name === 'undo') : null;
-        if (!undoAccess || !undoAccess.groups.some(g => user.groups.includes(g))) {
+        if (!workflowEngine.canUndo(ticket.type, user.groups || [])) {
             return res.json(null); // User has no undo permission
         }
 
@@ -1335,7 +1280,7 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
         // "wenn er die action selbst hätte ausführen können bzw. selbst ausgeführt hat"
 
         let canUndo = false;
-        if (latestLog.editor === user.username) {
+        if (latestLog.editor === user.username || workflowEngine.isAdmin(user.groups)) {
             canUndo = true;
         } else {
             // Check if user could have executed this action
@@ -1367,11 +1312,8 @@ router.get('/tickets/:id/undoable', verifyToken, async (req, res) => {
                     const actionName = latestLog.action.split(' (')[0]; // simple heuristic
                     const actionDef = workflowState.actions.find(a => a.name === actionName);
 
-                    if (actionDef) {
-                        // Check permissions
-                        if (actionDef.groups.some(g => user.groups.includes(g))) canUndo = true;
-                        if (actionDef.groups.includes('@creator') && latestLog.dataBefore.creator === user.username) canUndo = true; // Use creator from snapshot
-                        if (actionDef.groups.includes('@assignee') && latestLog.dataBefore.assignee === user.username) canUndo = true;
+                    if (actionDef && matchesActionGroups(actionDef.groups, latestLog.dataBefore, user)) {
+                        canUndo = true; // dynamic roles are checked against the snapshot before the action
                     }
                 }
             }
@@ -1399,6 +1341,7 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
         const wfConfig = workflowEngine.getWorkflows();
 
         // 1. Fetch Ticket
+        if (!mongoose.isValidObjectId(ticketId)) return res.status(404).json({ message: 'Ticket not found' });
         const ticket = await Ticket.findById(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
@@ -1408,8 +1351,8 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
         // Checks
         if (!latestLog) return res.status(400).json({ message: 'No actions to undo' });
         if (latestLog.published) return res.status(400).json({ message: 'Kann nicht mehr rückgängig gemacht werden' });
-        if (latestLog.action.trim().startsWith(REOPEN_LOG_PREFIX)) {
-            return res.status(400).json({ message: 'Wiedereröffnen kann nicht rückgängig gemacht werden' });
+        if (isUndoBlocked(latestLog)) {
+            return res.status(400).json({ message: 'Diese Aktion kann nicht rückgängig gemacht werden' });
         }
 
         // Ensure no new actions appeared (trivial since we fetched latestLog just now, 
@@ -1427,14 +1370,13 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
         const wf = wfConfig[ticket.type];
         if (!wf) return res.status(500).json({ message: 'Workflow config missing' });
 
-        const undoAccess = wf.access ? wf.access.find(a => a.name === 'undo') : null;
-        if (!undoAccess || !undoAccess.groups.some(g => user.groups.includes(g))) {
+        if (!workflowEngine.canUndo(ticket.type, user.groups || [])) {
             return res.status(403).json({ message: 'Not authorized to undo' });
         }
 
         // 4. Action ownership/permission check
         let canUndo = false;
-        if (latestLog.editor === user.username) {
+        if (latestLog.editor === user.username || workflowEngine.isAdmin(user.groups)) {
             canUndo = true;
         } else {
             const stateBefore = latestLog.dataBefore ? latestLog.dataBefore.state : null;
@@ -1444,11 +1386,7 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
                     const actionName = latestLog.action.split(' (')[0];
                     const actionDef = workflowState.actions.find(a => a.name === actionName);
 
-                    if (actionDef) {
-                        if (actionDef.groups.some(g => user.groups.includes(g))) canUndo = true;
-                        if (actionDef.groups.includes('@creator') && latestLog.dataBefore.creator === user.username) canUndo = true;
-                        if (actionDef.groups.includes('@assignee') && latestLog.dataBefore.assignee === user.username) canUndo = true;
-                    }
+                    if (actionDef && matchesActionGroups(actionDef.groups, latestLog.dataBefore, user)) canUndo = true;
                 }
             }
         }
@@ -1470,6 +1408,15 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
         const restoreData = latestLog.dataBefore;
         delete restoreData._id; // Ensure we don't overwrite ID (though it should be same)
         delete restoreData.__v;
+
+        // Fields that the undone action added (absent in dataBefore) must be removed,
+        // otherwise e.g. a freshly set assignee would survive the undo.
+        const UNDO_PROTECTED_FIELDS = new Set(['_id', '__v', 'id', 'type', 'created', 'updated']);
+        for (const key of Object.keys(ticket.toObject())) {
+            if (!UNDO_PROTECTED_FIELDS.has(key) && !(key in restoreData)) {
+                ticket.set(key, undefined);
+            }
+        }
 
         // Mongoose 'set' or overwrite
         ticket.set(restoreData);

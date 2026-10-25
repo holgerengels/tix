@@ -70,10 +70,8 @@ router.get('/attachments/:fileId', verifyToken, async (req, res) => {
 
         let hasAccess = false;
         if (ticket) {
-            const { canRead } = require('./workflow');
-            const isCreator = ticket.creator === req.user.username;
-            const isAssignee = ticket.assignee === req.user.username;
-            hasAccess = isCreator || isAssignee || canRead(ticket.type, userGroups);
+            const { canReadTicket } = require('./workflow');
+            hasAccess = canReadTicket(ticket, req.user);
         } else {
             // Unassociated file - only uploader or administrator can access
             const isUploader = file.metadata?.uploadedBy === req.user.username;

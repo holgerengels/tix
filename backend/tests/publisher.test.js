@@ -179,13 +179,18 @@ describe('Publisher Service', () => {
             expect(testNotifs[0].targetUser).toBe('lehrer1');
         });
         
-        it('should notify users who starred the ticket', async () => {
+        it('should notify users who starred the ticket only if they may read it', async () => {
+            const User = require('../src/models/user');
+            await User.create([
+                { username: 'fanuser1', groups: ['Administration'] }, // may read everything
+                { username: 'fanuser2', groups: [] }                  // no read access
+            ]);
             const ticket = await Ticket.create({
                 type: 'IT-Ticket',
                 title: 'Starred Ticket',
                 creator: 'lehrer1',
                 assignee: 'netzwerker',
-                starredBy: ['fanUser1', 'fanUser2', 'lehrer1']
+                starredBy: ['fanuser1', 'fanuser2', 'fanuser3', 'lehrer1'] // fanuser3 unknown
             });
 
             const oldDate = new Date(Date.now() - 2 * 60 * 1000);
@@ -205,7 +210,7 @@ describe('Publisher Service', () => {
 
             const testNotifs = getTestNotifications();
             const recipientUsers = testNotifs.map(n => n.targetUser).sort();
-            expect(recipientUsers).toEqual(['fanUser1', 'fanUser2', 'lehrer1', 'netzwerker'].sort());
+            expect(recipientUsers).toEqual(['fanuser1', 'lehrer1', 'netzwerker'].sort());
         });
 
         it('should send web push notifications', async () => {

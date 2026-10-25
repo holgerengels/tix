@@ -104,6 +104,35 @@ describe('Comments on closed tickets', () => {
     });
 });
 
+describe('Administration', () => {
+    it('may create, comment, run any action, reopen and undo without being in the configured groups', async () => {
+        const auth = { Authorization: `Bearer ${tokens.adminOnly}` };
+
+        // create (IT-Ticket create groups don't include Administration)
+        const ticket = await createItTicket(tokens.adminOnly);
+
+        // comment
+        const commentRes = await request(app).post(`/api/tickets/${ticket._id}/comments`).set(auth).send({ text: 'Admin war hier' });
+        expect(commentRes.status).toBe(201);
+
+        // workflow action restricted to Netzwerkteam / IT-Support
+        const actionRes = await request(app).post(`/api/tickets/${ticket._id}/action`).set(auth).send({ actionName: 'ablehnen' });
+        expect(actionRes.status).toBe(200);
+        expect(actionRes.body.state).toBe('geschlossen.abgelehnt');
+
+        // reopen
+        const reopenRes = await reopen(ticket, tokens.adminOnly);
+        expect(reopenRes.status).toBe(201);
+
+        // undo of an action executed by someone else
+        const other = await createItTicket();
+        await rejectTicket(other);
+        const undoRes = await request(app).post(`/api/tickets/${other._id}/undo`).set(auth);
+        expect(undoRes.status).toBe(200);
+        expect((await Ticket.findById(other._id)).state).toBe('offen.neu');
+    });
+});
+
 describe('Reopen', () => {
     it('creates a linked copy, keeps the creator and closes the predecessor as wiedereröffnet', async () => {
         const original = await createItTicket();
@@ -116,7 +145,6 @@ describe('Reopen', () => {
         expect(copy.id).not.toBe(original.id);
         expect(copy.state).toBe('offen.neu');
         expect(copy.creator).toBe('lehrer1');
-        expect(copy.reopenedBy).toBe('netzwerker');
         expect(copy.starredBy).toEqual(['netzwerker']);
         expect(copy.assignee).toBeUndefined();
         expect(copy.links).toHaveLength(1);
@@ -236,10 +264,9 @@ describe('Reopen', () => {
         const res = await request(app)
             .post('/api/tickets')
             .set('Authorization', `Bearer ${tokens.lehrer1}`)
-            .send({ ...IT_TICKET, links: [{ type: 'duplicates', ticket: 'ITT-99' }], starredBy: ['admin'], reopenedBy: 'admin' });
+            .send({ ...IT_TICKET, links: [{ type: 'duplicates', ticket: 'ITT-99' }], starredBy: ['admin'] });
         expect(res.status).toBe(201);
         expect(res.body.links).toBeUndefined();
         expect(res.body.starredBy).toEqual([]);
-        expect(res.body.reopenedBy).toBeUndefined();
     });
 });

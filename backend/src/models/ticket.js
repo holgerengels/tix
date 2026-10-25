@@ -28,7 +28,6 @@ const ticketSchema = new mongoose.Schema({
     //   duplicates - this ticket is a duplicate of the target
     //   relates    - generic (symmetric) relation
     links: { type: [linkSchema], default: undefined },
-    reopenedBy: { type: String },
     summary: { type: String }
 }, {
     strict: false,

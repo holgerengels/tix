@@ -103,9 +103,7 @@
                         "Stundenplanung"
                     ],
                     "optional": true,
-                    "reopen": {
-                        "closeAs": "geschlossen.wiedereröffnet"
-                    }
+                    "reopen": true
                 }
             ]
         }

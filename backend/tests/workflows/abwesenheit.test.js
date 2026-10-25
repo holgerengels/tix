@@ -53,7 +53,7 @@ beforeAll(async () => {
     // Set up test notification channels
     await updateUserSettings('lehrer1', { notificationUri: 'test:lehrer1@local' });
     await updateUserSettings('schulleiter', { notificationUri: 'test:schulleiter@local' });
-    await updateUserSettings('stundenplaner', { notificationUri: 'test:stundenplaner@local' });
+    await updateUserSettings('vertretungsplaner', { notificationUri: 'test:vertretungsplaner@local' });
 });
 
 beforeEach(async () => {
@@ -62,9 +62,9 @@ beforeEach(async () => {
     // Set up subscriptions (must be here so clearDatabase doesn't wipe them)
     await Subscription.create([
         { userId: 'lehrer1', name: 'Meine Tickets', filter: { creator: 'lehrer1' }, lastMatchingTickets: [] },
-        { userId: 'stundenplaner', name: 'Persönlich Zugewiesene', filter: { assignmentType: 'personal' }, lastMatchingTickets: [] },
+        { userId: 'vertretungsplaner', name: 'Persönlich Zugewiesene', filter: { assignmentType: 'personal' }, lastMatchingTickets: [] },
         { userId: 'schulleiter', name: 'Mir Zugewiesen', filter: { assignmentType: 'group' }, lastMatchingTickets: [] },
-        { userId: 'stundenplaner', name: 'Mir Zugewiesen', filter: { assignmentType: 'group' }, lastMatchingTickets: [] }
+        { userId: 'vertretungsplaner', name: 'Mir Zugewiesen', filter: { assignmentType: 'group' }, lastMatchingTickets: [] }
     ]);
 });
 
@@ -81,7 +81,7 @@ describe('Workflow: Abwesenheit', () => {
         lessonFrom: '1',
         dateUntil: '2030-01-01',
         lessonUntil: '6',
-        reason: 'Dienstgeschäft',
+        reason: 'Fortbildung', // 'Dienstgeschäft' is approved automatically by a bot
         description: 'Testticket'
     };
 
@@ -131,8 +131,8 @@ describe('Workflow: Abwesenheit', () => {
         expect(notifs.some(n => n.targetUser === 'lehrer1' && n.message.includes('Meine Tickets'))).toBe(true);
         // schulleiter sees 3 tickets in Mir Zugewiesen -> 1 notification
         expect(notifs.some(n => n.targetUser === 'schulleiter' && n.message.includes('Mir Zugewiesen'))).toBe(true);
-        // stundenplaner sees nothing because they are offen.neu and only schulleiter handles them
-        expect(notifs.some(n => n.targetUser === 'stundenplaner')).toBe(false);
+        // vertretungsplaner sees nothing because they are offen.neu and only schulleiter handles them
+        expect(notifs.some(n => n.targetUser === 'vertretungsplaner')).toBe(false);
         clearTestNotifications();
 
         // Verify "Meine Tickets" for lehrer1
@@ -183,8 +183,8 @@ describe('Workflow: Abwesenheit', () => {
 
         await runSubscriptionCheck();
         notifs = getTestNotifications();
-        // schulleiter loses t3 from Mir Zugewiesen
-        expect(notifs.some(n => n.targetUser === 'schulleiter' && n.message.includes('Mir Zugewiesen'))).toBe(true);
+        // schulleiter loses t3 from Mir Zugewiesen; subscriptions only notify about added tickets
+        expect(notifs.some(n => n.targetUser === 'schulleiter')).toBe(false);
         clearTestNotifications();
 
         // Verify t3 is no longer in Schulleiter's assigned list
@@ -220,10 +220,10 @@ describe('Workflow: Abwesenheit', () => {
 
         await runSubscriptionCheck();
         notifs = getTestNotifications();
-        // stundenplaner now sees t1 in Mir Zugewiesen
-        expect(notifs.some(n => n.targetUser === 'stundenplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
-        // schulleiter sees both leave Mir Zugewiesen (one approved, one rejected)
-        expect(notifs.some(n => n.targetUser === 'schulleiter')).toBe(true);
+        // vertretungsplaner now sees t1 in Mir Zugewiesen
+        expect(notifs.some(n => n.targetUser === 'vertretungsplaner' && n.message.includes('Mir Zugewiesen'))).toBe(true);
+        // schulleiter sees both leave Mir Zugewiesen (one approved, one rejected) -> no notification
+        expect(notifs.some(n => n.targetUser === 'schulleiter')).toBe(false);
         clearTestNotifications();
 
         // Verify "Meine Tickets" for lehrer1
@@ -244,34 +244,34 @@ describe('Workflow: Abwesenheit', () => {
         expect(myT2Actions.map(a => a.name)).toEqual([]);
 
 
-        // --- 4. stundenplaner sees approved ticket and assigns to himself ---
+        // --- 4. vertretungsplaner sees approved ticket and assigns to himself ---
         let resAssignedSP = await request(app)
             .get('/api/tickets?filter=assigned')
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`);
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`);
 
         expect(resAssignedSP.status).toBe(200);
         const assignedT1_SP = resAssignedSP.body.find(t => t.id === t1.id);
         expect(assignedT1_SP).toBeDefined();
-        // Stundenplanung sees "bearbeiten" action
-        const spActions = getActionsForTicket(assignedT1_SP, { username: 'stundenplaner', groups: ['Stundenplanung', 'Lehrkräfte'] }, 'assigned');
+        // Vertretungsplanung sees "bearbeiten" action
+        const spActions = getActionsForTicket(assignedT1_SP, { username: 'vertretungsplaner', groups: ['Vertretungsplanung', 'Lehrkräfte'] }, 'assigned');
         expect(spActions.map(a => a.name)).toEqual(['bearbeiten']);
 
         const resAssign = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
-            .send({ actionName: 'bearbeiten', formData: { assignee: 'stundenplaner' } });
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
+            .send({ actionName: 'bearbeiten', formData: { assignee: 'vertretungsplaner' } });
 
         expect(resAssign.status).toBe(200);
-        expect(resAssign.body.assignee).toBe('stundenplaner');
+        expect(resAssign.body.assignee).toBe('vertretungsplaner');
 
 
-        // --- 5. stundenplaner processes t1 and sets to "erledigt" ---
+        // --- 5. vertretungsplaner processes t1 and sets to "erledigt" ---
         // 'bearbeiten' action executes a form script or just changes state.
         // The workflow defines "erledigt" and "in Arbeit" via form.
         // We simulate the form submission for "erledigt" action.
         const resDone = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
-            .set('Authorization', `Bearer ${tokens.stundenplaner}`)
+            .set('Authorization', `Bearer ${tokens.vertretungsplaner}`)
             .send({ actionName: 'bearbeiten', formButtonName: 'erledigt' });
 
         expect(resDone.status).toBe(200);
@@ -286,6 +286,16 @@ describe('Workflow: Abwesenheit', () => {
         clearTestNotifications();
 
 
+    });
+
+    it('approves Dienstgeschäft requests automatically', async () => {
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send({ ...ticketPayload, reason: 'Dienstgeschäft' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.state).toBe('offen.genehmigt');
     });
 
     it('should correctly restrict access to actions according to workflow groups', async () => {
@@ -306,7 +316,7 @@ describe('Workflow: Abwesenheit', () => {
         expect(resApproveL2.status).toBe(403);
 
         // 3. Hausmeister tries to read (should not be visible in all tickets depending on permissions)
-        // Access rules say "read": "@creator", "Schulleitung", "Stundenplanung"
+        // Access rules say "read": "@creator", "Schulleitung", "Vertretungsplanung"
         const resReadHausmeister = await request(app)
             .get(`/api/tickets/${ticketId}`)
             .set('Authorization', `Bearer ${tokens.hausmeister}`);

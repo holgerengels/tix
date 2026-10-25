@@ -6,64 +6,47 @@ export const isClosedState = (state) => typeof state === 'string' && state.start
 // Reopen actions don't change the ticket; they open the creation form prefilled with a copy.
 export const getReopenRoute = (t) => ({ path: '/tickets/new', query: { type: t.type, reopen: t.id } });
 
+// Administration may do everything (access rules, workflow actions, undo). Mirrors backend/src/workflow.js.
+export const isAdmin = (user) => (user?.groups || []).includes('Administration');
+
+// Checks whether a user matches an action's groups (incl. dynamic roles @creator / @assignee).
+export const matchesActionGroups = (groups, t, user) => {
+    if (isAdmin(user)) return true;
+    const userGroups = user.groups || [];
+    return (groups || []).some(g => {
+        if (g === '@creator') return t.creator === user.username;
+        if (g === '@assignee') return t.assignee === user.username;
+        return userGroups.includes(g);
+    });
+};
+
+// Generic access check against a workflow's `access` rule `name` (create, read, edit, delete, comment, undo).
+// Missing workflows or rules deny access. Mirrors backend/src/workflow.js.
+export const hasAccess = (conf, name, user) => {
+    if (isAdmin(user)) return true;
+    const userGroups = user?.groups || [];
+    const rule = conf?.access?.find(r => r.name === name);
+    return !!rule && (rule.groups || []).some(g => userGroups.includes(g));
+};
+
 export function useTicketAccess(ticket, config, user) {
     if (!user) {
         user = JSON.parse(localStorage.getItem('user') || '{}');
     }
 
-    const canEdit = computed(() => {
-        if (!ticket.value || !config.value) return false;
-        const conf = config.value[ticket.value.type];
-        if (!conf) return false;
+    const ticketConf = () => (ticket.value && config.value) ? config.value[ticket.value.type] : null;
 
-        const uGroups = user.groups || [];
-        if (uGroups.includes('Administration')) return true;
-        
-        const access = conf.access;
-        if (!access) return false;
+    const canEdit = computed(() => !!ticket.value && hasAccess(ticketConf(), 'edit', user));
 
-        const rule = access.find(r => r.name === 'edit');
-        if (!rule) return false;
-
-        return rule.groups.some(g => uGroups.includes(g));
-    });
-
-    const canDelete = computed(() => {
-        if (!ticket.value || !config.value) return false;
-        const conf = config.value[ticket.value.type];
-        if (!conf) return false;
-
-        const uGroups = user.groups || [];
-        if (uGroups.includes('Administration')) return true;
-        
-        const access = conf.access;
-        if (!access) return false;
-        
-        const rule = access.find(r => r.name === 'delete');
-        if (!rule) return false;
-        
-        return rule.groups.some(g => uGroups.includes(g));
-    });
-
-    const isClosed = computed(() => isClosedState(ticket.value?.state));
+    const canDelete = computed(() => !!ticket.value && hasAccess(ticketConf(), 'delete', user));
 
     // Controls writing comments only. Reading comments follows ticket read access.
     const canComment = computed(() => {
         if (!ticket.value || !config.value) return false;
-        if (isClosed.value) return false;
-        const conf = config.value[ticket.value.type];
-        if (!conf) return false;
-        
+        if (isClosedState(ticket.value.state)) return false;
         if (ticket.value.creator === user.username) return true;
         if (ticket.value.assignee === user.username) return true;
-
-        const access = conf.access;
-        if (!access) return false;
-        
-        const rule = access.find(r => r.name === 'comment');
-        if (!rule) return false;
-        
-        return rule.groups.some(g => (user.groups || []).includes(g));
+        return hasAccess(ticketConf(), 'comment', user);
     });
 
     const allowedSubticketTypes = computed(() => {
@@ -78,19 +61,9 @@ export function useTicketAccess(ticket, config, user) {
         matchingBlocks.forEach(block => {
             const subActions = (block.actions || []).filter(a => a.subTickets);
             subActions.forEach(action => {
+                // Actions without groups allow everyone to create the subticket
                 const groups = action.groups || [];
-                const isCreator = ticket.value.creator === user.username;
-                const isAssignee = ticket.value.assignee === user.username;
-                const userGroups = user.groups || [];
-                
-                const allowed = groups.length === 0 || groups.some(g => {
-                    if (g === '@creator' && isCreator) return true;
-                    if (g === '@assignee' && isAssignee) return true;
-                    if (userGroups.includes(g)) return true;
-                    return false;
-                });
-                
-                if (allowed) {
+                if (groups.length === 0 || matchesActionGroups(groups, ticket.value, user)) {
                     action.subTickets.forEach(t => allowedTypes.add(t));
                 }
             });
@@ -134,11 +107,7 @@ export function useTicketAccess(ticket, config, user) {
 
         const authorizedActions = allActions.filter(action => {
             if (action.subTickets) return false;
-
-            const allowedByCreator = action.groups.includes('@creator') && t.creator === user.username;
-            const allowedByAssignee = action.groups.includes('@assignee') && t.assignee === user.username;
-            const allowedByGroup = action.groups.some(g => (user.groups || []).includes(g));
-            return allowedByCreator || allowedByAssignee || allowedByGroup;
+            return matchesActionGroups(action.groups, t, user);
         });
 
         return authorizedActions;
@@ -148,7 +117,6 @@ export function useTicketAccess(ticket, config, user) {
         canEdit,
         canDelete,
         canComment,
-        isClosed,
         allowedSubticketTypes,
         getStatusColor,
         getStatusLabel,

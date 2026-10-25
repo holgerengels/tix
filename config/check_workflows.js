@@ -81,12 +81,12 @@ files.forEach(file => {
   }
 
   // 3. Reopen Check
-  // Reopen actions must only appear in closed states, and their closeAs target state must
+  // Reopen actions must only appear in closed states, and their target state geschlossen.wiedereröffnet must
   // exist and must not offer a reopen action itself (otherwise tickets could be reopened twice).
   const stateNames = (data.states || []).map(s => s.name);
   (data.workflow || []).forEach(stateBlock => {
     (stateBlock.actions || []).filter(a => a.reopen).forEach(action => {
-      const closeAs = (typeof action.reopen === 'object' && action.reopen.closeAs) || 'geschlossen.wiedereröffnet';
+      const closeAs = 'geschlossen.wiedereröffnet';
       const openStates = (stateBlock.states || []).filter(s => !s.startsWith('geschlossen.'));
       if (openStates.length > 0) {
         issues.push(`Aktion '${action.name}' (reopen) ist in offenen Status konfiguriert: ${openStates.join(', ')}.`);

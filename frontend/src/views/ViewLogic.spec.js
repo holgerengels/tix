@@ -209,7 +209,7 @@ describe('View Logic & Constraints', () => {
 
             await wrapper.vm.handleAction(
                 { ...mockTicket, state: 'geschlossen.erledigt' },
-                { name: 'wiedereröffnen', groups: ['@creator'], reopen: { closeAs: 'geschlossen.wiedereröffnet' } }
+                { name: 'wiedereröffnen', groups: ['@creator'], reopen: true }
             );
 
             expect(mockRouter.push).toHaveBeenCalledWith({ path: '/tickets/new', query: { type: 'TestTicket', reopen: 'TKT-1' } });
