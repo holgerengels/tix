@@ -155,6 +155,13 @@
       :open="showLogDrawer"
       @close="showLogDrawer = false"
     />
+
+    <DuplicateTicketDialog
+      v-model:open="showDuplicateDialog"
+      :ticket="ticket"
+      :action="duplicateAction"
+      @done="onDuplicateDone"
+    />
   </div>
 </template>
 
@@ -172,6 +179,7 @@ import TicketComments from '../components/TicketComments.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
 import TicketLogDrawer from '../components/TicketLogDrawer.vue';
 import RelatedTicketTags from '../components/RelatedTicketTags.vue';
+import DuplicateTicketDialog from '../components/DuplicateTicketDialog.vue';
 import { getReopenRoute } from '../composables/useTicketAccess';
 import { toast, confirm, prompt } from '../composables/useToast';
 
@@ -191,6 +199,8 @@ const undoAction = ref(null);
 const executingActionId = ref(null);
 const showHelp = ref(false);
 const showLogDrawer = ref(false);
+const showDuplicateDialog = ref(false);
+const duplicateAction = ref(null);
 
 const ticketData = ref({});
 const formFields = ref([]);
@@ -361,8 +371,11 @@ const prepareForm = () => {
 const formatDate = (dateStr) => format(new Date(dateStr), 'dd.MM.yyyy HH:mm');
 
 const handleAction = async (ticket, action) => {
-    if (action.reopen) {
+    if (action.link === 'reopen' || action.reopen) {
         router.push(getReopenRoute(ticket));
+    } else if (action.link === 'duplicate' || action.duplicate) {
+        duplicateAction.value = action;
+        showDuplicateDialog.value = true;
     } else if (action.form === 'read') {
         fetchData();
     } else if (action.form === 'edit') {
@@ -372,6 +385,10 @@ const handleAction = async (ticket, action) => {
     } else {
         executeActionDirect(ticket, action);
     }
+};
+
+const onDuplicateDone = () => {
+    fetchData();
 };
 
 const executeActionDirect = async (ticketObj, action) => {

@@ -134,7 +134,7 @@
                         "Vertretungsplanung"
                     ],
                     "optional": true,
-                    "reopen": true
+                    "link": "reopen"
                 }
             ]
         }

@@ -101,6 +101,12 @@
             </table>
         </div>
     </div>
+    <DuplicateTicketDialog
+        v-model:open="showDuplicateDialog"
+        :ticket="activeDuplicateTicket"
+        :action="duplicateAction"
+        @done="fetchTickets"
+    />
     </div>
 </template>
 
@@ -114,6 +120,7 @@ import { useUsersStore } from '../stores/users';
 import { useTicketsStore } from '../stores/tickets';
 import TicketListConfig from '../components/TicketListConfig.vue';
 import InlineActionPopover from '../components/InlineActionPopover.vue';
+import DuplicateTicketDialog from '../components/DuplicateTicketDialog.vue';
 import { toast, confirm, prompt } from '../composables/useToast';
 import { useTicketAccess, getReopenRoute } from '../composables/useTicketAccess';
 
@@ -138,6 +145,9 @@ const sort = ref('');
 const searchTerm = ref('');
 
 const executingActionId = ref(null);
+const showDuplicateDialog = ref(false);
+const activeDuplicateTicket = ref(null);
+const duplicateAction = ref(null);
 const ticketConfigRef = ref(null);
 
 const handleViewUpdate = (payload) => {
@@ -382,8 +392,12 @@ const executeAction = async (ticket, action) => {
 };
 
 const handleAction = async (ticket, action) => {
-    if (action.reopen) {
+    if (action.link === 'reopen' || action.reopen) {
         router.push(getReopenRoute(ticket));
+    } else if (action.link === 'duplicate' || action.duplicate) {
+        activeDuplicateTicket.value = ticket;
+        duplicateAction.value = action;
+        showDuplicateDialog.value = true;
     } else if (action.form === 'read') {
         router.push(`/tickets/${ticket.id}/view`);
     } else if (action.form === 'edit') {

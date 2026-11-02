@@ -80,12 +80,22 @@ files.forEach(file => {
      }
   }
 
+  // Check action link property validity
+  const ALLOWED_LINKS = ['reopen', 'duplicate', 'relate'];
+  (data.workflow || []).forEach(stateBlock => {
+    (stateBlock.actions || []).forEach(action => {
+      if (action.link && !ALLOWED_LINKS.includes(action.link)) {
+        issues.push(`Aktion '${action.name}' hat ungültigen link-Typ '${action.link}'. Erlaubt sind: ${ALLOWED_LINKS.join(', ')}.`);
+      }
+    });
+  });
+
   // 3. Reopen Check
   // Reopen actions must only appear in closed states, and their target state geschlossen.wiedereröffnet must
   // exist and must not offer a reopen action itself (otherwise tickets could be reopened twice).
   const stateNames = (data.states || []).map(s => s.name);
   (data.workflow || []).forEach(stateBlock => {
-    (stateBlock.actions || []).filter(a => a.reopen).forEach(action => {
+    (stateBlock.actions || []).filter(a => a.link === 'reopen' || a.reopen).forEach(action => {
       const closeAs = 'geschlossen.wiedereröffnet';
       const openStates = (stateBlock.states || []).filter(s => !s.startsWith('geschlossen.'));
       if (openStates.length > 0) {
@@ -95,9 +105,31 @@ files.forEach(file => {
         issues.push(`Aktion '${action.name}' (reopen): Status '${closeAs}' fehlt in 'states'.`);
       }
       const reopenableAgain = (data.workflow || []).some(b =>
-        (b.states || []).includes(closeAs) && (b.actions || []).some(a => a.reopen));
+        (b.states || []).includes(closeAs) && (b.actions || []).some(a => a.link === 'reopen' || a.reopen));
       if (reopenableAgain) {
         issues.push(`Status '${closeAs}' bietet selbst wieder eine reopen-Aktion an (Mehrfach-Wiedereröffnung).`);
+      }
+    });
+  });
+
+  // 4. Duplicate Check
+  // Duplicate actions must set target state geschlossen.redundant, which must exist in 'states'.
+  // Duplicate actions must only appear in open states, and geschlossen.redundant must not offer
+  // a duplicate action itself.
+  (data.workflow || []).forEach(stateBlock => {
+    (stateBlock.actions || []).filter(a => a.link === 'duplicate' || a.duplicate).forEach(action => {
+      const closeAs = 'geschlossen.redundant';
+      const closedStates = (stateBlock.states || []).filter(s => s.startsWith('geschlossen.'));
+      if (closedStates.length > 0) {
+        issues.push(`Aktion '${action.name}' (duplicate) ist in geschlossenen Status konfiguriert: ${closedStates.join(', ')}.`);
+      }
+      if (!stateNames.includes(closeAs)) {
+        issues.push(`Aktion '${action.name}' (duplicate): Status '${closeAs}' fehlt in 'states'.`);
+      }
+      const duplicateAgain = (data.workflow || []).some(b =>
+        (b.states || []).includes(closeAs) && (b.actions || []).some(a => a.link === 'duplicate' || a.duplicate));
+      if (duplicateAgain) {
+        issues.push(`Status '${closeAs}' bietet selbst wieder eine duplicate-Aktion an.`);
       }
     });
   });

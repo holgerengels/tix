@@ -232,6 +232,16 @@
                         "IT-Ticket",
                         "Hausmeisterauftrag"
                     ]
+                },
+                {
+                    "name": "als Duplikat schließen",
+                    "groups": [
+                        "@assignee",
+                        "Netzwerkteam",
+                        "IT-Support"
+                    ],
+                    "optional": true,
+                    "link": "duplicate"
                 }
             ]
         },
@@ -265,7 +275,7 @@
                         "IT-Support"
                     ],
                     "optional": true,
-                    "reopen": true
+                    "link": "reopen"
                 }
             ]
         }
@@ -421,6 +431,11 @@
             "name": "geschlossen.wiedereröffnet",
             "label": "wiedereröffnet",
             "color": "gray"
+        },
+        {
+            "name": "geschlossen.redundant",
+            "label": "redundant",
+            "color": "red"
         },
         {
             "name": "geschlossen.*",

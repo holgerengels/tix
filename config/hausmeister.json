@@ -201,6 +201,15 @@
                         "Hausmeister"
                     ],
                     "form": "bearbeiten"
+                },
+                {
+                    "name": "als Duplikat schließen",
+                    "groups": [
+                        "Hausmeister",
+                        "Schulleitung"
+                    ],
+                    "optional": true,
+                    "link": "duplicate"
                 }
             ]
         },
@@ -234,7 +243,7 @@
                         "Schulleitung"
                     ],
                     "optional": true,
-                    "reopen": true
+                    "link": "reopen"
                 }
             ]
         }
@@ -372,6 +381,11 @@
             "name": "geschlossen.wiedereröffnet",
             "label": "wiedereröffnet",
             "color": "gray"
+        },
+        {
+            "name": "geschlossen.redundant",
+            "label": "redundant",
+            "color": "red"
         },
         {
             "name": "geschlossen.*",

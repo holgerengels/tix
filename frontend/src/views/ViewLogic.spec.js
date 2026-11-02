@@ -207,13 +207,23 @@ describe('View Logic & Constraints', () => {
             });
             await flushPromises();
 
+            // Test link: 'reopen'
+            await wrapper.vm.handleAction(
+                { ...mockTicket, state: 'geschlossen.erledigt' },
+                { name: 'wiedereröffnen', groups: ['@creator'], link: 'reopen' }
+            );
+
+            expect(mockRouter.push).toHaveBeenCalledWith({ path: '/tickets/new', query: { type: 'TestTicket', reopen: 'TKT-1' } });
+            expect(axios.post).not.toHaveBeenCalled();
+
+            // Test legacy reopen: true
+            mockRouter.push.mockClear();
             await wrapper.vm.handleAction(
                 { ...mockTicket, state: 'geschlossen.erledigt' },
                 { name: 'wiedereröffnen', groups: ['@creator'], reopen: true }
             );
 
             expect(mockRouter.push).toHaveBeenCalledWith({ path: '/tickets/new', query: { type: 'TestTicket', reopen: 'TKT-1' } });
-            expect(axios.post).not.toHaveBeenCalled();
         });
     });
 

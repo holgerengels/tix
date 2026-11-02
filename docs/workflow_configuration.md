@@ -321,9 +321,9 @@ Actions represent user-triggered state transitions in the ticket detail view:
   * `"comment"`: Prompts for a mandatory/optional comment before executing the action.
   * `"assign"`: Prompts for assignee selection.
 * **`subTickets`**: Array of ticket types that can be spawned from this action (see [Subtickets](#7-subtickets)).
-* **`reopen`**: Turns the action into a reopen action (see [Reopen](#61-reopen-reopen)). Such actions don't run a `script`.
+* **`link`**: Definiert eine verknüpfende Aktion (`"reopen"` | `"duplicate"` | `"relate"`). Solche Aktionen führen kein `script` aus. *(Legacy: `reopen: true` und `duplicate: true` werden weiterhin unterstützt).*
 
-### 6.1 Reopen (`reopen`)
+### 6.1 Reopen (`link: "reopen"`)
 
 Closed tickets are final. Instead of reopening the ticket itself, a reopen action creates a **copy in state `offen.neu`** that links back to the closed predecessor.
 
@@ -335,7 +335,7 @@ Closed tickets are final. Instead of reopening the ticket itself, a reopen actio
             "name": "wiedereröffnen",
             "groups": ["@creator", "Netzwerkteam"],
             "optional": true,
-            "reopen": true
+            "link": "reopen"
         }
     ]
 }
@@ -362,13 +362,23 @@ Non-hierarchical relations are stored as directed links on the **source** ticket
 links: [{ type: 'follows' | 'duplicates' | 'relates', ticket: 'ITT-7', created, creator }]
 ```
 
-| Type | Stored on | Outgoing label | Incoming label |
-| :-- | :-- | :-- | :-- |
-| `follows` | reopened copy | ↶ Fortsetzung von X | ↷ Wiedereröffnet als Y |
-| `duplicates` | duplicate | ⧉ Duplikat von X | ⧉ Duplikat: Y |
-| `relates` | either | ↔ Verwandt mit X | ↔ Verwandt mit Y |
+`GET /api/tickets` attaches `relatedTickets: [{ id, type, state, title, linkType, direction: 'out' | 'in' }]` (analogous to `subTickets`). Parent/subticket relations remain in `parentTicket`.
 
-`GET /api/tickets` attaches `relatedTickets: [{ id, type, state, title, linkType, direction: 'out' | 'in' }]` (analogous to `subTickets`). Parent/subticket relations remain in `parentTicket`. Currently only `follows` is created (by reopen); `duplicates` and `relates` are prepared in the data model.
+### 6.3 Duplikate (`link: "duplicate"`)
+
+Tickets können als Duplikat eines anderen Tickets geschlossen werden:
+* In den gewünschten Workflows wird der Status `geschlossen.redundant` in `states` ergänzt.
+* In den offenen Bearbeitungszuständen wird eine Aktion mit `"link": "duplicate"` definiert:
+  ```json
+  {
+      "name": "als Duplikat schließen",
+      "groups": ["@assignee", "Netzwerkteam", "IT-Support"],
+      "optional": true,
+      "link": "duplicate"
+  }
+  ```
+* Das Ausführen öffnet den Auswahldialog mit Suche, Rollentausch (⇄) und Favoriten-Übernahme. Das geschlossene Ticket erhält den Link `type: 'duplicates'`, beide Tickets erhalten Protokolleinträge, und ein optionaler Kommentar wird auf dem Duplikat hinterlegt.
+* Konsistenzprüfung über `node config/check_workflows.js`.
 
 ---
 

@@ -35,7 +35,7 @@ const findReopenAction = (ticket) => {
     const wf = workflowEngine.getWorkflowForType(ticket.type);
     if (!wf || !Array.isArray(wf.workflow)) return null;
     for (const block of wf.workflow.filter(b => (b.states || []).includes(ticket.state))) {
-        const action = (block.actions || []).find(a => a.reopen);
+        const action = (block.actions || []).find(a => a.link === 'reopen' || a.reopen);
         if (action) return action;
     }
     return null;
@@ -786,7 +786,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
             }
         }
 
-        if (action && action.reopen) {
+        if (action && (action.link === 'reopen' || action.reopen)) {
             return res.status(400).json({ message: `Aktion '${actionName}' erzeugt ein neues Ticket und wird über POST /tickets mit 'reopenOf' ausgeführt.` });
         }
 
@@ -816,6 +816,90 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
 
         // Check permission
         if (!matchesActionGroups(action.groups, ticket, req.user)) return res.status(403).json({ message: 'Not authorized' });
+
+        if (action.link === 'duplicate' || action.duplicate) {
+            const { targetTicketId, comment, starTarget = true } = req.body;
+            if (!targetTicketId) {
+                return res.status(400).json({ message: 'Ziel-Ticket fehlt.' });
+            }
+
+            const target = await Ticket.findOne({ id: targetTicketId });
+            if (!target) {
+                return res.status(404).json({ message: `Ziel-Ticket ${targetTicketId} nicht gefunden.` });
+            }
+
+            if (target.id === ticket.id) {
+                return res.status(400).json({ message: 'Ein Ticket kann nicht Duplikat von sich selbst sein.' });
+            }
+
+            if (!canReadTicket(target, req.user)) {
+                return res.status(403).json({ message: 'Keine Leseberechtigung für das Ziel-Ticket.' });
+            }
+
+            const dataBefore = ticket.toObject();
+
+            ticket.state = 'geschlossen.redundant';
+            if (!Array.isArray(ticket.links)) {
+                ticket.links = [];
+            }
+            if (!ticket.links.some(l => l.type === 'duplicates' && l.ticket === target.id)) {
+                ticket.links.push({
+                    type: 'duplicates',
+                    ticket: target.id,
+                    created: new Date(),
+                    creator: req.user.username
+                });
+            }
+            ticket.markModified('links');
+
+            const currentWfForSummary = workflowEngine.getWorkflowForType(ticket.type);
+            const newSummary = computeSummary(ticket, currentWfForSummary);
+            if (newSummary !== undefined) ticket.summary = newSummary;
+
+            await ticket.save();
+
+            // Optional comment on duplicate
+            if (comment && typeof comment === 'string' && comment.trim()) {
+                await new Comment({
+                    ticket: ticket._id,
+                    text: comment.trim(),
+                    creator: req.user.username,
+                    created: new Date()
+                }).save();
+            }
+
+            // Star target ticket for creator if requested
+            if (starTarget && ticket.creator) {
+                await Ticket.findByIdAndUpdate(
+                    target._id,
+                    { $addToSet: { starredBy: ticket.creator } }
+                );
+            }
+
+            // Log on duplicate ticket
+            await new Log({
+                ticket: ticket._id,
+                editor: req.user.username,
+                action: `${actionName} (${target.id})`,
+                dataBefore: dataBefore,
+                dataAfter: ticket.toObject()
+            }).save();
+
+            // Log on target ticket
+            await new Log({
+                ticket: target._id,
+                editor: req.user.username,
+                action: `Ticket ${ticket.id} als Duplikat markiert`,
+                timestamp: new Date()
+            }).save();
+
+            // Trigger bots
+            await runBotsForTicket(ticket);
+
+            const responseObj = ticket.toObject();
+            await attachRelatedTickets([responseObj], [responseObj.id]);
+            return res.json(responseObj);
+        }
 
         // Determine Script to run
         let scriptToRun = null;

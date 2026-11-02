@@ -103,7 +103,7 @@
                         "Stundenplanung"
                     ],
                     "optional": true,
-                    "reopen": true
+                    "link": "reopen"
                 }
             ]
         }
