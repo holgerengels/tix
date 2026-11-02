@@ -10,15 +10,18 @@ Ein Hausmeisterauftrag wird verwendet, um Arbeitsaufträge, Reparaturen oder Vor
 
 ### Prozess
 
-[neu] → [genehmigt] → [in Arbeit] → [erledigt]
+**Standardablauf:**
+[neu] → [in Arbeit] → [erledigt]
 
-[neu] → [abgelehnt]
+**Ablauf mit Freigabe durch Schulleitung:**
+[neu] → [Wartet auf Freigabe] → [genehmigt] → [in Arbeit] → [erledigt]  
+[neu] → [Wartet auf Freigabe] → [abgelehnt]
 
-[neu] / [genehmigt] → [storniert]
-
+**Stornierung & Wiedereröffnung:**
+[neu] / [Wartet auf Freigabe] / [genehmigt] / [in Arbeit] → [storniert]  
 [erledigt] / [abgelehnt] → [wiedereröffnet] ↷ neues Ticket [neu]
 
-* Die Genehmigung erfolgt durch die Schulleitung
-* Die Bearbeitung erfolgt durch das Hausmeisterteam
-* Die Stornierung erfolgt durch den Ersteller
-* Das Wiedereröffnen erfolgt durch den Ersteller, das Hausmeisterteam oder die Schulleitung (es entsteht ein neues, verknüpftes Ticket)
+* Die Bearbeitung erfolgt direkt durch das Hausmeisterteam.
+* Bei Bedarf fordert der Hausmeister eine Freigabe an; die Genehmigung oder Ablehnung erfolgt durch die Schulleitung.
+* Die Stornierung erfolgt durch den Ersteller.
+* Das Wiedereröffnen erfolgt durch den Ersteller, das Hausmeisterteam oder die Schulleitung (es entsteht ein neues, verknüpftes Ticket).

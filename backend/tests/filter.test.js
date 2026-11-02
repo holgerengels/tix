@@ -164,12 +164,12 @@ describe('Ticket Fulltext Search', () => {
 describe('Ticket Filtering via Action', () => {
     beforeEach(async () => {
         // Hausmeisterauftrag:
-        // 'offen.neu' has actions: 'genehmigen', 'ablehnen', 'stornieren'
+        // 'offen.freigabe' has actions: 'genehmigen', 'ablehnen', 'stornieren'
         // 'offen.genehmigt' has actions: 'bearbeiten', 'stornieren'
-        // 'offen.inArbeit' has actions: 'bearbeiten'
+        // 'offen.inArbeit' has actions: 'bearbeiten', 'stornieren'
         // 'geschlossen.ok' has no active actions
         await Ticket.create([
-            { id: 'ACT-1', type: 'Hausmeisterauftrag', title: 'Ticket Neu', creator: 'lehrer1', state: 'offen.neu' },
+            { id: 'ACT-1', type: 'Hausmeisterauftrag', title: 'Ticket Freigabe', creator: 'lehrer1', state: 'offen.freigabe' },
             { id: 'ACT-2', type: 'Hausmeisterauftrag', title: 'Ticket In Arbeit', creator: 'lehrer1', state: 'offen.inArbeit' },
             { id: 'ACT-3', type: 'Hausmeisterauftrag', title: 'Ticket Genehmigt', creator: 'lehrer1', state: 'offen.genehmigt' },
             { id: 'ACT-4', type: 'Hausmeisterauftrag', title: 'Ticket Erledigt', creator: 'lehrer1', state: 'geschlossen.ok' }

@@ -49,46 +49,93 @@ describe('Workflow: Hausmeisterauftrag', () => {
         description: 'Testticket'
     };
 
-    it('should complete the full lifecycle of a Hausmeisterauftrag and trigger auto-approve bot', async () => {
-        // --- 1. schulleiter creates ticket ---
-        // automatically genehmigen bot should move it to offen.genehmigt immediately
+    it('should complete the direct lifecycle of a Hausmeisterauftrag (neu -> in Arbeit -> erledigt)', async () => {
+        // --- 1. lehrer1 creates ticket ---
         const res = await request(app)
             .post('/api/tickets')
-            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
             .send(ticketPayload);
 
         expect(res.status).toBe(201);
         const t1 = res.body;
+        expect(t1.state).toBe('offen.neu');
 
-        // Bot triggers immediately and modifies to offen.genehmigt
-        expect(t1.state).toBe('offen.genehmigt');
-
-        // Verify Publisher Logs
-        await Log.updateMany({}, { timestamp: new Date(Date.now() - 60000) });
-        await checkUnpublishedLogs();
-        let notifs = getTestNotifications();
-        // Creation logs (created, and maybe technically a bot modified state)
-        // Creator shouldn't get creation logs, but maybe the bot modification is logged? 
-        // We don't strictly assert the exact logs here, but it works.
-        clearTestNotifications();
-
-        // Verify sub check
+        // Verify sub check: hausmeister sees 1 ticket in "Mir Zugewiesen"
         await runSubscriptionCheck();
-        notifs = getTestNotifications();
-        // hausmeister sees 1 ticket in "Mir Zugewiesen"
+        let notifs = getTestNotifications();
         expect(notifs.some(n => n.targetUser === 'hausmeister' && n.message.includes('Mir Zugewiesen'))).toBe(true);
         clearTestNotifications();
 
-        // --- 2. Hausmeister processes the ticket ---
+        // --- 2. Hausmeister sets to in Arbeit ---
+        const resInArbeit = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.hausmeister}`)
+            .send({
+                actionName: 'bearbeiten',
+                formButtonName: 'in Arbeit',
+                formData: { badges: [] }
+            });
+
+        expect(resInArbeit.status).toBe(200);
+        expect(resInArbeit.body.state).toBe('offen.inArbeit');
+
+        // --- 3. Hausmeister completes the ticket ---
         const resDone = await request(app)
             .post(`/api/tickets/${t1._id}/action`)
             .set('Authorization', `Bearer ${tokens.hausmeister}`)
             .send({
                 actionName: 'bearbeiten',
                 formButtonName: 'erledigt',
-                formData: {
-                    badges: []
-                }
+                formData: { badges: [] }
+            });
+
+        expect(resDone.status).toBe(200);
+        expect(resDone.body.state).toBe('geschlossen.erledigt');
+    });
+
+    it('should complete approval lifecycle (neu -> Freigabe anfordern -> Schulleitung genehmigt -> erledigt)', async () => {
+        // --- 1. lehrer1 creates ticket ---
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.lehrer1}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        const t1 = res.body;
+        expect(t1.state).toBe('offen.neu');
+
+        // --- 2. Hausmeister requests approval ---
+        const resFreigabe = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.hausmeister}`)
+            .send({
+                actionName: 'bearbeiten',
+                formButtonName: 'Freigabe anfordern',
+                formData: { badges: [] }
+            });
+
+        expect(resFreigabe.status).toBe(200);
+        expect(resFreigabe.body.state).toBe('offen.freigabe');
+
+        // --- 3. Schulleitung approves ticket ---
+        const resApprove = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send({
+                actionName: 'genehmigen'
+            });
+
+        expect(resApprove.status).toBe(200);
+        expect(resApprove.body.state).toBe('offen.genehmigt');
+
+        // --- 4. Hausmeister finishes ticket from genehmigt ---
+        const resDone = await request(app)
+            .post(`/api/tickets/${t1._id}/action`)
+            .set('Authorization', `Bearer ${tokens.hausmeister}`)
+            .send({
+                actionName: 'bearbeiten',
+                formButtonName: 'erledigt',
+                formData: { badges: [] }
             });
 
         expect(resDone.status).toBe(200);

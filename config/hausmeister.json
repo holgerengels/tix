@@ -173,6 +173,29 @@
             ],
             "actions": [
                 {
+                    "name": "bearbeiten",
+                    "groups": [
+                        "Hausmeister"
+                    ],
+                    "form": "bearbeiten.neu"
+                },
+                {
+                    "name": "als Duplikat schließen",
+                    "groups": [
+                        "Hausmeister",
+                        "Schulleitung"
+                    ],
+                    "optional": true,
+                    "link": "duplicate"
+                }
+            ]
+        },
+        {
+            "states": [
+                "offen.freigabe"
+            ],
+            "actions": [
+                {
                     "name": "genehmigen",
                     "groups": [
                         "Schulleitung"
@@ -216,7 +239,9 @@
         {
             "states": [
                 "offen.neu",
-                "offen.genehmigt"
+                "offen.freigabe",
+                "offen.genehmigt",
+                "offen.inArbeit"
             ],
             "actions": [
                 {
@@ -249,13 +274,6 @@
         }
     ],
     "bots": [
-        {
-            "name": "automatisch_genehmigen",
-            "states": [
-                "offen.neu"
-            ],
-            "script": "await automatisch_genehmigen(ticket)"
-        },
         {
             "name": "raum_erkennung",
             "states": [
@@ -321,6 +339,30 @@
     ],
     "forms": [
         {
+            "name": "bearbeiten.neu",
+            "title": "bearbeiten",
+            "fields": [
+                {
+                    "name": "badges",
+                    "visible": true
+                }
+            ],
+            "actions": [
+                {
+                    "name": "in Arbeit",
+                    "script": "ticket.state = 'offen.inArbeit'"
+                },
+                {
+                    "name": "Freigabe anfordern",
+                    "script": "ticket.state = 'offen.freigabe'"
+                },
+                {
+                    "name": "erledigt",
+                    "script": "ticket.state = 'geschlossen.erledigt'"
+                }
+            ]
+        },
+        {
             "name": "bearbeiten",
             "title": "bearbeiten",
             "fields": [
@@ -351,6 +393,11 @@
             "name": "offen.neu",
             "label": "neu",
             "color": "blue"
+        },
+        {
+            "name": "offen.freigabe",
+            "label": "Wartet auf Freigabe",
+            "color": "yellow"
         },
         {
             "name": "offen.genehmigt",
