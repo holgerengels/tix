@@ -1003,7 +1003,7 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
                         const Log = require('./models/log');
                         await new Log({
                             ticket: parent._id,
-                            editor: 'System',
+                            editor: 'system',
                             action: `Subticket ${ticket.id} ist nun im Status: ${ticket.state}`,
                             timestamp: new Date(),
                             dataAfter: parent.toObject()
@@ -1531,7 +1531,8 @@ router.post('/tickets/:id/undo', verifyToken, async (req, res) => {
 // Get all subscriptions for the current user
 router.get('/settings/subscriptions', verifyToken, async (req, res) => {
     try {
-        const subscriptions = await Subscription.find({ userId: req.user.username });
+        const username = req.user.username.toLowerCase();
+        const subscriptions = await Subscription.find({ userId: username });
         res.json(subscriptions);
     } catch (error) {
         console.error('[API] Error fetching subscriptions:', error);
@@ -1547,8 +1548,9 @@ router.post('/settings/subscriptions', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Name and filter are required' });
         }
 
+        const username = req.user.username.toLowerCase();
         const newSubscription = new Subscription({
-            userId: req.user.username,
+            userId: username,
             name: name,
             filter: filter,
             lastMatchingTickets: [] // Initial empty state
@@ -1570,7 +1572,8 @@ router.delete('/settings/subscriptions/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ message: 'Subscription not found' });
         }
 
-        if (subscription.userId !== req.user.username) {
+        const username = req.user.username.toLowerCase();
+        if (subscription.userId.toLowerCase() !== username) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 

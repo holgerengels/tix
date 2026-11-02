@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const pushSubscriptionSchema = new mongoose.Schema({
-    userId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true, lowercase: true },
     subscription: { type: mongoose.Schema.Types.Mixed, required: true }
 }, {
     timestamps: true

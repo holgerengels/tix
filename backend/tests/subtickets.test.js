@@ -104,7 +104,7 @@ describe('Subtickets Integration', () => {
 
         // 5. Check if parent has log
         const parentLogs = await Log.find({ ticket: parentRes.body._id });
-        const sysLog = parentLogs.find(l => l.editor === 'System' && l.action.includes('ist nun im Status'));
+        const sysLog = parentLogs.find(l => (l.editor || '').toLowerCase() === 'system' && l.action.includes('ist nun im Status'));
         expect(sysLog).toBeTruthy();
         expect(sysLog.action).toContain('inArbeit');
 

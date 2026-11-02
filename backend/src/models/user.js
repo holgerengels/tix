@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
         of: [mongoose.Schema.Types.Mixed],
         default: {}
     },
-    substitutedBy: { type: [String], default: [] },
+    substitutedBy: { type: [{ type: String, lowercase: true }], default: [] },
     lastSeenInLdap: { type: Date, default: Date.now }
 }, {
     timestamps: true

@@ -31,6 +31,7 @@ TUNNEL_HOST="${TUNNEL_HOST:-localhost}"
 
 DUMP_DIR="/tmp/mongodump-tix"
 COLLECTIONS=()
+SANITIZE="${SANITIZE:-true}"
 
 # --- Argument Parsing ---
 while [[ $# -gt 0 ]]; do
@@ -47,6 +48,10 @@ while [[ $# -gt 0 ]]; do
         --port|-p)
             TUNNEL_PORT="$2"
             shift 2
+            ;;
+        --no-sanitize)
+            SANITIZE=false
+            shift
             ;;
         *)
             # If it's a number, treat as tunnel port
@@ -74,6 +79,26 @@ if ! docker ps --format '{{.Names}}' | grep -wq "$LOCAL_CONTAINER"; then
     echo "   Please start it with: docker compose up -d mongodb"
     exit 1
 fi
+
+sanitize_dev_db() {
+    if [[ "$SANITIZE" != "true" ]]; then
+        echo "⏭️  Skipping database sanitization (--no-sanitize set)."
+        return
+    fi
+
+    echo ""
+    echo "🔒 Sanitizing dev database '$LOCAL_DB' (clearing notification channels & subscriptions)..."
+    docker exec -i "$LOCAL_CONTAINER" mongosh $LOCAL_AUTH "$LOCAL_DB" --quiet --eval '
+        const userRes = db.users.updateMany({}, { $set: { notificationUri: "" } });
+        const subRes = db.subscriptions.deleteMany({});
+        const pushRes = db.pushsubscriptions.deleteMany({});
+        const logRes = db.logs.updateMany({ $or: [{ published: { $exists: false } }, { published: null }] }, { $set: { published: new Date() } });
+        console.log(`   - Cleared notificationUri on ${userRes.modifiedCount} users`);
+        console.log(`   - Removed ${subRes.deletedCount} subscriptions`);
+        console.log(`   - Removed ${pushRes.deletedCount} push subscriptions`);
+        console.log(`   - Marked ${logRes.modifiedCount} pending logs as published`);
+    '
+}
 
 # ==============================================================================
 # MODE 1: SSH Tunnel Mode
@@ -111,6 +136,8 @@ if [[ -n "$TUNNEL_PORT" ]]; then
         --nsTo="$LOCAL_DB.*" \
         --drop \
         --archive
+
+    sanitize_dev_db
 
     echo ""
     echo "✅ Restore into local database '$LOCAL_DB' completed successfully!"
@@ -196,6 +223,8 @@ echo ""
 echo "🧹 Step 4: Cleaning up temp files..."
 ssh "$REMOTE_HOST" "$REMOTE_DOCKER exec $REMOTE_CONTAINER rm -rf $DUMP_DIR 2>/dev/null || true"
 docker exec "$LOCAL_CONTAINER" rm -rf /tmp/mongorestore-data 2>/dev/null || true
+
+sanitize_dev_db
 
 echo ""
 echo "✅ Sync complete!"

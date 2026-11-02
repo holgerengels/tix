@@ -107,9 +107,10 @@ const login = async (username, password, isPwa) => {
             const groups = [...user.groups];
             await mergeSubstituteGroups(user.username, groups);
 
-            const token = jwt.sign({ username: user.username, groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-            const result = { token, user: { username: user.username, groups } };
-            if (isPwa) result.refreshToken = generateRefreshToken(user.username, groups);
+            const lowerUsername = user.username.toLowerCase();
+            const token = jwt.sign({ username: lowerUsername, groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+            const result = { token, user: { username: lowerUsername, groups } };
+            if (isPwa) result.refreshToken = generateRefreshToken(lowerUsername, groups);
             return result;
         }
     }
@@ -258,9 +259,10 @@ const login = async (username, password, isPwa) => {
 
                         await mergeSubstituteGroups(username, groups);
 
-                        const token = jwt.sign({ username: username, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-                        const result = { token, user: { username: username, groups: groups } };
-                        if (isPwa) result.refreshToken = generateRefreshToken(username, groups);
+                        const lowerUsername = username.toLowerCase();
+                        const token = jwt.sign({ username: lowerUsername, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                        const result = { token, user: { username: lowerUsername, groups: groups } };
+                        if (isPwa) result.refreshToken = generateRefreshToken(lowerUsername, groups);
                         resolve(result);
                     });
                 });
@@ -286,6 +288,9 @@ const verifyToken = (req, res, next) => {
 
     jwt.verify(parts[1], SECRET_KEY, (err, decoded) => {
         if (err) return res.status(401).json({ message: 'Failed to authenticate token' });
+        if (decoded && decoded.username) {
+            decoded.username = decoded.username.toLowerCase();
+        }
         req.user = decoded;
         next();
     });
@@ -579,7 +584,8 @@ const getUser = async (username) => {
 
 
 const generateRefreshToken = (username, groups) => {
-    return jwt.sign({ username, groups, type: 'refresh' }, REFRESH_SECRET_KEY, { expiresIn: REFRESH_TOKEN_EXPIRY });
+    const lowerUsername = (username || '').toLowerCase();
+    return jwt.sign({ username: lowerUsername, groups, type: 'refresh' }, REFRESH_SECRET_KEY, { expiresIn: REFRESH_TOKEN_EXPIRY });
 };
 
 const refreshAccessToken = async (refreshToken) => {
@@ -589,14 +595,15 @@ const refreshAccessToken = async (refreshToken) => {
             console.log('[Auth] Token is not a refresh token');
             return null;
         }
+        const lowerUsername = (decoded.username || '').toLowerCase();
         const groups = [...decoded.groups];
-        await mergeSubstituteGroups(decoded.username, groups);
+        await mergeSubstituteGroups(lowerUsername, groups);
         const newAccessToken = jwt.sign(
-            { username: decoded.username, groups },
+            { username: lowerUsername, groups },
             SECRET_KEY,
             { expiresIn: ACCESS_TOKEN_EXPIRY }
         );
-        return { token: newAccessToken, user: { username: decoded.username, groups } };
+        return { token: newAccessToken, user: { username: lowerUsername, groups } };
     } catch (err) {
         console.log('[Auth] Refresh token invalid or expired:', err.message);
         return null;
@@ -604,12 +611,13 @@ const refreshAccessToken = async (refreshToken) => {
 };
 
 const extendAccessToken = (username, groups) => {
+    const lowerUsername = (username || '').toLowerCase();
     const token = jwt.sign(
-        { username: username, groups: groups },
+        { username: lowerUsername, groups: groups },
         SECRET_KEY,
         { expiresIn: ACCESS_TOKEN_EXPIRY }
     );
-    return { token, user: { username, groups } };
+    return { token, user: { username: lowerUsername, groups } };
 };
 
 const isDevMode = () => !!settings.devmode;
@@ -696,4 +704,4 @@ const updateUserSettings = async (username, newSettings) => {
     }
 };
 
-module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, normalizeNotificationUri, refreshAccessToken, extendAccessToken };
+module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, normalizeNotificationUri, refreshAccessToken, extendAccessToken, generateRefreshToken };

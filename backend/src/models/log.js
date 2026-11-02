@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const logSchema = new mongoose.Schema({
     ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true, index: true },
-    editor: { type: String, required: true },
+    editor: { type: String, required: true, lowercase: true },
     timestamp: { type: Date, required: true, default: Date.now },
     action: { type: String, required: true },
     dataBefore: { type: Object }, // Snapshot of ticket data before action

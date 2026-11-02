@@ -29,7 +29,7 @@ function getWorkflowEngine() {
  * @param {string} [creator='System'] - The creator username
  * @returns {Object} The saved sub-ticket (Mongoose document)
  */
-async function createSubTicket(parentTicket, type, data, creator = 'System') {
+async function createSubTicket(parentTicket, type, data, creator = 'system') {
     const wf = getWorkflowEngine().getWorkflowForType(type);
     if (!wf) {
         throw new Error(`[createSubTicket] Unknown ticket type: ${type}`);
@@ -232,7 +232,7 @@ async function runBots() {
                     try {
                         await new Log({
                             ticket: ticket._id,
-                            editor: 'System',
+                            editor: 'system',
                             action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                             timestamp: new Date()
                         }).save();
@@ -269,7 +269,7 @@ async function runBotsForTicket(ticket) {
             try {
                 await new Log({
                     ticket: ticket._id,
-                    editor: 'System',
+                    editor: 'system',
                     action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                     timestamp: new Date()
                 }).save();
@@ -300,7 +300,7 @@ async function runBotsForTicket(ticket) {
                 try {
                     await new Log({
                         ticket: ticket._id,
-                        editor: 'System',
+                        editor: 'system',
                         action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                         timestamp: new Date()
                     }).save();
@@ -337,7 +337,7 @@ function scheduleBots() {
                                 try {
                                     await new Log({
                                         ticket: t._id,
-                                        editor: 'System',
+                                        editor: 'system',
                                         action: `Fehler bei Bot-Ausführung '${bot.name}': ${err.message}`,
                                         timestamp: new Date()
                                     }).save();

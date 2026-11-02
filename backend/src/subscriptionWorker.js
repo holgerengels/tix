@@ -73,11 +73,12 @@ async function runSubscriptionCheck() {
 
             // Inject assignment filter logic
             if (sub.filter.assignmentType) {
-                const user = users.find(u => u.username === sub.userId);
+                const subUserLower = (sub.userId || '').toLowerCase();
+                const user = users.find(u => (u.username || '').toLowerCase() === subUserLower);
                 const userGroups = user ? user.groups : [];
 
                 if (sub.filter.assignmentType === 'personal') {
-                    query.assignee = sub.userId;
+                    query.assignee = subUserLower;
                 } else if (sub.filter.assignmentType === 'group') {
                     const conditions = [];
 
@@ -102,7 +103,7 @@ async function runSubscriptionCheck() {
                                     if (releavantActions.some(a => a.groups.some(g => userGroups.includes(g)))) {
                                         conditions.push(condition);
                                     } else if (releavantActions.some(a => a.groups.includes('@assignee'))) {
-                                        conditions.push({ ...condition, assignee: sub.userId });
+                                        conditions.push({ ...condition, assignee: subUserLower });
                                     }
                                 }
                             });
@@ -118,7 +119,7 @@ async function runSubscriptionCheck() {
                         }
                     } else {
                         // User has no group assignments matching this filter
-                        query.assignee = sub.userId;
+                        query.assignee = subUserLower;
                     }
                 }
             }

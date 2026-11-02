@@ -6,7 +6,7 @@ const linkSchema = new mongoose.Schema({
     type: { type: String, enum: LINK_TYPES, required: true },
     ticket: { type: String, required: true }, // Human readable ID of the target
     created: { type: Date, default: Date.now },
-    creator: { type: String }
+    creator: { type: String, lowercase: true }
 }, { _id: false });
 
 const ticketSchema = new mongoose.Schema({
@@ -15,11 +15,11 @@ const ticketSchema = new mongoose.Schema({
     state: { type: String, required: true, default: 'offen.neu' },
     title: { type: String, required: true },
     description: { type: String },
-    creator: { type: String, required: true },
+    creator: { type: String, required: true, lowercase: true },
     created: { type: Date, required: true, default: Date.now },
-    assignee: { type: String },
+    assignee: { type: String, lowercase: true },
     assigned: { type: Date },
-    starredBy: [{ type: String, index: true }],
+    starredBy: [{ type: String, index: true, lowercase: true }],
     badges: { type: [String], default: [] },
     parentTicket: { type: String, index: true },
     // Directed, non-hierarchical relations. Stored only on the source ticket;

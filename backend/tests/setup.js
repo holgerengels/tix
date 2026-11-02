@@ -16,7 +16,7 @@ jest.mock('../src/ki', () => ({
 
 // Mock tokens based on auth.js MOCK_USERS
 const generateToken = (username, groups) => {
-    return jwt.sign({ username, groups }, SECRET_KEY, { expiresIn: '8h' });
+    return jwt.sign({ username: (username || '').toLowerCase(), groups }, SECRET_KEY, { expiresIn: '8h' });
 };
 
 const getTokens = () => {

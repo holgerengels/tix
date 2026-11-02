@@ -181,6 +181,7 @@ describe('Publisher Service', () => {
         
         it('should notify users who starred the ticket only if they may read it', async () => {
             const User = require('../src/models/user');
+            await User.deleteMany({ username: { $in: ['fanuser1', 'fanuser2'] } });
             await User.create([
                 { username: 'fanuser1', groups: ['Administration'] }, // may read everything
                 { username: 'fanuser2', groups: [] }                  // no read access
@@ -387,3 +388,4 @@ describe('Publisher Service', () => {
         });
     });
 });
+
