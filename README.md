@@ -8,22 +8,28 @@ Instead of hardcoding workflows or forms, Tix relies on an intelligent **JSON Sc
 
 ## 🚀 Key Features
 - **Dynamic Forms**: Vue 3 powered interface interpreting JSON grids with conditional field visibility via Vue proxy reactivity.
+- **Workflow & State Engine**: Granular state transitions, interactive sub-forms, inline actions, and access control scoped directly to state lifecycles.
+- **Ticket Relations & Linking**:
+  - **Subtickets**: Hierarchical delegation with field mapping and automatic status event propagation to parents.
+  - **Duplicates**: Merge redundant reports with interactive target selection, role swapping, and bookmark transfer.
+  - **Follow-ups (Reopen)**: Immutable closed tickets; reopening creates clean successor copies in `offen.neu` with audit trail links.
+  - **Starred Bookmarks**: Personal watchlist and notification hooks with strict security boundaries.
 - **Bot Automation Engine**: Node.js `vm` sandboxing executes JavaScript snippets in the background to handle auto-approvals, notifications, and logic processing based on ticket states.
 - **Deep External Integrations**: Built-in support for LDAP (Active Directory), CalDAV (Nextcloud/SOGo) room reservations, and WebUntis 2FA authentication.
-- **Workflow Consistency**: Access control is deeply ingrained into the workflow states, seamlessly updating permissions as a ticket life-cycle progresses.
 
 ## 📚 System Documentation
-The system's documentation has been divided into detailed modules in the `docs/` folder. Please select a topic:
+The system's documentation has been divided into detailed modules in the `docs/` folder:
 
 | Area | Description | Link |
 | :--- | :--- | :--- |
 | **Architecture** | High-level overview of system components, 'sparsity', and the sandbox concept. | [architecture_overview.md](docs/architecture_overview.md) |
-| **Workflow Configuration**| Cohesive description: ticket types, states, actions (incl. forms), bots, accesses. | [workflow_configuration.md](docs/workflow_configuration.md) |
+| **Workflow Configuration** | Cohesive description: ticket types, states, actions (incl. forms), bots, accesses. | [workflow_configuration.md](docs/workflow_configuration.md) |
+| **Relations & Bookmarks** | Subtickets, duplicates, follow-ups (reopen), links, and starred bookmarks. | [ticket_relations.md](docs/ticket_relations.md) |
+| **Subtickets** | Delegation of tasks via child tickets, field mappings, and parent status logging. | [subtickets.md](docs/subtickets.md) |
 | **Frontend & UI** | Vue 3 Dynamic Forms, grid layouts, conditional readonly, and sibling dependencies. | [frontend_forms.md](docs/frontend_forms.md) |
 | **Backend & Bots** | JS sandbox module, synchronous vs. asynchronous bots, Mongoose dynamic fields. | [backend_and_bots.md](docs/backend_and_bots.md) |
 | **Integrations** | LDAP auth flow, CalDAV room booking & time zones, WebUntis, and Axios proxies. | [integrations_caldav_ldap.md](docs/integrations_caldav_ldap.md) |
 | **Testing** | Strategies for integration tests, stateful mocks for CalDAV, and bot idempotency. | [testing_and_verification.md](docs/testing_and_verification.md) |
-| **Subtickets** | Delegation of tasks via child tickets and automatic parent logging. | [subtickets.md](docs/subtickets.md) |
 
 ## 🛠️ Tech Stack
 - **Frontend**: Vue 3, Vite, Pinia, Web Awesome Components

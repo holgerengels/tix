@@ -377,8 +377,16 @@ Tickets können als Duplikat eines anderen Tickets geschlossen werden:
       "link": "duplicate"
   }
   ```
-* Das Ausführen öffnet den Auswahldialog mit Suche, Rollentausch (⇄) und Favoriten-Übernahme. Das geschlossene Ticket erhält den Link `type: 'duplicates'`, beide Tickets erhalten Protokolleinträge, und ein optionaler Kommentar wird auf dem Duplikat hinterlegt.
 * Konsistenzprüfung über `node config/check_workflows.js`.
+
+### 6.4 Bookmarks & Watchers (`starredBy`)
+
+Users can bookmark tickets by starring them via the UI or API (`POST /api/tickets/:id/star`).
+* **Purpose**: Creates personal watchlists (`/api/tickets?filter=starred`) and triggers email/push notifications on ticket activity.
+* **Automatic Favoriting**: When reopening a ticket or closing a duplicate, involved users (such as the duplicate submitter or the reopening agent) are automatically subscribed via `starredBy`.
+* **Security Scoping**: `starredBy` is strictly a user bookmark and **grants no read permissions**. If a user does not have read access through `@creator`, `@assignee`, or `access.read`, starring a ticket will not allow them to read it or view it in filtered lists.
+
+For the complete architectural guide on links, reopens, duplicates, and bookmarks, see [Ticket Relations & Bookmarks](ticket_relations.md).
 
 ---
 
