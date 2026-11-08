@@ -47,7 +47,7 @@ const updateField = (name, value) => {
     props.modelValue[name] = value;
 
     // Compute fills: derive values from other fields
-    const { defaults, computeds } = computeFills(props.fields, props.modelValue);
+    const { defaults, computeds } = computeFills(props.fields, props.modelValue, name);
     for (const [key, val] of Object.entries(defaults)) {
         if (props.modelValue[key] === undefined || props.modelValue[key] === null || props.modelValue[key] === '') {
             props.modelValue[key] = val;

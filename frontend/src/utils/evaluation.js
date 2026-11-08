@@ -80,6 +80,19 @@ const createSafeEvaluator = (expr, ticketData, action = null) => {
             }
             return null;
         },
+        lookupGroupUsers: (groups) => {
+            const store = getUsersStore();
+            if (!store || typeof store.getUsersForGroups !== 'function') return [];
+            const users = store.getUsersForGroups(groups);
+            return users.map(u => {
+                const email = u.employeeId ? `${u.employeeId}@valckenburgschule.de` : undefined;
+                return {
+                    name: u.username,
+                    ...(email ? { email } : {}),
+                    status: 'eingeladen'
+                };
+            });
+        },
         firstName: (username) => {
             if (!username) return '';
             const store = getUsersStore();
@@ -145,8 +158,9 @@ export function evaluateFields(fields, ticketData) {
     return fields.map(field => {
         const evaluatedField = { ...field };
 
-        // Evaluate all string properties of the field
+        // Evaluate all string properties of the field (except 'default' and 'computed', which are evaluated by computeFills)
         for (const [key, value] of Object.entries(evaluatedField)) {
+            if (key === 'default' || key === 'computed') continue;
             if (typeof value === 'string' && value.includes('{{')) {
                 let val = evaluateTemplate(value, ticketData);
                 // Coerce boolean properties to handle undefined properly (e.g., v-if="undefined !== false" shows field)
@@ -167,9 +181,11 @@ export function evaluateFields(fields, ticketData) {
  *
  * @param {Array} fields - Field definitions (may contain 'default' or 'computed' properties)
  * @param {Object} context - The data context (ticket data or row data for ObjectArrays)
+ * @param {String|null} changedField - Optional name of the field that just changed; if provided,
+ *                                     computed expressions are only evaluated if they reference changedField
  * @returns {Object} { defaults, computeds } maps of { fieldName: derivedValue }
  */
-export function computeFills(fields, context) {
+export function computeFills(fields, context, changedField = null) {
     if (!fields) return { defaults: {}, computeds: {} };
 
     const defaults = {};
@@ -178,6 +194,13 @@ export function computeFills(fields, context) {
         const isComputed = !!field.computed;
         const expr = field.computed || field.default;
         if (expr !== undefined && expr !== null) {
+            if (isComputed && changedField) {
+                if (field.name === changedField) continue;
+                if (typeof expr === 'string') {
+                    const depRegex = new RegExp(`\\b${changedField.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+                    if (!depRegex.test(expr)) continue;
+                }
+            }
             try {
                 const value = typeof expr === 'string' ? evaluateTemplate(expr, context) : expr;
                 if (value !== undefined && value !== null && value !== '') {

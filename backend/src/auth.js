@@ -192,8 +192,7 @@ const login = async (username, password, isPwa) => {
                         return resolve(null);
                     }
 
-                    // C. Verify Password (Bind as User)
-                    const userClient = ldap.createClient({ url: ldapConfig.url });
+                    // C. Verify Password (Bind as User)\n                    const userClient = ldap.createClient({ url: ldapConfig.url });
                     const bindDn = decodeDN(userEntry.dn);
                     userClient.bind(bindDn, password, async (err) => {
                         if (err) {
@@ -299,17 +298,36 @@ const verifyToken = (req, res, next) => {
 const ldapCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-const getUsers = async (filterGroups = [], forceFetch = false) => {
-    const hasFilter = filterGroups && filterGroups.length > 0;
+const resolveEmployeeIdFromUserDoc = (u) => {
+    if (!u) return '';
+    if (u.employeeId) return String(u.employeeId).trim();
+    if (u.notificationUri && typeof u.notificationUri === 'string') {
+        const parts = u.notificationUri.split(',').map(s => s.trim());
+        for (const part of parts) {
+            if (part.startsWith('nctalk:')) {
+                const id = part.slice('nctalk:'.length).trim();
+                if (id) return id;
+            }
+            if (part.startsWith('mailto:')) {
+                const addr = part.slice('mailto:'.length).trim();
+                if (addr.toLowerCase().endsWith('@valckenburgschule.de')) {
+                    const id = addr.split('@')[0].trim();
+                    if (id) return id;
+                }
+            }
+        }
+    }
+    return '';
+};
 
-    // 1. LDAP query with caching if there is a filter OR if forceFetch is requested
-    if ((hasFilter || forceFetch) && !settings.devmode && settings.server && settings.server.ldap) {
-        const cacheKey = filterGroups.sort().join(',');
+const getUsers = async (filterGroups = [], forceFetch = false) => {
+    // 1. Direct LDAP query (used by userPruningWorker or when forceFetch is true)
+    if (forceFetch && !settings.devmode && settings.server && settings.server.ldap) {
+        const cacheKey = [...filterGroups].sort().join(',');
         const cached = ldapCache.get(cacheKey);
         const now = Date.now();
 
         if (!forceFetch && cached && (now - cached.timestamp < CACHE_TTL)) {
-            console.log(`[Auth] Returning cached LDAP users for groups: ${cacheKey}`);
             return cached.users;
         }
 
@@ -396,17 +414,20 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                             }
 
                             if (username) {
-                                foundUsers.push({ username, groups, displayName, employeeId });
+                                if (!filterGroups || filterGroups.length === 0) {
+                                    foundUsers.push({ username, groups, displayName, employeeId });
+                                } else {
+                                    const hasGroup = groups.some(g => filterGroups.includes(g));
+                                    if (hasGroup) {
+                                        foundUsers.push({ username, groups, displayName, employeeId });
+                                    }
+                                }
                             }
                         });
 
                         searchRes.on('end', () => {
                             client.unbind();
-                            let result = foundUsers;
-                            if (filterGroups && filterGroups.length > 0) {
-                                result = result.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
-                            }
-                            resolve(result);
+                            resolve(foundUsers);
                         });
 
                         searchRes.on('error', (err) => {
@@ -418,7 +439,6 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
                 });
             });
 
-            // Cache the result
             ldapCache.set(cacheKey, {
                 users: ldapUsers,
                 timestamp: now
@@ -438,7 +458,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
         users = dbUsers.map(u => ({
             username: u.username,
             displayName: u.displayName || u.username,
-            employeeId: u.employeeId || '',
+            employeeId: resolveEmployeeIdFromUserDoc(u),
             groups: u.groups || []
         }));
     } catch (err) {
@@ -476,6 +496,15 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
     return users;
 };
 
+const getGroups = async () => {
+    const allUsers = await getUsers([], false);
+    const groupSet = new Set();
+    allUsers.forEach(u => {
+        (u.groups || []).forEach(g => groupSet.add(g));
+    });
+    return Array.from(groupSet).sort((a, b) => a.localeCompare(b, 'de'));
+};
+
 const getUser = async (username) => {
     username = username.toLowerCase();
 
@@ -491,7 +520,7 @@ const getUser = async (username) => {
             return {
                 username: mongoUser.username,
                 displayName,
-                employeeId: mongoUser.employeeId || ''
+                employeeId: resolveEmployeeIdFromUserDoc(mongoUser)
             };
         }
     } catch (err) {
@@ -704,4 +733,4 @@ const updateUserSettings = async (username, newSettings) => {
     }
 };
 
-module.exports = { login, verifyToken, getUsers, getUser, isDevMode, getUserSettings, updateUserSettings, normalizeNotificationUri, refreshAccessToken, extendAccessToken, generateRefreshToken };
+module.exports = { login, verifyToken, getUsers, getGroups, getUser, isDevMode, getUserSettings, updateUserSettings, normalizeNotificationUri, refreshAccessToken, extendAccessToken, generateRefreshToken };

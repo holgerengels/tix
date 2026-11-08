@@ -172,6 +172,7 @@ function evaluateFields(fields, ticketData, user = null) {
         const evaluatedField = { ...field };
 
         for (const [key, value] of Object.entries(evaluatedField)) {
+            if (key === 'default' || key === 'computed') continue;
             if (typeof value === 'string' && value.includes('{{')) {
                 let val = evaluateTemplate(value, ticketData, user);
                 if (['visible', 'readonly', 'required', 'optional', 'fixedLength', 'fixedOrder'].includes(key)) {

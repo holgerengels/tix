@@ -70,7 +70,7 @@ const workflow = useWorkflowStore();
 const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
 import RichTextEditor from '../components/RichTextEditor.vue';
-import { validateTicket, evaluateTemplate } from '../utils/evaluation';
+import { validateTicket, evaluateTemplate, computeFills } from '../utils/evaluation';
 import { marked } from 'marked';
 
 const getFieldLabel = (name) => {
@@ -137,6 +137,20 @@ const applySubticketMapping = () => {
     }
 
     newTicketData.value = { ...defaults, ...newTicketData.value };
+};
+
+/**
+ * Applies default field values defined in the workflow config.
+ */
+const applyDefaultFills = () => {
+    const wf = config.value[newTicketType.value];
+    if (!wf || !wf.fields) return;
+    const { defaults } = computeFills(wf.fields, newTicketData.value);
+    for (const [key, val] of Object.entries(defaults)) {
+        if (newTicketData.value[key] === undefined || newTicketData.value[key] === null || newTicketData.value[key] === '') {
+            newTicketData.value[key] = val;
+        }
+    }
 };
 
 /**
@@ -208,6 +222,7 @@ const availableTypes = computed(() => {
 onMounted(async () => {
     try {
         await workflow.fetchConfig();
+        applyDefaultFills();
     } catch (err) {
         console.error("Config fetch error", err);
         toast.error("Fehler beim Laden der Konfiguration.");
@@ -238,11 +253,13 @@ watch(newTicketType, (newType) => {
         formRef.value.clearErrors();
     }
     fetchWorkflowDoc(newType);
+    applyDefaultFills();
     applySubticketMapping();
 });
 
 const resetForm = () => {
     newTicketData.value = {};
+    applyDefaultFills();
     if (formRef.value && typeof formRef.value.clearErrors === 'function') {
         formRef.value.clearErrors();
     }

@@ -29,6 +29,15 @@ afterAll(async () => {
 describe('API Routes', () => {
 
     describe('User Routes', () => {
+        it('should get all groups', async () => {
+            const res = await request(app)
+                .get('/api/groups')
+                .set('Authorization', 'Bearer ' + tokens.admin);
+            expect(res.status).toBe(200);
+            expect(Array.isArray(res.body)).toBe(true);
+            expect(res.body).toContain('Lehrkräfte');
+        });
+
         it('should get all users', async () => {
             const res = await request(app)
                 .get('/api/users')

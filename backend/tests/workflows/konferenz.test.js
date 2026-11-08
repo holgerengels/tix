@@ -80,6 +80,8 @@ describe('Workflow: Konferenz', () => {
             date: new Date().toISOString().split('T')[0],
             timeStart: '14:00',
             timeEnd: '16:00',
+            calendarMode: 'invite',
+            assignee: 'lehrer1',
             participants: [
                 { name: 'lehrer1', status: 'eingeladen' },
                 { name: 'lehrer2', status: 'eingeladen' }
@@ -118,6 +120,63 @@ describe('Workflow: Konferenz', () => {
         );
     });
 
+    it('should handle calendarMode: entry without sending attendees', async () => {
+        const ticketPayload = {
+            type: 'Konferenz',
+            title: 'GLK für alle',
+            date: new Date().toISOString().split('T')[0],
+            timeStart: '14:00',
+            timeEnd: '16:00',
+            calendarMode: 'entry',
+            participants: [
+                { name: 'lehrer1', status: 'eingeladen' },
+                { name: 'lehrer2', status: 'eingeladen' }
+            ]
+        };
+
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.state).toBe('offen.eingetragen');
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Event should be added to personal calendar with EMPTY attendees
+        expect(caldav.addEvent).toHaveBeenCalledTimes(1);
+        const attendeesArg = caldav.addEvent.mock.calls[0][6];
+        expect(attendeesArg).toEqual([]);
+    });
+
+    it('should handle calendarMode: none without creating CalDAV event', async () => {
+        const ticketPayload = {
+            type: 'Konferenz',
+            title: 'Informelle Besprechung',
+            date: new Date().toISOString().split('T')[0],
+            timeStart: '14:00',
+            timeEnd: '16:00',
+            calendarMode: 'none',
+            participants: [
+                { name: 'lehrer1', status: 'eingeladen' }
+            ]
+        };
+
+        const res = await request(app)
+            .post('/api/tickets')
+            .set('Authorization', `Bearer ${tokens.schulleiter}`)
+            .send(ticketPayload);
+
+        expect(res.status).toBe(201);
+        expect(res.body.state).toBe('offen.eingetragen');
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // CalDAV should NOT be called
+        expect(caldav.addEvent).not.toHaveBeenCalled();
+    });
+
     it('should handle mixed participants: internal user, external email, attendance-only', async () => {
         const ticketPayload = {
             type: 'Konferenz',
@@ -125,6 +184,7 @@ describe('Workflow: Konferenz', () => {
             date: new Date().toISOString().split('T')[0],
             timeStart: '14:00',
             timeEnd: '16:00',
+            calendarMode: 'invite',
             participants: [
                 { name: 'lehrer1', email: 'lehrer1@valckenburgschule.de', status: 'eingeladen' },
                 { email: 'gast@extern.de', status: 'eingeladen' },
@@ -160,6 +220,7 @@ describe('Workflow: Konferenz', () => {
                 date: new Date().toISOString().split('T')[0],
                 timeStart: '09:00',
                 timeEnd: '10:00',
+                calendarMode: 'invite',
                 participants: [{ name: 'lehrer1', status: 'eingeladen' }]
             });
 
@@ -220,6 +281,7 @@ describe('Workflow: Konferenz', () => {
                 date: new Date().toISOString().split('T')[0],
                 timeStart: '14:00',
                 timeEnd: '15:00',
+                calendarMode: 'invite',
                 participants: [
                     { name: 'lehrer1', status: 'eingeladen' },
                     { name: 'lehrer2', status: 'eingeladen' }
@@ -313,6 +375,7 @@ describe('Workflow: Konferenz', () => {
             date: new Date().toISOString().split('T')[0],
             timeStart: '15:00',
             timeEnd: '15:00',
+            calendarMode: 'invite',
             participants: [{ name: 'lehrer1', status: 'eingeladen' }]
         };
 
@@ -338,6 +401,7 @@ describe('Workflow: Konferenz', () => {
             date: new Date().toISOString().split('T')[0],
             timeStart: '14:00',
             timeEnd: '16:00',
+            calendarMode: 'invite',
             participants: [
                 { name: 'lehrer1', status: 'eingeladen' },
                 { name: 'lehrer2', status: 'eingeladen' }

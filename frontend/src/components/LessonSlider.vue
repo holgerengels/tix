@@ -69,6 +69,16 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 const sliderRef = ref(null);
 
+watch(
+  () => props.isRange,
+  (isRange) => {
+    if (props.modelValue === undefined) {
+      emit('update:modelValue', isRange ? { min: 1, max: 11 } : 1);
+    }
+  },
+  { immediate: true }
+);
+
 const applyFormatter = () => {
   const el = sliderRef.value;
   if (!el) return;
@@ -113,4 +123,3 @@ wa-slider::part(label) {
     line-height: 1.5;
 }
 </style>
-

@@ -112,6 +112,11 @@ router.post('/extend', verifyToken, (req, res) => {
     res.json(result);
 });
 
+router.get('/groups', verifyToken, async (req, res) => {
+    const { getGroups } = require('./auth');
+    res.json(await getGroups());
+});
+
 router.get('/users', verifyToken, async (req, res) => {
     const { getUsers } = require('./auth');
     // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin

@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import FormField from './FormField.vue';
+import axios from 'axios';
 
 // Use standard pinia for tests
 import { createPinia, setActivePinia } from 'pinia';
@@ -12,7 +13,7 @@ const globalStubs = {
         methods: { emitChange(val) { this.$emit('change', { target: { value: val }, stopPropagation: () => {} }); } }
     },
     'wa-select': { 
-        template: '<div class="wa-select-stub" @change="emitChange"></div>',
+        template: '<div class="wa-select-stub" @change="emitChange"><slot></slot></div>',
         props: ['multiple'],
         methods: { emitChange(val) { this.$emit('change', { target: { value: val }, stopPropagation: () => {} }); } }
     },
@@ -21,7 +22,10 @@ const globalStubs = {
         props: ['checked', 'defaultChecked'],
         methods: { emitChange(val) { this.$emit('change', { target: { checked: val }, stopPropagation: () => {} }); } }
     },
-    'wa-option': true,
+    'wa-option': {
+        template: '<div class="wa-option-stub" :data-value="value"><slot></slot></div>',
+        props: ['value']
+    },
 };
 
 describe('FormField.vue Data Binding & Reactivity', () => {
@@ -94,6 +98,83 @@ describe('FormField.vue Data Binding & Reactivity', () => {
         const emitArgs = wrapper.emitted('update:modelValue');
         expect(emitArgs).toBeTruthy();
         expect(emitArgs[0][0]).toEqual(['A', 'B']);
+    });
+
+    it('Select field normalizes { value, label } options and renders labels', async () => {
+        const wrapper = mount(FormField, {
+            props: {
+                field: {
+                    type: 'Select',
+                    name: 'calendarMode',
+                    label: 'Kalender',
+                    options: [
+                        { value: 'none', label: 'nicht eintragen' },
+                        { value: 'entry', label: 'nur eintragen' },
+                        { value: 'invite', label: 'Einladung versenden' }
+                    ]
+                },
+                modelValue: 'invite'
+            },
+            global: {
+                stubs: globalStubs
+            }
+        });
+
+        const options = wrapper.findAllComponents('.wa-option-stub');
+        expect(options.length).toBe(3);
+        expect(options[0].props('value')).toBe('none');
+        expect(options[0].text()).toBe('nicht eintragen');
+        expect(options[1].props('value')).toBe('entry');
+        expect(options[1].text()).toBe('nur eintragen');
+        expect(options[2].props('value')).toBe('invite');
+        expect(options[2].text()).toBe('Einladung versenden');
+
+        const select = wrapper.findComponent('.wa-select-stub');
+        await select.vm.emitChange('entry');
+
+        const emitArgs = wrapper.emitted('update:modelValue');
+        expect(emitArgs).toBeTruthy();
+        expect(emitArgs[0][0]).toBe('entry');
+    });
+
+    it('Group field fetches dynamic groups from usersStore and merges with static options', async () => {
+        vi.spyOn(axios, 'get').mockImplementation(async (url) => {
+            if (url === '/api/groups') {
+                return { data: ['Lehrkräfte', 'Schulleitung'] };
+            }
+            if (url === '/api/users') {
+                return { data: [] };
+            }
+            return { data: [] };
+        });
+
+        const wrapper = mount(FormField, {
+            props: {
+                field: {
+                    type: 'Group',
+                    name: 'groups',
+                    label: 'Gruppen',
+                    multiple: true,
+                    options: [{ value: 'all', label: '<alle>' }]
+                },
+                modelValue: []
+            },
+            global: {
+                stubs: globalStubs
+            }
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 20));
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.findAllComponents('.wa-option-stub');
+        expect(options.length).toBe(3);
+        expect(options[0].props('value')).toBe('all');
+        expect(options[0].text()).toBe('<alle>');
+        expect(options[1].props('value')).toBe('Lehrkräfte');
+        expect(options[1].text()).toBe('Lehrkräfte');
+        expect(options[2].props('value')).toBe('Schulleitung');
+        expect(options[2].text()).toBe('Schulleitung');
     });
 
 });

@@ -7,24 +7,28 @@ const { addEvent, deleteEvent, getEventAttendees } = require('./caldav');
  * Helper to resolve attendees and creator's email address using MongoDB User model.
  */
 async function getAttendeesAndCreatorEmail(ticket) {
-    const participants = ticket.get('participants') || [];
+    const calendarMode = ticket.get('calendarMode') || 'invite';
     const attendees = [];
-    
-    for (const p of participants) {
-        if (p.email) {
-            // Direct email (internal or external)
-            const cn = p.name || p.email;
-            attendees.push({ email: p.email, cn });
-        } else if (p.name) {
-            // Fallback: look up user in MongoDB
-            const userDoc = await User.findOne({ username: p.name.toLowerCase() });
-            if (userDoc && userDoc.employeeId) {
-                attendees.push({
-                    email: `${userDoc.employeeId}@valckenburgschule.de`,
-                    cn: userDoc.displayName || p.name
-                });
+
+    // Only build attendees if calendarMode is 'invite'
+    if (calendarMode === 'invite') {
+        const participants = ticket.get('participants') || [];
+        for (const p of participants) {
+            if (p.email) {
+                // Direct email (internal or external)
+                const cn = p.name || p.email;
+                attendees.push({ email: p.email, cn });
+            } else if (p.name) {
+                // Fallback: look up user in MongoDB
+                const userDoc = await User.findOne({ username: p.name.toLowerCase() });
+                if (userDoc && userDoc.employeeId) {
+                    attendees.push({
+                        email: `${userDoc.employeeId}@valckenburgschule.de`,
+                        cn: userDoc.displayName || p.name
+                    });
+                }
+                // No email found → attendance-only participant, skip CalDAV
             }
-            // No email found → attendance-only participant, skip CalDAV
         }
     }
 
@@ -41,35 +45,40 @@ async function getAttendeesAndCreatorEmail(ticket) {
 /**
  * Bot: eintragen
  * Triggered when a new Konferenz ticket is created (state: offen.neu).
- * Creates sub-tickets for Raumreservierung and/or Bewirtungsauftrag if requested.
+ * Creates calendar event on creator's personal calendar unless calendarMode is 'none'.
  */
 async function eintragen(ticket) {
     if (ticket.state !== 'offen.neu') return;
 
+    const calendarMode = ticket.get('calendarMode') || 'invite';
     const date = ticket.get('date');
     const timeStart = ticket.get('timeStart');
     const timeEnd = ticket.get('timeEnd');
 
-    // Create event on creator's personal calendar
-    try {
-        const { attendees, creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
-        if (creatorEmail) {
-            await addEvent(
-                'personal',
-                ticket.id,
-                date,
-                timeStart,
-                timeEnd,
-                ticket.title || 'Konferenz',
-                attendees,
-                creatorEmail
-            );
-            console.log(`[Konferenz] Event for ${ticket.id} added to creator's personal calendar (${creatorEmail}).`);
-        } else {
-            console.warn(`[Konferenz] No creator found for ticket ${ticket.id}, calendar event skipped.`);
+    // Create event on creator's personal calendar unless calendarMode is 'none'
+    if (calendarMode !== 'none') {
+        try {
+            const { attendees, creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
+            if (creatorEmail) {
+                await addEvent(
+                    'personal',
+                    ticket.id,
+                    date,
+                    timeStart,
+                    timeEnd,
+                    ticket.title || 'Konferenz',
+                    attendees,
+                    creatorEmail
+                );
+                console.log(`[Konferenz] Event for ${ticket.id} (mode: ${calendarMode}) added to creator's personal calendar (${creatorEmail}).`);
+            } else {
+                console.warn(`[Konferenz] No creator found for ticket ${ticket.id}, calendar event skipped.`);
+            }
+        } catch (err) {
+            console.warn(`[Konferenz] Failed to create calendar event for creator (possibly missing SOGo superuser permissions for the service account):`, err.message);
         }
-    } catch (err) {
-        console.warn(`[Konferenz] Failed to create calendar event for creator (possibly missing SOGo superuser permissions for the service account):`, err.message);
+    } else {
+        console.log(`[Konferenz] Calendar event skipped for ${ticket.id} (calendarMode is 'none').`);
     }
 
     ticket.state = 'offen.eingetragen';
@@ -84,15 +93,18 @@ async function eintragen(ticket) {
 async function stornieren(ticket) {
     if (ticket.state !== 'offen.storniert') return;
 
-    // Delete event from creator's personal calendar
-    try {
-        const { creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
-        if (creatorEmail) {
-            await deleteEvent('personal', ticket.id, creatorEmail);
-            console.log(`[Konferenz] Event for ${ticket.id} deleted from creator's personal calendar.`);
+    // Delete event from creator's personal calendar if one might have been created
+    const calendarMode = ticket.get('calendarMode') || 'invite';
+    if (calendarMode !== 'none') {
+        try {
+            const { creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
+            if (creatorEmail) {
+                await deleteEvent('personal', ticket.id, creatorEmail);
+                console.log(`[Konferenz] Event for ${ticket.id} deleted from creator's personal calendar.`);
+            }
+        } catch (err) {
+            console.warn(`[Konferenz] Failed to delete calendar event for creator (possibly missing SOGo superuser permissions):`, err.message);
         }
-    } catch (err) {
-        console.warn(`[Konferenz] Failed to delete calendar event for creator (possibly missing SOGo superuser permissions):`, err.message);
     }
 
     // Find all open sub-tickets of this conference
@@ -122,30 +134,33 @@ async function stornieren(ticket) {
 async function syncDate(ticket) {
     if (!['offen.eingetragen', 'offen.durchgeführt', 'offen.protokolliert'].includes(ticket.state)) return;
 
+    const calendarMode = ticket.get('calendarMode') || 'invite';
     const date = ticket.get('date');
     if (!date) return;
 
     const timeStart = ticket.get('timeStart');
     const timeEnd = ticket.get('timeEnd');
 
-    // Update event on creator's personal calendar (including updated attendees & times)
-    try {
-        const { attendees, creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
-        if (creatorEmail && timeStart && timeEnd) {
-            await addEvent(
-                'personal',
-                ticket.id,
-                date,
-                timeStart,
-                timeEnd,
-                ticket.title || 'Konferenz',
-                attendees,
-                creatorEmail
-            );
-            console.log(`[Konferenz] Calendar event for ${ticket.id} rescheduled on creator's calendar.`);
+    // Update event on creator's personal calendar unless calendarMode is 'none'
+    if (calendarMode !== 'none') {
+        try {
+            const { attendees, creatorEmail } = await getAttendeesAndCreatorEmail(ticket);
+            if (creatorEmail && timeStart && timeEnd) {
+                await addEvent(
+                    'personal',
+                    ticket.id,
+                    date,
+                    timeStart,
+                    timeEnd,
+                    ticket.title || 'Konferenz',
+                    attendees,
+                    creatorEmail
+                );
+                console.log(`[Konferenz] Calendar event for ${ticket.id} rescheduled on creator's calendar.`);
+            }
+        } catch (err) {
+            console.warn(`[Konferenz] Failed to reschedule calendar event for creator (possibly missing SOGo superuser permissions):`, err.message);
         }
-    } catch (err) {
-        console.warn(`[Konferenz] Failed to reschedule calendar event for creator (possibly missing SOGo superuser permissions):`, err.message);
     }
 
     // Sync date to all open sub-tickets
@@ -189,6 +204,8 @@ async function syncDate(ticket) {
 
 async function checkResponses(ticket) {
     if (ticket.state !== 'offen.eingetragen') return;
+    const calendarMode = ticket.get('calendarMode') || 'invite';
+    if (calendarMode !== 'invite') return;
 
     try {
         const { creatorEmail } = await getAttendeesAndCreatorEmail(ticket);

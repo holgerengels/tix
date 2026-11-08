@@ -30,6 +30,7 @@
         <div
           class="object-row"
           :class="{ 'is-skeleton': row.isSkeleton }"
+          v-memo="[row.value, row.isSkeleton, index, visibleSubFields, showDragHandles, showDeleteButtons]"
         >
           <!-- Drag Handle -->
           <div class="drag-handle" v-if="showDragHandles && !row.isSkeleton">
@@ -44,7 +45,7 @@
             class="row-cell"
           >
             <FormField
-              :field="{ ...subField, label: '' }"
+              :field="subField.fieldNoLabel"
               :context="context"
               :modelValue="(row.value || {})[subField.name]"
               @update:modelValue="updateSubField(index, subField.name, $event)"
@@ -112,7 +113,12 @@ const subFields = computed(() => {
 });
 
 const visibleSubFields = computed(() => {
-    return subFields.value.filter(f => f.visible !== false);
+    return subFields.value
+        .filter(f => f.visible !== false)
+        .map(f => ({
+            ...f,
+            fieldNoLabel: { ...f, label: '' }
+        }));
 });
 
 // Build default values for a new row from sub-field defaults
@@ -166,6 +172,7 @@ watch(isFixedLength, () => {
 
 const updateSubField = (index, fieldName, newValue) => {
     const row = internalList.value[index];
+    if (!row) return;
 
     // Clone the value to ensure reactivity
     const updated = { ...(row.value || {}) };
@@ -229,6 +236,7 @@ const emitUpdate = () => {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    contain: layout style;
 }
 
 .label {
@@ -276,17 +284,20 @@ const emitUpdate = () => {
     flex-direction: column;
     gap: 0.25rem;
     width: 100%;
+    contain: layout style;
 }
 
 .object-row {
     display: flex;
     align-items: center;
     gap: 0rem;
+    height: 2.5rem;
     border: 1px solid transparent;
     border-radius: var(--wa-border-radius-medium);
-    transition: background-color 0.2s;
     flex-shrink: 0;
     min-width: 0;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100% auto 2.5rem;
 }
 
 .object-row:hover {

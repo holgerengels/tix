@@ -52,9 +52,47 @@
             "required": true
         },
         {
+            "name": "calendarMode",
+            "label": "Kalender",
+            "type": "Select",
+            "options": [
+                {
+                    "value": "none",
+                    "label": "nicht eintragen"
+                },
+                {
+                    "value": "entry",
+                    "label": "nur eintragen"
+                },
+                {
+                    "value": "invite",
+                    "label": "Einladung versenden"
+                }
+            ],
+            "default": "invite",
+            "required": true
+        },
+        {
+            "name": "assignee",
+            "label": "Protokollant*in",
+            "type": "User",
+            "groups": [
+                "Lehrkräfte"
+            ],
+            "visible": true
+        },
+        {
+            "name": "groups",
+            "label": "Gruppen",
+            "type": "Group",
+            "multiple": true,
+            "visible": "{{ !ticket.state || ticket.state === 'offen.neu' || ticket.state === 'offen.eingetragen' }}"
+        },
+        {
             "name": "participants",
             "label": "Teilnehmer*innen",
             "type": "ObjectArray",
+            "computed": "{{ lookupGroupUsers(ticket.groups) }}",
             "items": {
                 "fields": [
                     {
@@ -131,6 +169,8 @@
     "grid": [
         "title title title title",
         "date date timeStart timeEnd",
+        "calendarMode calendarMode assignee assignee",
+        "groups groups groups groups",
         "participants participants participants participants",
         "agenda agenda agenda agenda",
         "protocol protocol protocol protocol",
@@ -148,7 +188,8 @@
                     "groups": [
                         "@creator",
                         "Schulleitung",
-                        "Netzwerkteam"
+                        "Netzwerkteam",
+                        "@assignee"
                     ],
                     "script": "ticket.state = 'offen.durchgeführt'"
                 },
@@ -196,7 +237,8 @@
                     "groups": [
                         "@creator",
                         "Schulleitung",
-                        "Netzwerkteam"
+                        "Netzwerkteam",
+                        "@assignee"
                     ],
                     "optional": true,
                     "form": "protokollieren"
@@ -232,7 +274,8 @@
                     "groups": [
                         "@creator",
                         "Schulleitung",
-                        "Netzwerkteam"
+                        "Netzwerkteam",
+                        "@assignee"
                     ],
                     "optional": true,
                     "form": "protokollieren"
@@ -263,7 +306,8 @@
             "groups": [
                 "@creator",
                 "Schulleitung",
-                "Netzwerkteam"
+                "Netzwerkteam",
+                "@assignee"
             ]
         },
         {
@@ -285,7 +329,8 @@
             "groups": [
                 "@creator",
                 "Schulleitung",
-                "Netzwerkteam"
+                "Netzwerkteam",
+                "@assignee"
             ]
         }
     ],

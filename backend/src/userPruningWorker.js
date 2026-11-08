@@ -38,7 +38,7 @@ async function runUserPruningCheck() {
             return;
         }
 
-        const ldapUsernames = new Set(ldapUsers.map(u => u.username.toLowerCase()));
+        const ldapUserMap = new Map(ldapUsers.map(u => [u.username.toLowerCase(), u]));
         const mongoUsers = await User.find({});
 
         const now = new Date();
@@ -49,9 +49,13 @@ async function runUserPruningCheck() {
 
         for (const mongoUser of mongoUsers) {
             const username = mongoUser.username.toLowerCase();
-            if (ldapUsernames.has(username)) {
+            const ldapUser = ldapUserMap.get(username);
+            if (ldapUser) {
                 // User is still present in LDAP. Keep their lastSeenInLdap updated
                 mongoUser.lastSeenInLdap = now;
+                if (ldapUser.employeeId && !mongoUser.employeeId) {
+                    mongoUser.employeeId = ldapUser.employeeId;
+                }
                 await mongoUser.save();
                 updatedCount++;
             } else {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { evaluateFields, validateTicket } from './evaluation';
 
 describe('evaluation.js', () => {
@@ -39,6 +39,20 @@ describe('evaluation.js', () => {
             const result = evaluateFields(fields, ticketData);
             // It should keep the original string and coerce to boolean because it's the visible property!
             expect(typeof result[0].visible).toBe('boolean');
+        });
+
+        it('should NOT evaluate default or computed properties inside evaluateFields', () => {
+            const fields = [
+                {
+                    name: 'participants',
+                    default: '{{ ticket.groups }}',
+                    computed: '{{ lookupGroupUsers(ticket.groups) }}'
+                }
+            ];
+            const ticketData = { groups: ['Lehrkräfte'] };
+            const result = evaluateFields(fields, ticketData);
+            expect(result[0].default).toBe('{{ ticket.groups }}');
+            expect(result[0].computed).toBe('{{ lookupGroupUsers(ticket.groups) }}');
         });
     });
 
@@ -275,6 +289,26 @@ describe('evaluation.js', () => {
             ];
             const { defaults } = computeFills(fields, {});
             expect(Object.keys(defaults)).toEqual(['priority']);
+        });
+
+        it('should only evaluate computed fields that reference changedField when changedField is provided', () => {
+            const fields = [
+                { name: 'title', computed: '{{ticket.level + ": " + ticket.name}}' },
+                { name: 'participants', computed: '{{ticket.groups}}' }
+            ];
+            const context = { level: '1. Mahnung', name: 'Max', groups: ['Lehrkräfte'] };
+
+            // When 'level' changes, 'title' is computed, 'participants' is skipped
+            const res1 = computeFills(fields, context, 'level');
+            expect(res1.computeds).toEqual({ title: '1. Mahnung: Max' });
+
+            // When 'groups' changes, 'participants' is computed, 'title' is skipped
+            const res2 = computeFills(fields, context, 'groups');
+            expect(res2.computeds).toEqual({ participants: ['Lehrkräfte'] });
+
+            // When 'participants' itself changes, 'participants' is NOT overwritten
+            const res3 = computeFills(fields, context, 'participants');
+            expect(res3.computeds).toEqual({});
         });
     });
 });

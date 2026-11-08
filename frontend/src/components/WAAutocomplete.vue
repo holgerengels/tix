@@ -17,7 +17,7 @@
         <wa-icon slot="suffix" name="chevron-down"></wa-icon>
     </wa-input>
 
-    <div v-if="filteredOptions.length > 0" class="dropdown-list">
+    <div v-if="isOpen && filteredOptions.length > 0" class="dropdown-list">
       <wa-dropdown-item v-for="opt in filteredOptions" :key="optValue(opt)" :value="optValue(opt)" @click="handleItemClick(opt)">
         {{ optLabel(opt) }}
       </wa-dropdown-item>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, watch } from 'vue';
+import { ref, computed, defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -45,7 +45,6 @@ const searchText = ref('');
 const hasSelected = ref(false);
 let suppressOpen = false; // Guard to prevent reopening after selection or blur
 
-// Helpers to handle both string[] and { value, label }[] options
 const optValue = (opt) => typeof opt === 'object' ? opt.value : opt;
 const optLabel = (opt) => typeof opt === 'object' ? opt.label : opt;
 
@@ -58,6 +57,7 @@ const displayValue = computed(() => {
 });
 
 const filteredOptions = computed(() => {
+    if (!isOpen.value) return [];
     const query = (searchText.value || displayValue.value || '').toLowerCase();
     if (!query) return props.options;
     return props.options.filter(opt => optLabel(opt).toLowerCase().includes(query));
