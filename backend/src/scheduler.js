@@ -1,21 +1,8 @@
 const { loadBots, runBots, scheduleBots } = require('./bots');
 const { runSubscriptionCheck } = require('./subscriptionWorker');
 const { checkUnpublishedLogs } = require('./publisher');
+const { settings } = require('./settings');
 const cron = require('node-cron');
-const path = require('path');
-const fs = require('fs');
-
-let settingsPath = path.join(__dirname, '../../config/settings.json');
-let settings = {};
-
-try {
-    if (fs.existsSync(settingsPath)) {
-        const data = fs.readFileSync(settingsPath, 'utf8');
-        settings = JSON.parse(data);
-    }
-} catch (err) {
-    console.error(`[Scheduler] Error reading settings file: ${err.message}`);
-}
 
 const SUBSCRIPTION_SCHEDULE = (settings.scheduler && settings.scheduler.subscriptionSchedule)
     ? settings.scheduler.subscriptionSchedule : '0 * * * *'; // default to top of every hour

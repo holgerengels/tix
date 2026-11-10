@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { evaluateFields, validateTicket } from './evaluation';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { reactive } from 'vue';
+import {
+    evaluateFields,
+    validateTicket,
+    evaluateTemplate,
+    getCachedFunction,
+    getEvaluatorCacheSize,
+    clearEvaluatorCache
+} from './evaluation';
 
 describe('evaluation.js', () => {
 
@@ -309,6 +317,60 @@ describe('evaluation.js', () => {
             // When 'participants' itself changes, 'participants' is NOT overwritten
             const res3 = computeFills(fields, context, 'participants');
             expect(res3.computeds).toEqual({});
+        });
+    });
+
+    describe('evaluator compilation cache', () => {
+        beforeEach(() => {
+            clearEvaluatorCache();
+        });
+
+        it('reuses compiled expressions across different ticketData objects, actions, and reactive proxies', () => {
+            expect(getEvaluatorCacheSize()).toBe(0);
+
+            const ticket1 = reactive({ status: 'open', count: 2 });
+            const ticket2 = reactive({ status: 'closed', count: 5 });
+            const wf = {
+                fields: [{
+                    name: 'count',
+                    visible: '{{ ticket.status === "open" }}',
+                    validation: {
+                        expression: 'ticket.count > 0 && action !== "reject"',
+                        message: 'Invalid'
+                    }
+                }]
+            };
+
+            expect(validateTicket(ticket1, wf, null, 'create').isValid).toBe(true);
+            expect(getEvaluatorCacheSize()).toBe(2);
+
+            // Re-evaluating with different ticket data and action reuses cached functions
+            expect(validateTicket(ticket2, wf, null, 'reject').isValid).toBe(true); // hidden -> validation skipped
+            expect(getEvaluatorCacheSize()).toBe(2);
+
+            ticket2.status = 'open';
+            expect(validateTicket(ticket2, wf, null, 'reject').isValid).toBe(false);
+            expect(getEvaluatorCacheSize()).toBe(2);
+
+            expect(evaluateTemplate('Wert: {{ ticket.count * 2 }}', ticket1)).toBe('Wert: 4');
+            expect(evaluateTemplate('Wert: {{ ticket.count * 2 }}', ticket2)).toBe('Wert: 10');
+            expect(getEvaluatorCacheSize()).toBe(3);
+        });
+
+        it('does not cache syntax errors and supports separate prefixes via getCachedFunction', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            expect(evaluateTemplate('{{ broken && syntax!! }}', {})).toBe('{{ broken && syntax!! }}');
+            expect(getEvaluatorCacheSize()).toBe(0);
+            warnSpy.mockRestore();
+
+            const fnA = getCachedFunction('prefixA\0expr', () => () => 'A');
+            const fnB = getCachedFunction('prefixB\0expr', () => () => 'B');
+            const fnA2 = getCachedFunction('prefixA\0expr', () => () => 'NEW_A');
+
+            expect(fnA).toBe(fnA2);
+            expect(fnA()).toBe('A');
+            expect(fnB()).toBe('B');
+            expect(getEvaluatorCacheSize()).toBe(2);
         });
     });
 });

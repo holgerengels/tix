@@ -10,4 +10,7 @@ const logSchema = new mongoose.Schema({
     published: { type: Date }     // Internal timestamp for publishing logic
 });
 
+logSchema.index({ published: 1 });
+logSchema.index({ timestamp: -1 });
+
 module.exports = mongoose.model('Log', logSchema);

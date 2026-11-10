@@ -1,8 +1,6 @@
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const { settings } = require('./settings');
 
-const CONFIG_DIR = path.join(__dirname, '../../config');
 let kiToken = null;
 let kiModel = null;
 let serverUrl = null;
@@ -11,7 +9,6 @@ let baseApiUrl = null;
 async function getClient() {
     if (kiToken && kiModel) return { token: kiToken, model: kiModel, baseUrl: baseApiUrl };
 
-    const settings = JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'settings.json'), 'utf8'));
     if (!settings.ki || !settings.ki.server) throw new Error("Kein KI-Server konfiguriert");
     
     serverUrl = settings.ki.server; 

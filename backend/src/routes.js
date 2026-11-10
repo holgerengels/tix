@@ -457,10 +457,18 @@ router.get('/tickets', verifyToken, async (req, res) => {
             sensitiveFilters.push({ _id: null });
         }
     }
+    let cachedAllUsers = null;
+    const loadAllUsers = async () => {
+        if (!cachedAllUsers) {
+            const { getUsers } = require('./auth');
+            cachedAllUsers = await getUsers();
+        }
+        return cachedAllUsers;
+    };
+
     if (creator) {
         try {
-            const { getUsers } = require('./auth');
-            const allUsers = await getUsers();
+            const allUsers = await loadAllUsers();
             const searchRegex = new RegExp(creator, 'i');
             const matchedUsernames = allUsers
                 .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
@@ -477,8 +485,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
     }
     if (assignee) {
         try {
-            const { getUsers } = require('./auth');
-            const allUsers = await getUsers();
+            const allUsers = await loadAllUsers();
             const searchRegex = new RegExp(assignee, 'i');
             const matchedUsernames = allUsers
                 .filter(u => searchRegex.test(u.username) || searchRegex.test(u.displayName))
@@ -529,8 +536,7 @@ router.get('/tickets', verifyToken, async (req, res) => {
 
         // Also match by user display names
         try {
-            const { getUsers } = require('./auth');
-            const allUsers = await getUsers();
+            const allUsers = await loadAllUsers();
             const searchRegex = new RegExp(escapedSearch, 'i');
             const matchedUsernames = allUsers
                 .filter(u => searchRegex.test(u.displayName))
@@ -937,38 +943,12 @@ router.post('/tickets/:id/action', verifyToken, async (req, res) => {
         // Execute Script
         if (scriptToRun) {
             const { evaluateTemplate } = require('./validation');
-            const sandbox = { ticket, evaluateTemplate, currentWorkflow: wf };
-
-            // Inject functions from the workflow's specific JS file if it exists
-            if (wf && wf.file) {
-                const fs = require('fs');
-                const path = require('path');
-                const baseName = wf.file.replace('.json', '');
-                const scriptPath = path.join(__dirname, '../../config', `${baseName}.js`);
-                if (fs.existsSync(scriptPath)) {
-                    try {
-                        const scriptContent = fs.readFileSync(scriptPath, 'utf8');
-                        const contextSandbox = {
-                            require: require,
-                            console: console,
-                            module: {},
-                            exports: {},
-                            process: process,
-                            path: path,
-                            fs: fs,
-                            otpauth: require('otpauth'),
-                            evaluateTemplate: require('./validation').evaluateTemplate,
-                            currentWorkflow: wf
-                        };
-                        contextSandbox.module.exports = contextSandbox.exports;
-                        vm.createContext(contextSandbox);
-                        vm.runInContext(scriptContent, contextSandbox);
-                        Object.assign(sandbox, contextSandbox.module.exports);
-                    } catch (e) {
-                        console.error(`Error loading workflow JS ${scriptPath} for action script:`, e);
-                    }
-                }
-            }
+            const sandbox = {
+                ticket,
+                evaluateTemplate,
+                currentWorkflow: wf,
+                ...workflowEngine.getWorkflowScriptExports(wf)
+            };
 
             vm.createContext(sandbox);
             try {
@@ -1598,17 +1578,9 @@ router.get('/caldav/availability', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Date parameter is required (YYYY-MM-DD)' });
         }
 
-        const fs = require('fs');
-        const path = require('path');
-        const rrConfigPath = path.join(__dirname, '../../config/raumreservierung.json');
-        let allowedRooms = null;
-        if (fs.existsSync(rrConfigPath)) {
-            const rrConfig = JSON.parse(fs.readFileSync(rrConfigPath, 'utf8'));
-            const terminField = rrConfig.fields.find(f => f.type === 'Termin');
-            if (terminField && terminField.rooms) {
-                allowedRooms = terminField.rooms;
-            }
-        }
+        const rrConfig = workflowEngine.getWorkflowForType('Raumreservierung');
+        const terminField = rrConfig?.fields?.find(f => f.type === 'Termin');
+        const allowedRooms = terminField?.rooms || null;
 
         const { getAllAvailability } = require('./caldav');
         const availability = await getAllAvailability(date, allowedRooms);

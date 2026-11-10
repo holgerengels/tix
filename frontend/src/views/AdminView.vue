@@ -97,6 +97,7 @@ import { useTicketsStore } from '../stores/tickets';
 import TicketListConfig from '../components/TicketListConfig.vue';
 import { toast, confirm } from '../composables/useToast';
 import { useTicketAccess } from '../composables/useTicketAccess';
+import { getCachedFunction } from '../utils/evaluation';
 
 const ui = useUiStore();
 const workflow = useWorkflowStore();
@@ -328,7 +329,10 @@ const getFormattedData = (ticket) => {
                 return values[idx];
             });
 
-            const func = new Function(...validKeys, `return ${expr}`);
+            const func = getCachedFunction(
+                `admin\0${validKeys.join(',')}\0${expr}`,
+                () => new Function(...validKeys, `return ${expr}`)
+            );
             return func(...validValues);
         } catch (e) {
             console.error(`Error evaluating expression "${expr}":`, e);

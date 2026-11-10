@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
 const ldap = require('ldapjs');
-const fs = require('fs');
-const path = require('path');
 const User = require('./models/user');
+const { settings } = require('./settings');
 
 const escapeLDAP = (str) => {
     if (!str) return '';
@@ -30,15 +29,6 @@ const decodeDN = (dn) => {
 
 
 // Load Settings
-let settings = {};
-try {
-    const settingsPath = path.join(__dirname, '../../config/settings.json');
-    if (fs.existsSync(settingsPath)) {
-        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    }
-} catch (e) {
-    console.error('Error loading settings.json:', e);
-}
 console.log(`[Auth] Settings loaded. DevMode: ${settings.devmode}`);
 
 const MOCK_USERS = [

@@ -2,13 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 
 import ListView from './views/ListView.vue'
-import NewTicketView from './views/NewTicketView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
     routes: [
         { path: '/', component: ListView, meta: { requiresAuth: true } },
-        { path: '/tickets/new', component: NewTicketView, meta: { requiresAuth: true } },
+        { path: '/tickets/new', component: () => import('./views/NewTicketView.vue'), meta: { requiresAuth: true } },
         { path: '/tickets/:id', component: ListView, meta: { requiresAuth: true } },
         { path: '/tickets/:id/view', component: () => import('./views/ViewView.vue'), meta: { requiresAuth: true } },
         { path: '/tickets/:id/edit', component: () => import('./views/EditView.vue'), meta: { requiresAuth: true } },

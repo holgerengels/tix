@@ -1,10 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const configDir = path.join(__dirname, '../../config');
 const workflows = {};
+const workflowScriptCache = new Map();
 
 const loadWorkflows = () => {
+    workflowScriptCache.clear();
     try {
         const files = fs.readdirSync(configDir);
 
@@ -106,9 +109,50 @@ const canReadTicket = (ticket, user) => {
     return canRead(ticket.type, user.groups || []);
 };
 
+const getWorkflowScriptExports = (wf) => {
+    if (!wf || !wf.file) return {};
+    if (workflowScriptCache.has(wf.file)) {
+        return workflowScriptCache.get(wf.file);
+    }
+
+    const baseName = wf.file.replace('.json', '');
+    const scriptPath = path.join(configDir, `${baseName}.js`);
+    if (!fs.existsSync(scriptPath)) {
+        workflowScriptCache.set(wf.file, {});
+        return {};
+    }
+
+    try {
+        const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+        const { evaluateTemplate } = require('./validation');
+        const contextSandbox = {
+            require,
+            console,
+            module: {},
+            exports: {},
+            process,
+            path,
+            fs,
+            otpauth: require('otpauth'),
+            evaluateTemplate,
+            currentWorkflow: wf
+        };
+        contextSandbox.module.exports = contextSandbox.exports;
+        vm.createContext(contextSandbox);
+        vm.runInContext(scriptContent, contextSandbox);
+        const exported = contextSandbox.module.exports || {};
+        workflowScriptCache.set(wf.file, exported);
+        return exported;
+    } catch (e) {
+        console.error(`Error loading workflow JS ${scriptPath} for action script:`, e);
+        return {};
+    }
+};
+
 module.exports = {
     getWorkflows,
     getWorkflowForType,
+    getWorkflowScriptExports,
     getVisibleTicketTypes,
     loadWorkflows,
     isAdmin,

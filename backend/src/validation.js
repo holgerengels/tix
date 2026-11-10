@@ -1,50 +1,120 @@
 const { format, formatDistance, addDays, subDays } = require('date-fns');
 const { de } = require('date-fns/locale');
+const mongoose = require('mongoose');
 
-const userCache = new Map();
+const USER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const PRELOAD_RETRY_COOLDOWN = 5 * 1000; // 5 seconds
+const MAX_EVALUATOR_CACHE_SIZE = 1000;
+const IDENTIFIER_REGEX = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
 
-// Helper to lookup user displayName in background
+const userCache = new Map(); // cleanUsername -> { displayName, timestamp }
+const pendingUserFetches = new Set();
+let preloadPromise = null;
+let lastBulkPreload = 0;
+let lastBulkAttempt = 0;
+
+const evaluatorCache = new Map();
+
+function pruneExpiredUsers(now = Date.now()) {
+    for (const [key, entry] of userCache.entries()) {
+        if (now - entry.timestamp >= USER_CACHE_TTL) {
+            userCache.delete(key);
+        }
+    }
+}
+
+async function preloadUserCache() {
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) return;
+    if (preloadPromise) return preloadPromise;
+
+    lastBulkAttempt = Date.now();
+
+    preloadPromise = (async () => {
+        try {
+            const User = require('./models/user');
+            const query = User.find({}, 'username displayName');
+            const users = typeof query?.lean === 'function' ? await query.lean() : await query;
+            const now = Date.now();
+            pruneExpiredUsers(now);
+            for (const u of (users || [])) {
+                if (u.username && u.displayName) {
+                    userCache.set(u.username.toLowerCase(), {
+                        displayName: u.displayName,
+                        timestamp: now
+                    });
+                }
+            }
+            lastBulkPreload = now;
+        } catch (err) {
+            // Connection or query might fail on immediate startup; background fetch will handle
+        } finally {
+            preloadPromise = null;
+        }
+    })();
+
+    return preloadPromise;
+}
+
+function refreshUserInBackground(cleanUsername, fallbackUsername) {
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) return;
+
+    const now = Date.now();
+    if (now - lastBulkPreload >= USER_CACHE_TTL && now - lastBulkAttempt >= PRELOAD_RETRY_COOLDOWN) {
+        preloadUserCache();
+        return;
+    }
+
+    if (pendingUserFetches.has(cleanUsername)) return;
+    pendingUserFetches.add(cleanUsername);
+
+    try {
+        const User = require('./models/user');
+        const query = User.findOne({ username: cleanUsername }, 'username displayName');
+        const promise = typeof query?.lean === 'function' ? query.lean() : query;
+        Promise.resolve(promise).then(u => {
+            const displayName = (u && u.displayName) ? u.displayName : fallbackUsername;
+            userCache.set(cleanUsername, { displayName, timestamp: Date.now() });
+        }).catch(err => {
+            console.error(`[Validation] Error fetching user ${fallbackUsername} in background:`, err);
+        }).finally(() => {
+            pendingUserFetches.delete(cleanUsername);
+        });
+    } catch (e) {
+        pendingUserFetches.delete(cleanUsername);
+        // Model import or mongoose fetch could fail if not fully initialized or in test scripts
+    }
+}
+
+// Helper to lookup user displayName from TTL cache with background refresh
 function getBackendDisplayName(username) {
     if (!username) return '';
     const cleanUsername = username.toLowerCase();
-    if (userCache.has(cleanUsername)) {
-        return userCache.get(cleanUsername);
-    }
-    
-    // Trigger background database fetch
-    try {
-        const User = require('./models/user');
-        User.findOne({ username: cleanUsername }).then(u => {
-            if (u && u.displayName) {
-                userCache.set(cleanUsername, u.displayName);
-            } else {
-                userCache.set(cleanUsername, username);
-            }
-        }).catch(err => {
-            console.error(`[Validation] Error fetching user ${username} in background:`, err);
-        });
-    } catch (e) {
-        // Model import or mongoose fetch could fail if not fully initialized or in test scripts
+    const now = Date.now();
+    const cached = userCache.get(cleanUsername);
+
+    if (cached) {
+        if (now - cached.timestamp < USER_CACHE_TTL) {
+            return cached.displayName;
+        }
+        // Stale-while-revalidate: avoid flashing raw username while refreshing expired entry
+        refreshUserInBackground(cleanUsername, username);
+        return cached.displayName;
     }
 
-    // Return fallback for first execution
+    refreshUserInBackground(cleanUsername, username);
     return username;
 }
 
-// Pre-populate user cache
-try {
-    const User = require('./models/user');
-    User.find({}).then(users => {
-        for (const u of users) {
-            if (u.username && u.displayName) {
-                userCache.set(u.username.toLowerCase(), u.displayName);
-            }
-        }
-    }).catch(err => {
-        // Connection or query might fail on immediate startup, background fetch will handle
-    });
-} catch (e) {
-    // Ignore import errors in tests/scripts where Mongoose isn't initialized
+// Pre-populate user cache once DB connection is active (no buffering queries during unit tests)
+if (mongoose.connection) {
+    if (mongoose.connection.readyState === 1) {
+        preloadUserCache();
+    }
+    if (typeof mongoose.connection.on === 'function') {
+        mongoose.connection.on('connected', () => {
+            preloadUserCache();
+        });
+    }
 }
 
 function getFirstNameFromDisplayName(displayName) {
@@ -70,14 +140,34 @@ function getLastNameFromDisplayName(displayName) {
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
+function getCompiledEvaluator(expr, validKeys, isAsync) {
+    const cacheKey = `${isAsync ? 'A' : 'S'}\0${validKeys.join(',')}\0${expr}`;
+    let func = evaluatorCache.get(cacheKey);
+    if (!func) {
+        func = isAsync
+            ? new AsyncFunction(...validKeys, `return await (${expr})`)
+            : new Function(...validKeys, `return ${expr}`);
+        if (evaluatorCache.size >= MAX_EVALUATOR_CACHE_SIZE) {
+            evaluatorCache.delete(evaluatorCache.keys().next().value);
+        }
+        evaluatorCache.set(cacheKey, func);
+    }
+    return func;
+}
+
 const createSafeEvaluator = (expr, ticketData, user = null, action = null, isAsync = false) => {
-    const keys = Object.keys(ticketData || {});
-    const values = Object.values(ticketData || {});
-    const validKeys = keys.filter(k => /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k));
-    const validValues = validKeys.map(k => values[keys.indexOf(k)]);
+    const data = ticketData || {};
+    const validKeys = [];
+    const validValues = [];
+    for (const [k, v] of Object.entries(data)) {
+        if (IDENTIFIER_REGEX.test(k)) {
+            validKeys.push(k);
+            validValues.push(v);
+        }
+    }
 
     validKeys.push('ticket');
-    validValues.push(ticketData || {});
+    validValues.push(data);
 
     // Inject helpers
     const helpers = {
@@ -109,13 +199,8 @@ const createSafeEvaluator = (expr, ticketData, user = null, action = null, isAsy
         validValues.push(val);
     }
 
-    if (isAsync) {
-        const func = new AsyncFunction(...validKeys, `return await (${expr})`);
-        return () => func(...validValues);
-    } else {
-        const func = new Function(...validKeys, `return ${expr}`);
-        return () => func(...validValues);
-    }
+    const func = getCompiledEvaluator(expr, validKeys, isAsync);
+    return () => func(...validValues);
 };
 
 function shouldRunValidation(validationDef, action = null) {
@@ -299,11 +384,24 @@ function computeSummary(ticketData, wf) {
     }
 }
 
+function clearValidationCaches() {
+    userCache.clear();
+    evaluatorCache.clear();
+    pendingUserFetches.clear();
+    lastBulkPreload = 0;
+    lastBulkAttempt = 0;
+}
+
 module.exports = {
     createSafeEvaluator,
     shouldRunValidation,
     evaluateTemplate,
     evaluateFields,
     validateTicket,
-    computeSummary
+    computeSummary,
+    preloadUserCache,
+    getBackendDisplayName,
+    getEvaluatorCacheSize: () => evaluatorCache.size,
+    getUserCacheSize: () => userCache.size,
+    clearValidationCaches
 };

@@ -2,19 +2,7 @@ const User = require('./models/user');
 const Subscription = require('./models/subscription');
 const PushSubscription = require('./models/pushSubscription');
 const auth = require('./auth');
-const fs = require('fs');
-const path = require('path');
-
-// Read settings
-let settings = {};
-try {
-    const settingsPath = path.join(__dirname, '../../config/settings.json');
-    if (fs.existsSync(settingsPath)) {
-        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    }
-} catch (e) {
-    console.error('[UserPruningWorker] Error loading settings:', e);
-}
+const { settings } = require('./settings');
 
 const RETENTION_DAYS = (settings.server && settings.server.usersync && settings.server.usersync.retentionDays) !== undefined
     ? settings.server.usersync.retentionDays

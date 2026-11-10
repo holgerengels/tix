@@ -69,7 +69,6 @@ const ui = useUiStore();
 const workflow = useWorkflowStore();
 const ticketsStore = useTicketsStore();
 import DynamicForm from '../components/DynamicForm.vue';
-import RichTextEditor from '../components/RichTextEditor.vue';
 import { validateTicket, evaluateTemplate, computeFills } from '../utils/evaluation';
 import { marked } from 'marked';
 

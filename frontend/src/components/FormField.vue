@@ -228,19 +228,20 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue';
-import RichTextEditor from './RichTextEditor.vue';
+import { computed, defineAsyncComponent } from 'vue';
 import WAAutocomplete from './WAAutocomplete.vue';
 import UserSelect from './UserSelect.vue';
 import GroupSelect from './GroupSelect.vue';
-import BadgeEditor from './BadgeEditor.vue';
-import ArrayFieldEditor from './ArrayFieldEditor.vue';
-import ObjectArrayEditor from './ObjectArrayEditor.vue';
-import TimelineDisplay from './TimelineDisplay.vue';
-import TerminInput from './TerminInput.vue';
-import FileAttachments from './FileAttachments.vue';
-import WeekdayInput from './WeekdayInput.vue';
-import LessonSlider from './LessonSlider.vue';
+
+const RichTextEditor = defineAsyncComponent(() => import('./RichTextEditor.vue'));
+const BadgeEditor = defineAsyncComponent(() => import('./BadgeEditor.vue'));
+const ArrayFieldEditor = defineAsyncComponent(() => import('./ArrayFieldEditor.vue'));
+const ObjectArrayEditor = defineAsyncComponent(() => import('./ObjectArrayEditor.vue'));
+const TimelineDisplay = defineAsyncComponent(() => import('./TimelineDisplay.vue'));
+const TerminInput = defineAsyncComponent(() => import('./TerminInput.vue'));
+const FileAttachments = defineAsyncComponent(() => import('./FileAttachments.vue'));
+const WeekdayInput = defineAsyncComponent(() => import('./WeekdayInput.vue'));
+const LessonSlider = defineAsyncComponent(() => import('./LessonSlider.vue'));
 
 const props = defineProps({
   field: { type: Object, required: true },

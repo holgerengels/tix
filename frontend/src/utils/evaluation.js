@@ -36,6 +36,32 @@ function getLastNameFromDisplayName(displayName) {
     return parts.slice(1).join(' ');
 }
 
+const MAX_EVALUATOR_CACHE_SIZE = 500;
+const evaluatorCache = new Map();
+
+/**
+ * Compile and cache a function by key with bounded cache size to avoid repeated JIT compilation.
+ */
+export function getCachedFunction(cacheKey, compileFn) {
+    let func = evaluatorCache.get(cacheKey);
+    if (!func) {
+        func = compileFn();
+        if (evaluatorCache.size >= MAX_EVALUATOR_CACHE_SIZE) {
+            evaluatorCache.delete(evaluatorCache.keys().next().value);
+        }
+        evaluatorCache.set(cacheKey, func);
+    }
+    return func;
+}
+
+export function getEvaluatorCacheSize() {
+    return evaluatorCache.size;
+}
+
+export function clearEvaluatorCache() {
+    evaluatorCache.clear();
+}
+
 const createSafeEvaluator = (expr, ticketData, action = null) => {
     // We cannot just use Object.keys(ticketData) because Vue needs to track GET requests
     // for specific properties inside the expression, even if they don't exist on the object yet.
@@ -109,9 +135,6 @@ const createSafeEvaluator = (expr, ticketData, action = null) => {
         isAvailable: () => true
     };
 
-    const validKeys = ['ticket', 'helpers'];
-    const validValues = [ticketData || {}, helpers];
-
     const funcBody = `
         with(helpers) {
             with(ticket) {
@@ -120,8 +143,9 @@ const createSafeEvaluator = (expr, ticketData, action = null) => {
         }
     `;
 
-    const func = new Function(...validKeys, funcBody);
-    return () => func(...validValues);
+    const func = getCachedFunction(`eval\0${expr}`, () => new Function('ticket', 'helpers', funcBody));
+    const ticketArg = ticketData || {};
+    return () => func(ticketArg, helpers);
 };
 
 export function evaluateTemplate(templateStr, ticketData) {

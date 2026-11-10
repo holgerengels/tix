@@ -1,19 +1,5 @@
 const mongoose = require('mongoose');
-
-const fs = require('fs');
-const path = require('path');
-
-let settingsPath = path.join(__dirname, '../../config/settings.json');
-let settings = {};
-
-try {
-    if (fs.existsSync(settingsPath)) {
-        const data = fs.readFileSync(settingsPath, 'utf8');
-        settings = JSON.parse(data);
-    }
-} catch (err) {
-    console.warn(`[DB] Warning: Error reading settings file: ${err.message}`);
-}
+const { settings } = require('./settings');
 
 let MONGO_URI = settings.database && settings.database.url
     ? settings.database.url

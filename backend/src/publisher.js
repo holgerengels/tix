@@ -1,30 +1,15 @@
 const axios = require('axios');
 const Log = require('./models/log');
-const path = require('path');
-const fs = require('fs');
+const { settings } = require('./settings');
 
-let settingsPath = path.join(__dirname, '../../config/settings.json');
-let settings = {};
+const BASE_URL = settings.server?.url || 'http://localhost:5173';
 
-try {
-    if (fs.existsSync(settingsPath)) {
-        const data = fs.readFileSync(settingsPath, 'utf8');
-        settings = JSON.parse(data);
-    } else {
-        console.warn(`[Publisher] Warning: Settings file not found at ${settingsPath}`);
-    }
-} catch (err) {
-    console.error(`[Publisher] Error reading settings file: ${err.message}`);
-}
-
-const BASE_URL = settings.server.url || 'http://localhost:5173';
-
-const NEXTCLOUD_URL = settings.publisher.nextcloud ? settings.publisher.nextcloud.url : '';
+const NEXTCLOUD_URL = settings.publisher?.nextcloud ? settings.publisher.nextcloud.url : '';
 const NEXTCLOUD_AUTH = {
-    username: settings.publisher.nextcloud ? settings.publisher.nextcloud.username : '',
-    password: settings.publisher.nextcloud ? settings.publisher.nextcloud.password : ''
+    username: settings.publisher?.nextcloud ? settings.publisher.nextcloud.username : '',
+    password: settings.publisher?.nextcloud ? settings.publisher.nextcloud.password : ''
 };
-const DELAY = (settings.publisher.delay || 1) * 60 * 1000;
+const DELAY = (settings.publisher?.delay || 1) * 60 * 1000;
 
 if (!BASE_URL || !NEXTCLOUD_URL || !NEXTCLOUD_AUTH.username || !NEXTCLOUD_AUTH.password) {
     console.warn('[Publisher] Warning: Nextcloud configuration is missing or incomplete in settings.json');
@@ -144,14 +129,18 @@ async function checkUnpublishedLogs() {
             const candidates = new Set();
             if (ticket.creator) candidates.add(ticket.creator);
             if (ticket.assignee) candidates.add(ticket.assignee);
-            if (Array.isArray(ticket.starredBy)) {
+            if (Array.isArray(ticket.starredBy) && ticket.starredBy.length > 0) {
                 const { canReadTicket } = require('./workflow');
                 const User = require('./models/user');
-                for (const u of ticket.starredBy) {
-                    if (!u || candidates.has(u)) continue;
-                    const dbUser = await User.findOne({ username: u }).lean();
-                    if (dbUser && canReadTicket(ticket, { username: u, groups: dbUser.groups || [] })) {
-                        candidates.add(u);
+                const missing = ticket.starredBy
+                    .filter(u => u && !candidates.has(u))
+                    .map(u => u.toLowerCase());
+                if (missing.length > 0) {
+                    const dbUsers = await User.find({ username: { $in: missing } }).lean();
+                    for (const dbUser of dbUsers) {
+                        if (canReadTicket(ticket, { username: dbUser.username, groups: dbUser.groups || [] })) {
+                            candidates.add(dbUser.username);
+                        }
                     }
                 }
             }

@@ -34,6 +34,11 @@ const ticketSchema = new mongoose.Schema({
     timestamps: { createdAt: 'created', updatedAt: 'updated' }
 }); // Allow arbitrary additional fields
 
+ticketSchema.index({ id: 1 });
+ticketSchema.index({ type: 1, state: 1 });
+ticketSchema.index({ creator: 1 });
+ticketSchema.index({ assignee: 1 });
+ticketSchema.index({ created: -1 });
 ticketSchema.index({ 'links.ticket': 1 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
