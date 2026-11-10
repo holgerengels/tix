@@ -79,4 +79,33 @@ describe('users store', () => {
         const empty = store.getUsersForGroups([]);
         expect(empty).toEqual([]);
     });
+
+    it('does not permanently cache empty user lists and refreshes cache on forceFetch', async () => {
+        axios.get
+            .mockResolvedValueOnce({ data: [] })
+            .mockResolvedValueOnce({
+                data: [{ username: 'netz1', displayName: 'Jens Schreiber', groups: ['Netzwerkteam'] }]
+            })
+            .mockResolvedValueOnce({
+                data: [
+                    { username: 'netz1', displayName: 'Jens Schreiber', groups: ['Netzwerkteam'] },
+                    { username: 'netz2', displayName: 'Anna Admin', groups: ['Netzwerkteam'] }
+                ]
+            });
+
+        const store = useUsersStore();
+
+        const initial = await store.fetchUsersByGroup(['Netzwerkteam'], false);
+        expect(initial).toEqual([]);
+
+        // Empty list was not cached, so next call fetches again
+        const retried = await store.fetchUsersByGroup(['Netzwerkteam'], false);
+        expect(retried).toHaveLength(1);
+        expect(axios.get).toHaveBeenCalledTimes(2);
+
+        // forceFetch refreshes cache
+        const forced = await store.fetchUsersByGroup(['Netzwerkteam'], true);
+        expect(forced).toHaveLength(2);
+        expect(axios.get).toHaveBeenCalledTimes(3);
+    });
 });

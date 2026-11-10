@@ -192,7 +192,8 @@ const login = async (username, password, isPwa) => {
                         return resolve(null);
                     }
 
-                    // C. Verify Password (Bind as User)\n                    const userClient = ldap.createClient({ url: ldapConfig.url });
+                    // C. Verify Password (Bind as User)
+                    const userClient = ldap.createClient({ url: ldapConfig.url });
                     const bindDn = decodeDN(userEntry.dn);
                     userClient.bind(bindDn, password, async (err) => {
                         if (err) {
@@ -297,6 +298,8 @@ const verifyToken = (req, res, next) => {
 
 const ldapCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const ALL_LDAP_USERS_CACHE_KEY = '__all__';
+let pendingLdapFetch = null;
 
 const resolveEmployeeIdFromUserDoc = (u) => {
     if (!u) return '';
@@ -320,138 +323,155 @@ const resolveEmployeeIdFromUserDoc = (u) => {
     return '';
 };
 
+const filterUsersByGroups = (users, filterGroups) => {
+    if (filterGroups && filterGroups.length > 0) {
+        return users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
+    }
+    return users;
+};
+
+const fetchUsersFromLdap = (ldapConfig) => new Promise((resolve) => {
+    const client = ldap.createClient({ url: ldapConfig.url });
+    const fail = (label, err) => {
+        try { client.unbind(); } catch (_) {}
+        console.error(`[Auth] ${label}:`, err);
+        resolve({ users: [], failed: true });
+    };
+
+    client.on('error', (err) => fail('LDAP Client Error (getUsers)', err));
+
+    client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+        if (err) return fail('LDAP Bind Error (getUsers)', err);
+
+        const opts = {
+            filter: ldapConfig.userfilter,
+            scope: 'sub',
+            attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn', 'employeeID']
+        };
+
+        client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+            if (err) return fail('LDAP Search Error (getUsers)', err);
+
+            const foundUsers = [];
+            searchRes.on('searchEntry', (entry) => {
+                let userAttributes = entry.object;
+                if (!userAttributes) {
+                    userAttributes = {};
+                    if (entry.attributes) {
+                        entry.attributes.forEach(attr => {
+                            const values = attr.values;
+                            userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
+                            if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
+                                userAttributes.sAMAccountName = values[0];
+                            }
+                        });
+                    }
+                }
+
+                if (!userAttributes) return;
+
+                let username = userAttributes.sAMAccountName || userAttributes.samaccountname;
+                if (Array.isArray(username)) username = username[0];
+                if (!username) return;
+                username = String(username).toLowerCase();
+
+                let givenName = userAttributes.givenName || userAttributes.givenname || '';
+                let sn = userAttributes.sn || '';
+                if (Array.isArray(givenName)) givenName = givenName[0];
+                if (Array.isArray(sn)) sn = sn[0];
+                const displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+
+                let employeeId = userAttributes.employeeID || userAttributes.employeeid || '';
+                if (Array.isArray(employeeId)) employeeId = employeeId[0];
+
+                const groups = [];
+                let rawGroups = userAttributes.memberOf || userAttributes.memberof;
+                if (rawGroups) {
+                    if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
+                    const prefix = ldapConfig.groupprefix || '';
+                    rawGroups.forEach(groupDn => {
+                        const match = groupDn.match(/^CN=([^,]+)/i);
+                        if (match && match[1].startsWith(prefix)) {
+                            groups.push(match[1].substring(prefix.length));
+                        }
+                    });
+                }
+
+                foundUsers.push({ username, groups, displayName, employeeId: employeeId || '' });
+            });
+
+            searchRes.on('end', () => {
+                client.unbind();
+                resolve({ users: foundUsers, failed: false });
+            });
+
+            searchRes.on('error', (err) => fail('LDAP Search Stream Error', err));
+        });
+    });
+});
+
 const getUsers = async (filterGroups = [], forceFetch = false) => {
-    // 1. Direct LDAP query (used by userPruningWorker or when forceFetch is true)
-    if (forceFetch && !settings.devmode && settings.server && settings.server.ldap) {
-        const cacheKey = [...filterGroups].sort().join(',');
-        const cached = ldapCache.get(cacheKey);
+    // 1. LDAP query with caching when not in DevMode (forceFetch bypasses cache)
+    if (!settings.devmode && settings.server && settings.server.ldap) {
         const now = Date.now();
+        const cached = ldapCache.get(ALL_LDAP_USERS_CACHE_KEY);
 
         if (!forceFetch && cached && (now - cached.timestamp < CACHE_TTL)) {
-            return cached.users;
+            return filterUsersByGroups(cached.users, filterGroups);
         }
 
         const ldapConfig = settings.server.ldap;
         try {
-            const ldapUsers = await new Promise((resolve, reject) => {
-                const client = ldap.createClient({ url: ldapConfig.url });
+            let result;
+            if (!forceFetch && pendingLdapFetch) {
+                result = await pendingLdapFetch;
+            } else {
+                const promise = fetchUsersFromLdap(ldapConfig);
+                if (!forceFetch) pendingLdapFetch = promise;
+                try {
+                    result = await promise;
+                } finally {
+                    if (pendingLdapFetch === promise) pendingLdapFetch = null;
+                }
+            }
 
-                client.on('error', (err) => {
-                    console.error('[Auth] LDAP Client Error (getUsers):', err);
-                    resolve([]);
-                });
-
-                client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
-                    if (err) {
-                        client.unbind();
-                        console.error('[Auth] LDAP Bind Error (getUsers):', err);
-                        return resolve([]);
-                    }
-
-                    const opts = {
-                        filter: ldapConfig.userfilter,
-                        scope: 'sub',
-                        attributes: ['sAMAccountName', 'memberOf', 'givenName', 'sn', 'employeeID']
-                    };
-
-                    client.search(ldapConfig.basedn, opts, (err, searchRes) => {
-                        if (err) {
-                            client.unbind();
-                            console.error('[Auth] LDAP Search Error (getUsers):', err);
-                            return resolve([]);
+            if (!result.failed && result.users.length > 0) {
+                // Enrich missing employeeId from MongoDB (e.g. derived from notificationUri)
+                try {
+                    const dbUsers = await User.find({}, 'username employeeId notificationUri').lean();
+                    const dbMap = new Map(dbUsers.map(u => [String(u.username || '').toLowerCase(), u]));
+                    for (const u of result.users) {
+                        if (!u.employeeId) {
+                            const dbUser = dbMap.get(u.username);
+                            if (dbUser) {
+                                u.employeeId = resolveEmployeeIdFromUserDoc(dbUser);
+                            }
                         }
+                    }
+                } catch (dbErr) {
+                    console.error('[Auth] Error enriching LDAP users from MongoDB:', dbErr.message);
+                }
 
-                        const foundUsers = [];
-                        searchRes.on('searchEntry', (entry) => {
-                            let username = '';
-                            let groups = [];
-                            let displayName = '';
-                            let employeeId = '';
-
-                            let userAttributes = entry.object;
-                            if (!userAttributes) {
-                                userAttributes = {};
-                                if (entry.attributes) {
-                                    entry.attributes.forEach(attr => {
-                                        const values = attr.values;
-                                        userAttributes[attr.type] = Array.isArray(values) && values.length === 1 ? values[0] : values;
-                                        if (attr.type === 'sAMAccountName' && Array.isArray(values) && values.length > 0) {
-                                            userAttributes.sAMAccountName = values[0];
-                                        }
-                                    });
-                                }
-                            }
-
-                            if (userAttributes) {
-                                username = userAttributes.sAMAccountName || userAttributes.samaccountname;
-                                if (Array.isArray(username)) username = username[0];
-                                username = username.toLowerCase();
-
-                                let givenName = userAttributes.givenName || userAttributes.givenname || '';
-                                let sn = userAttributes.sn || '';
-                                if (Array.isArray(givenName)) givenName = givenName[0];
-                                if (Array.isArray(sn)) sn = sn[0];
-                                displayName = [givenName, sn].filter(Boolean).join(' ') || username;
-
-                                let empId = userAttributes.employeeID || userAttributes.employeeid || '';
-                                if (Array.isArray(empId)) empId = empId[0];
-                                employeeId = empId || '';
-
-                                let rawGroups = userAttributes.memberOf || userAttributes.memberof;
-                                if (rawGroups) {
-                                    if (!Array.isArray(rawGroups)) rawGroups = [rawGroups];
-                                    const prefix = ldapConfig.groupprefix || '';
-                                    rawGroups.forEach(groupDn => {
-                                        const match = groupDn.match(/^CN=([^,]+)/i);
-                                        if (match) {
-                                            const cn = match[1];
-                                            if (cn.startsWith(prefix)) {
-                                                groups.push(cn.substring(prefix.length));
-                                            }
-                                        }
-                                    });
-                                }
-                            }
-
-                            if (username) {
-                                if (!filterGroups || filterGroups.length === 0) {
-                                    foundUsers.push({ username, groups, displayName, employeeId });
-                                } else {
-                                    const hasGroup = groups.some(g => filterGroups.includes(g));
-                                    if (hasGroup) {
-                                        foundUsers.push({ username, groups, displayName, employeeId });
-                                    }
-                                }
-                            }
-                        });
-
-                        searchRes.on('end', () => {
-                            client.unbind();
-                            resolve(foundUsers);
-                        });
-
-                        searchRes.on('error', (err) => {
-                            client.unbind();
-                            console.error('[Auth] LDAP Search Stream Error:', err);
-                            resolve([]);
-                        });
-                    });
+                ldapCache.set(ALL_LDAP_USERS_CACHE_KEY, {
+                    users: result.users,
+                    timestamp: Date.now()
                 });
-            });
 
-            ldapCache.set(cacheKey, {
-                users: ldapUsers,
-                timestamp: now
-            });
+                return filterUsersByGroups(result.users, filterGroups);
+            }
 
-            return ldapUsers;
+            if (forceFetch) {
+                return [];
+            }
         } catch (err) {
             console.error('[Auth] General Error in getUsers:', err);
-            return [];
+            if (forceFetch) {
+                return [];
+            }
         }
     }
 
-    // 2. Default: Load from MongoDB
+    // 2. Fallback / DevMode: Load from MongoDB
     let users = [];
     try {
         const dbUsers = await User.find({}).lean();
@@ -489,11 +509,7 @@ const getUsers = async (filterGroups = [], forceFetch = false) => {
     }
 
     // 4. Apply group filtering
-    if (filterGroups && filterGroups.length > 0) {
-        users = users.filter(u => u.groups && u.groups.some(g => filterGroups.includes(g)));
-    }
-
-    return users;
+    return filterUsersByGroups(users, filterGroups);
 };
 
 const getGroups = async () => {

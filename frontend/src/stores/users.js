@@ -63,9 +63,10 @@ export const useUsersStore = defineStore('users', () => {
      * Caches all returned users and deduplicates concurrent requests for the same group key.
      */
     async function fetchUsersByGroup(groups = [], forceFetch = false) {
-        const groupsParam = groups.join(',')
+        const groupList = Array.isArray(groups) ? groups : (groups ? [groups] : [])
+        const groupsParam = groupList.join(',')
         if (!forceFetch) {
-            if (usersByGroupCache.value[groupsParam]) {
+            if (usersByGroupCache.value[groupsParam]?.length > 0) {
                 return usersByGroupCache.value[groupsParam]
             }
             if (pendingByGroup[groupsParam]) {
@@ -97,10 +98,14 @@ export const useUsersStore = defineStore('users', () => {
 
                 cache.value = nextCache
                 userDataCache.value = nextUserDataCache
-                usersByGroupCache.value[groupsParam] = users
-
-                if (groups.length === 0) {
-                    allUsersLoaded.value = true
+                if (forceFetch) {
+                    usersByGroupCache.value = {}
+                }
+                if (users.length > 0) {
+                    usersByGroupCache.value[groupsParam] = users
+                    if (groupList.length === 0) {
+                        allUsersLoaded.value = true
+                    }
                 }
                 return users
             } catch (err) {
@@ -119,14 +124,17 @@ export const useUsersStore = defineStore('users', () => {
      * Fetch all available user groups from the backend (cached).
      */
     async function fetchGroups() {
-        if (groupsCache.value) return groupsCache.value
+        if (groupsCache.value?.length > 0) return groupsCache.value
         if (pendingGroups) return pendingGroups
 
         pendingGroups = axios.get('/api/groups', {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }).then(res => {
-            groupsCache.value = Array.isArray(res.data) ? res.data : []
-            return groupsCache.value
+            const groups = Array.isArray(res.data) ? res.data : []
+            if (groups.length > 0) {
+                groupsCache.value = groups
+            }
+            return groups
         }).catch(err => {
             console.error('Failed to fetch groups:', err)
             return []

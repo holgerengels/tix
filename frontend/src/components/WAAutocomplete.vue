@@ -1,24 +1,33 @@
 <template>
-  <wa-dropdown class="autocomplete-dropdown" :open="isOpen" @after-hide.stop="isOpen = false" hoist>
+  <wa-dropdown
+    ref="dropdownRef"
+    class="autocomplete-dropdown"
+    :open="isOpen && filteredOptions.length > 0"
+    @wa-after-show.stop="handleAfterShow"
+    @wa-after-hide.stop="handleAfterHide"
+    @wa-select.stop="handleDropdownSelect"
+    hoist
+  >
     <wa-input
+      ref="inputRef"
       slot="trigger"
       :label="label"
       :value="displayValue"
       :required="required"
       :disabled="disabled"
+      @click.stop="openDropdown(true)"
       @input="handleInput"
-      @focus="handleFocus"
       @blur="handleBlur"
       @keydown.down.prevent="focusMenu"
       @keydown.space.stop
       autocomplete="off"
       :hint="hint"
     >
-        <wa-icon slot="suffix" name="chevron-down"></wa-icon>
+        <wa-icon slot="suffix" name="chevron-down" @click.stop="toggleDropdown"></wa-icon>
     </wa-input>
 
-    <div v-if="isOpen && filteredOptions.length > 0" class="dropdown-list">
-      <wa-dropdown-item v-for="opt in filteredOptions" :key="optValue(opt)" :value="optValue(opt)" @click="handleItemClick(opt)">
+    <div v-if="isOpen && filteredOptions.length > 0" class="dropdown-list" @mousedown.prevent>
+      <wa-dropdown-item v-for="opt in filteredOptions" :key="optValue(opt)" :value="optValue(opt)" @click="selectOption(opt)">
         {{ optLabel(opt) }}
       </wa-dropdown-item>
     </div>
@@ -26,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -40,17 +49,19 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+const dropdownRef = ref(null);
+const inputRef = ref(null);
 const isOpen = ref(false);
 const searchText = ref('');
-const hasSelected = ref(false);
-let suppressOpen = false; // Guard to prevent reopening after selection or blur
+// wa-dropdown focuses item 0 after opening; restore input focus unless opened via ArrowDown
+let keepInputFocus = false;
 
 const optValue = (opt) => typeof opt === 'object' ? opt.value : opt;
 const optLabel = (opt) => typeof opt === 'object' ? opt.label : opt;
+const getEl = (r) => r.value?.$el || r.value;
 
-// Find the label for the current modelValue
 const displayValue = computed(() => {
-    if (searchText.value !== '' && !hasSelected.value) return searchText.value;
+    if (searchText.value !== '') return searchText.value;
     if (!props.modelValue) return '';
     const match = props.options.find(opt => optValue(opt) === props.modelValue);
     return match ? optLabel(match) : props.modelValue;
@@ -58,47 +69,71 @@ const displayValue = computed(() => {
 
 const filteredOptions = computed(() => {
     if (!isOpen.value) return [];
-    const query = (searchText.value || displayValue.value || '').toLowerCase();
+    const query = searchText.value.toLowerCase();
     if (!query) return props.options;
     return props.options.filter(opt => optLabel(opt).toLowerCase().includes(query));
 });
 
+const openDropdown = (keepFocus = true) => {
+    if (isOpen.value || props.disabled || props.options.length === 0) return;
+    keepInputFocus = keepFocus;
+    isOpen.value = true;
+};
+
+const toggleDropdown = () => {
+    if (isOpen.value) {
+        isOpen.value = false;
+    } else {
+        openDropdown(true);
+    }
+};
+
+const handleAfterShow = () => {
+    if (keepInputFocus) {
+        keepInputFocus = false;
+        getEl(inputRef)?.focus?.();
+    }
+};
+
+const handleAfterHide = () => {
+    // Keep isOpen true if closed transiently because searchText matched 0 options
+    if (isOpen.value && filteredOptions.value.length === 0 && searchText.value) return;
+    isOpen.value = false;
+};
+
+const handleDropdownSelect = (event) => {
+    if (!isOpen.value) return;
+    const item = event?.detail?.item;
+    const match = item && props.options.find(opt => optValue(opt) === item.value);
+    if (match) selectOption(match);
+};
+
 const handleInput = (event) => {
-    searchText.value = event.target.value;
-    hasSelected.value = false;
-    suppressOpen = false;
-    // Check if text matches a value exactly
-    const match = props.options.find(opt => optLabel(opt).toLowerCase() === event.target.value.toLowerCase());
+    const val = event.target.value;
+    searchText.value = val;
+    const match = props.options.find(opt => optLabel(opt).toLowerCase() === val.toLowerCase());
     if (match) {
         emit('update:modelValue', optValue(match));
-    } else if (props.allowFreetext) {
-        emit('update:modelValue', event.target.value);
     } else {
-        emit('update:modelValue', '');
+        emit('update:modelValue', props.allowFreetext ? val : '');
     }
-    if (event.target.value.length >= 3) {
-        isOpen.value = true;
-    } else {
-        isOpen.value = false;
+    if (val.length >= 3) {
+        openDropdown(true);
     }
 };
 
-const handleFocus = () => {
-    // Don't reopen if we just closed after a selection or blur
-    if (suppressOpen) return;
-    if (searchText.value && searchText.value.length >= 3) {
-        isOpen.value = true;
+const handleBlur = (event) => {
+    const related = event?.relatedTarget;
+    const dropdownEl = getEl(dropdownRef);
+    if (related && typeof dropdownEl?.contains === 'function' && dropdownEl.contains(related)) {
+        return;
     }
-};
 
-const handleBlur = () => {
-    // Normalize immediately to ensure value is updated before any submit action
     if (searchText.value) {
         const lowerVal = searchText.value.toLowerCase().trim();
         const match = props.options.find(opt => optLabel(opt).toLowerCase() === lowerVal);
         if (match) {
             emit('update:modelValue', optValue(match));
-            hasSelected.value = true;
             searchText.value = '';
         } else if (!props.allowFreetext) {
             searchText.value = '';
@@ -110,33 +145,28 @@ const handleBlur = () => {
         emit('update:modelValue', '');
     }
 
-    // Suppress reopening and close after a short delay (to allow click on menu item)
-    suppressOpen = true;
     setTimeout(() => {
         isOpen.value = false;
     }, 150);
-    setTimeout(() => {
-        suppressOpen = false;
-    }, 300);
 };
 
-const handleItemClick = (option) => {
-    suppressOpen = true;
+const selectOption = (option) => {
+    keepInputFocus = false;
     emit('update:modelValue', optValue(option));
-    hasSelected.value = true;
     searchText.value = '';
     isOpen.value = false;
-    setTimeout(() => {
-        suppressOpen = false;
-    }, 300);
 };
 
 const focusMenu = () => {
     if (!isOpen.value) {
-        suppressOpen = false;
-        isOpen.value = true;
+        openDropdown(false);
         return;
     }
+    const dropdownEl = getEl(dropdownRef);
+    const firstItem = typeof dropdownEl?.querySelector === 'function'
+        ? dropdownEl.querySelector('.dropdown-list > :not([disabled])')
+        : null;
+    firstItem?.focus?.();
 };
 </script>
 
