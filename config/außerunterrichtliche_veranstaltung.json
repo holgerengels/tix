@@ -45,7 +45,13 @@
         },
         {
             "name": "estimatedCosts",
-            "label": "Voraussichtliche Kosten",
+            "label": "Kosten für das Schulbudget",
+            "type": "Text",
+            "required": true
+        },
+        {
+            "name": "estimatedCostsPerStudent",
+            "label": "Kosten pro Schüler*in",
             "type": "Text",
             "required": true
         },
@@ -113,7 +119,8 @@
         "badges badges badges badges",
         "dateFrom dateFrom lessonFrom lessonFrom",
         "dateUntil dateUntil lessonUntil lessonUntil",
-        "location location location estimatedCosts",
+        "location location location location",
+        "estimatedCosts estimatedCosts estimatedCostsPerStudent estimatedCostsPerStudent",
         "students students students students",
         "teachers teachers teachers teachers",
         "colleaguesAgree colleaguesAgree acrossDepartments acrossDepartments",
