@@ -204,6 +204,16 @@
                     "form": "aendern"
                 },
                 {
+                    "name": "entschuldigen",
+                    "groups": [
+                        "@creator",
+                        "Schulleitung",
+                        "Netzwerkteam"
+                    ],
+                    "optional": true,
+                    "form": "entschuldigen"
+                },
+                {
                     "name": "stornieren",
                     "groups": [
                         "@creator",
@@ -381,6 +391,50 @@
             ]
         },
         {
+            "name": "entschuldigen",
+            "title": "Entschuldigungen einpflegen",
+            "fields": [
+                {
+                    "name": "participants",
+                    "label": "Teilnehmer*innen",
+                    "fixedLength": true,
+                    "fixedOrder": true,
+                    "items": {
+                        "fields": [
+                            {
+                                "name": "name",
+                                "label": "Name",
+                                "type": "User",
+                                "groups": [
+                                    "Lehrkräfte"
+                                ],
+                                "readonly": true
+                            },
+                            {
+                                "name": "status",
+                                "label": "Status",
+                                "type": "Select",
+                                "options": [
+                                    "eingeladen",
+                                    "anwesend",
+                                    "entschuldigt",
+                                    "abwesend"
+                                ],
+                                "default": "eingeladen",
+                                "visible": true
+                            }
+                        ]
+                    }
+                }
+            ],
+            "actions": [
+                {
+                    "name": "Speichern",
+                    "script": "ticket.state = 'offen.eingetragen'"
+                }
+            ]
+        },
+        {
             "name": "protokollieren",
             "title": "Konferenz protokollieren",
             "fields": [
@@ -393,6 +447,11 @@
                         "fields": [
                             {
                                 "name": "name",
+                                "label": "Name",
+                                "type": "User",
+                                "groups": [
+                                    "Lehrkräfte"
+                                ],
                                 "readonly": true
                             },
                             {

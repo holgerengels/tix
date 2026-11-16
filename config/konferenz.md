@@ -35,5 +35,6 @@ Beim Anlegen kann festgelegt werden, wie der Termin im Kalender gehandhabt werde
 
 * Das Eintragen in den Kalender erfolgt je nach gewählter Kalender-Option automatisch per Bot.
 * Die Erstellung von Subtickets (Raumreservierung, Bewirtungsauftrag) erfolgt bei Bedarf durch den Ersteller, die Schulleitung oder das Netzwerkteam.
-* Die tatsächliche Anwesenheit der Teilnehmer*innen kann bei der Durchführung im Ticket festgehalten werden.
+* Vorab können bereits Entschuldigungen von Teilnehmer*innen eingepflegt werden (Aktion `entschuldigen`).
+* Die tatsächliche Anwesenheit der Teilnehmer*innen kann bei der Durchführung im Ticket festgehalten werden (`protokollieren`).
 * Die Stornierung erfolgt durch den Ersteller, die Schulleitung oder das Netzwerkteam.
