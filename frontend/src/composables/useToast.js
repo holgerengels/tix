@@ -1,31 +1,89 @@
 /**
- * useToast composable — toast(), confirm(), prompt() using wa-alert and wa-dialog
+ * useToast composable — toast(), confirm(), prompt() using wa-callout and wa-dialog
  */
 
+let toastStack = null;
+
+function getToastStack() {
+  if (!toastStack || !document.body.contains(toastStack)) {
+    toastStack = document.createElement('div');
+    toastStack.className = 'wa-toast-stack';
+    toastStack.style.cssText = [
+      'position: fixed',
+      'top: 1rem',
+      'right: 1rem',
+      'z-index: 10000',
+      'display: flex',
+      'flex-direction: column',
+      'gap: 0.5rem',
+      'max-width: min(28rem, calc(100vw - 2rem))',
+      'pointer-events: none'
+    ].join(';');
+    document.body.appendChild(toastStack);
+  }
+  return toastStack;
+}
+
 /**
- * Show a toast notification using wa-alert's toast() method
+ * Show a floating toast notification using wa-callout
  * @param {string} message
- * @param {'primary'|'success'|'neutral'|'warning'|'danger'} variant
+ * @param {'brand'|'primary'|'success'|'neutral'|'warning'|'danger'} variant
  * @param {number} duration - auto-close after ms (0 = manual close only)
  */
-export async function toast(message, variant = 'primary', duration = 3000) {
-  const alert = Object.assign(document.createElement('wa-alert'), {
-    variant,
-    closable: true,
-    duration,
-    innerHTML: `<wa-icon slot="icon" name="${getIcon(variant)}"></wa-icon>${escapeHtml(message)}`
-  });
-  document.body.appendChild(alert);
-  // Wait for the custom element to be defined (may not be ready on early page load)
-  await customElements.whenDefined('wa-alert');
-  alert.toast();
+export async function toast(message, variant = 'brand', duration = 3000) {
+  const mappedVariant = variant === 'primary' ? 'brand' : variant;
+  const callout = document.createElement('wa-callout');
+  callout.setAttribute('variant', mappedVariant);
+  callout.style.cssText = [
+    'pointer-events: auto',
+    'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)',
+    'background: var(--wa-color-surface-default, #fff)',
+    'transition: opacity 0.2s ease, transform 0.2s ease'
+  ].join(';');
+
+  callout.innerHTML = `
+    <wa-icon slot="icon" name="${getIcon(mappedVariant)}"></wa-icon>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+      <span>${escapeHtml(message)}</span>
+      <wa-button appearance="plain" size="small" class="toast-close" style="margin: -0.25rem -0.5rem -0.25rem 0;">
+        <wa-icon name="x-lg"></wa-icon>
+      </wa-button>
+    </div>
+  `;
+
+  const stack = getToastStack();
+  stack.appendChild(callout);
+
+  let removed = false;
+  const removeToast = () => {
+    if (removed) return;
+    removed = true;
+    callout.style.opacity = '0';
+    callout.style.transform = 'translateY(-0.5rem)';
+    setTimeout(() => {
+      callout.remove();
+      if (toastStack && toastStack.childElementCount === 0) {
+        toastStack.remove();
+        toastStack = null;
+      }
+    }, 200);
+  };
+
+  const closeBtn = callout.querySelector('.toast-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', removeToast);
+  }
+
+  if (duration > 0) {
+    setTimeout(removeToast, duration);
+  }
 }
 
 /** Convenience wrappers */
 toast.success = (msg) => toast(msg, 'success');
 toast.error = (msg) => toast(msg, 'danger', 5000);
 toast.warning = (msg) => toast(msg, 'warning', 4000);
-toast.info = (msg) => toast(msg, 'primary');
+toast.info = (msg) => toast(msg, 'brand');
 
 function getIcon(variant) {
   switch (variant) {

@@ -156,8 +156,10 @@ const viewsStore = useViewsStore();
 useRegisterSW({
   onRegisteredSW(swUrl, registration) {
     if (registration) {
-      // Check for updates immediately on page load
-      registration.update();
+      // Check for updates on page load only if an active SW already controls the page
+      if (navigator.serviceWorker.controller) {
+        registration.update();
+      }
 
       // Check for updates when tab becomes visible
       document.addEventListener('visibilitychange', () => {
@@ -171,31 +173,42 @@ useRegisterSW({
 });
 
 // Detect updates via two complementary mechanisms:
-// 1. controllerchange: fires when SW updates while the app is open
-// 2. Build timestamp: detects updates that happened while the app was closed
+// 1. controllerchange: fires when an existing SW is replaced by a new one while the app is open
+// 2. Build timestamp / sessionStorage flag: shows toast after the update reload or cold-start update
+const BUILD_VERSION_KEY = 'tix_build_timestamp';
+const SW_UPDATED_KEY = 'tix_sw_updated';
+
 let refreshing = false;
 if ('serviceWorker' in navigator) {
+  // Only treat controllerchange as an update if a SW was already controlling the page on load.
+  // On first visit (empty cache), controller is null and clientsClaim() fires controllerchange,
+  // which must NOT reload the page (otherwise login inputs are wiped).
+  let hadController = !!navigator.serviceWorker.controller;
+
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+
     if (refreshing) return;
     refreshing = true;
-    
-    toast.info('TIX wurde aktualisiert. Seite lädt in Kürze neu...');
-    resubscribePush();
 
-    // Reload the page so the new cached assets and frontend logic are actually executed
-    setTimeout(() => {
-      window.location.reload();
-    }, 2500);
+    sessionStorage.setItem(SW_UPDATED_KEY, 'true');
+    resubscribePush();
+    window.location.reload();
   });
 }
 
-// Cold-start update detection via build timestamp
-const BUILD_VERSION_KEY = 'tix_build_timestamp';
+// Show toast after an actual update has taken effect
 const previousBuild = localStorage.getItem(BUILD_VERSION_KEY);
 // @ts-ignore — injected by vite.config.js define
 const currentBuild = __BUILD_TIMESTAMP__;
-if (previousBuild && previousBuild !== currentBuild) {
-  // Short delay so the toast system is ready
+const swUpdated = sessionStorage.getItem(SW_UPDATED_KEY) === 'true';
+
+if (swUpdated || (previousBuild && previousBuild !== currentBuild)) {
+  sessionStorage.removeItem(SW_UPDATED_KEY);
+  // Short delay so the UI is mounted and ready
   setTimeout(() => toast.info('TIX wurde aktualisiert.'), 500);
 }
 localStorage.setItem(BUILD_VERSION_KEY, currentBuild);

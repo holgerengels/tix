@@ -590,6 +590,14 @@ onMounted(async () => {
     overflow-wrap: anywhere;
 }
 
+.is-mobile .ticket-table td.title-cell > span {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .is-mobile .ticket-table td::before {
     content: attr(data-label);
     font-weight: 600;

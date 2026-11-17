@@ -700,13 +700,21 @@ watch(searchTerm, () => {
 
 .is-mobile .ticket-table td {
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: 100px minmax(0, 1fr);
     align-items: flex-start;
     justify-items: start;
     padding: 0.25rem 0;
     border: none;
     text-align: left;
     white-space: normal;
+}
+
+.is-mobile .ticket-table td.title-cell > span {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .is-mobile .ticket-table td::before {
