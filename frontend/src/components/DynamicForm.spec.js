@@ -232,4 +232,40 @@ describe('DynamicForm.vue', () => {
         await wrapper.vm.updateField('groups', []);
         expect(modelValue.participants.length).toBe(0);
     });
+
+    it('should block validation while file uploads are in progress and unblock when finished', async () => {
+        let injectedTrackUpload = null;
+        const UploadAwareFieldStub = {
+            template: '<div class="stub-form-field"></div>',
+            props: ['field', 'modelValue'],
+            inject: ['trackUpload'],
+            mounted() {
+                injectedTrackUpload = this.trackUpload;
+            }
+        };
+
+        const fields = [{ name: 'attachments', type: 'Attachments', visible: true }];
+        const modelValue = {};
+
+        const wrapper = mount(DynamicForm, {
+            props: { fields, modelValue, workflow: { fields }, grid: [] },
+            global: {
+                stubs: { 'FormField': UploadAwareFieldStub }
+            }
+        });
+
+        expect(typeof injectedTrackUpload).toBe('function');
+
+        // Start upload -> validation must fail
+        injectedTrackUpload(1);
+        expect(wrapper.vm.validate()).toBe(false);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').text()).toContain('Bitte warten, bis der Datei-Upload abgeschlossen ist.');
+
+        // Finish upload -> error clears automatically and validation succeeds
+        injectedTrackUpload(-1);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.error-messages').exists()).toBe(false);
+        expect(wrapper.vm.validate()).toBe(true);
+    });
 });

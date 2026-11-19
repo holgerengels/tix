@@ -159,7 +159,7 @@
             "name": "attachments",
             "label": "Anhänge",
             "type": "Attachments",
-            "visible": "{{ ticket.state && ticket.state !== 'offen.neu' }}"
+            "visible": true
         },
         {
             "name": "description",

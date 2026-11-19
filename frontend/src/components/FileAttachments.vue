@@ -7,19 +7,21 @@
       v-if="!readonly"
       class="drop-zone"
       :class="{ 'drag-over': isDragOver }"
+      @click="openFileDialog"
+      @dragenter.prevent="isDragOver = true"
       @dragover.prevent="isDragOver = true"
       @dragleave="isDragOver = false"
       @drop.prevent="handleDrop"
     >
       <wa-icon name="cloud-arrow-up" style="font-size: 1.5rem;"></wa-icon>
-      <span>Dateien hierher ziehen oder <a href="#" @click.prevent="openFileDialog">auswählen</a></span>
+      <span>Dateien hierher ziehen oder <a href="#" @click.stop.prevent="openFileDialog">auswählen</a></span>
       <input ref="fileInput" type="file" multiple hidden @change="handleFileSelect" />
     </div>
 
     <!-- Upload progress -->
     <div v-for="upload in activeUploads" :key="upload.id" class="upload-progress">
       <span class="upload-name">{{ upload.filename }}</span>
-      <wa-progress-bar :value="upload.progress"></wa-progress-bar>
+      <wa-progress-bar :value="upload.progress">{{ upload.progress }}%</wa-progress-bar>
     </div>
 
     <!-- Attachment list -->
@@ -38,6 +40,7 @@
         </a>
         <span class="attachment-size">{{ formatSize(file.size) }}</span>
         <wa-button
+          v-if="!readonly"
           appearance="plain"
           size="small"
           class="delete-btn"
@@ -60,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount, inject } from 'vue';
 import { toast, confirm } from '../composables/useToast';
 
 const props = defineProps({
@@ -70,6 +73,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+const trackUpload = inject('trackUpload', null);
 
 const fileInput = ref(null);
 const isDragOver = ref(false);
@@ -109,6 +113,10 @@ const loadThumbnails = async () => {
 watch(files, loadThumbnails, { immediate: true });
 
 onBeforeUnmount(() => {
+  if (activeUploads.value.length > 0) {
+    trackUpload?.(-activeUploads.value.length);
+    activeUploads.value = [];
+  }
   // Clean up blob URLs
   Object.values(thumbnails.value).forEach(url => URL.revokeObjectURL(url));
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
@@ -132,20 +140,26 @@ const openPreview = async (file) => {
       console.error('Preview load error:', err);
     }
   }
-  previewDialog.value?.show();
+  if (previewDialog.value) previewDialog.value.open = true;
 };
 
 const closePreview = () => {
-  previewDialog.value?.hide();
+  if (previewDialog.value) previewDialog.value.open = false;
 };
 
 const openFileDialog = () => {
   fileInput.value?.click();
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 const handleDrop = (e) => {
   isDragOver.value = false;
-  const droppedFiles = Array.from(e.dataTransfer.files);
+  const droppedFiles = Array.from(e.dataTransfer?.files || []);
+  if (droppedFiles.length === 0) {
+    toast.warning('Keine Datei beim Ziehen erkannt. Bitte über "auswählen" hochladen.');
+    return;
+  }
   droppedFiles.forEach(uploadFile);
 };
 
@@ -156,9 +170,14 @@ const handleFileSelect = (e) => {
 };
 
 const uploadFile = async (file) => {
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error(`Datei "${file.name}" ist zu groß (${formatSize(file.size)} — max. 10 MB).`);
+    return;
+  }
+
   const uploadId = Date.now() + '-' + Math.random();
-  const uploadEntry = { id: uploadId, filename: file.name, progress: 0 };
-  activeUploads.value.push(uploadEntry);
+  activeUploads.value.push({ id: uploadId, filename: file.name, progress: 0 });
+  trackUpload?.(1);
 
   try {
     const token = localStorage.getItem('token');
@@ -172,7 +191,10 @@ const uploadFile = async (file) => {
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
-          uploadEntry.progress = Math.round((e.loaded / e.total) * 100);
+          const item = activeUploads.value.find(u => u.id === uploadId);
+          if (item) {
+            item.progress = Math.round((e.loaded / e.total) * 100);
+          }
         }
       };
 
@@ -180,10 +202,17 @@ const uploadFile = async (file) => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(JSON.parse(xhr.responseText));
         } else {
-          reject(new Error(xhr.responseText || 'Upload failed'));
+          let errMsg = xhr.responseText || `HTTP ${xhr.status}`;
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            if (parsed.message || parsed.error) errMsg = parsed.message || parsed.error;
+          } catch (_) {
+            // Keep raw responseText if not JSON
+          }
+          reject(new Error(errMsg));
         }
       };
-      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.onerror = () => reject(new Error('Netzwerkfehler beim Upload'));
       xhr.send(file);
     });
 
@@ -193,6 +222,7 @@ const uploadFile = async (file) => {
     toast.error('Upload fehlgeschlagen: ' + err.message);
   } finally {
     activeUploads.value = activeUploads.value.filter(u => u.id !== uploadId);
+    trackUpload?.(-1);
   }
 };
 
@@ -285,6 +315,9 @@ const formatSize = (bytes) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+.upload-progress wa-progress-bar {
+  flex: 1;
 }
 .upload-name {
   font-size: 0.875rem;

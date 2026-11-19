@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, defineExpose, computed, watch, ref, nextTick } from 'vue';
+import { defineProps, defineEmits, defineExpose, computed, watch, ref, nextTick, provide } from 'vue';
 import FormField from './FormField.vue';
 import { evaluateFields, validateTicket, computeFills } from '../utils/evaluation';
 import { useUiStore } from '../stores/ui';
@@ -40,6 +40,12 @@ const emit = defineEmits(['update:modelValue']);
 
 const errors = ref([]);
 const errorBox = ref(null);
+const activeUploadCount = ref(0);
+
+const trackUpload = (delta) => {
+    activeUploadCount.value = Math.max(0, activeUploadCount.value + delta);
+};
+provide('trackUpload', trackUpload);
 
 const updateField = (name, value) => {
     // By mutating the proxy instead of extracting it, we avoid race conditions
@@ -61,7 +67,7 @@ const updateField = (name, value) => {
 };
 
 // Re-validate if errors are already displayed to give immediate feedback
-watch(() => props.modelValue, () => {
+watch([() => props.modelValue, activeUploadCount], () => {
     if (errors.value.length > 0) {
         validate();
     }
@@ -69,25 +75,34 @@ watch(() => props.modelValue, () => {
 
 const validate = (actionOverride = null) => {
     errors.value = [];
-    if (!props.workflow && (!props.fields || props.fields.length === 0)) {
-        return true; // Nothing to validate against
+    const errs = [];
+
+    if (activeUploadCount.value > 0) {
+        errs.push('Bitte warten, bis der Datei-Upload abgeschlossen ist.');
     }
-    
-    // Fallback if workflow is incomplete but we have fields
-    const wfToValidate = props.workflow || { fields: props.fields, validations: [] };
-    const currentAction = actionOverride || props.action || null;
-    
-    const validation = validateTicket(props.modelValue, wfToValidate, props.fields, currentAction);
-    if (!validation.isValid) {
-        errors.value = validation.errors;
+
+    if (props.workflow || (props.fields && props.fields.length > 0)) {
+        // Fallback if workflow is incomplete but we have fields
+        const wfToValidate = props.workflow || { fields: props.fields, validations: [] };
+        const currentAction = actionOverride || props.action || null;
+
+        const validation = validateTicket(props.modelValue, wfToValidate, props.fields, currentAction);
+        if (!validation.isValid) {
+            errs.push(...validation.errors);
+        }
+    }
+
+    if (errs.length > 0) {
+        errors.value = errs;
         nextTick(() => {
             if (errorBox.value) {
                 // Scroll the error box into view with a little top margin
                 errorBox.value.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
         });
+        return false;
     }
-    return validation.isValid;
+    return true;
 };
 
 const clearErrors = () => {
