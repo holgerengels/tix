@@ -48,6 +48,30 @@ const REFRESH_SECRET_KEY = 'supersecretrefreshkey'; // In prod, use .env
 const ACCESS_TOKEN_EXPIRY = '1h';
 const REFRESH_TOKEN_EXPIRY = (settings.server && settings.server.refreshTokenExpiry) || '30d';
 
+const LDAP_CONNECT_TIMEOUT = 5000;
+const LDAP_TIMEOUT = 10000;
+const LDAP_HARD_TIMEOUT = 15000;
+
+const createLdapClient = (ldapConfig) => ldap.createClient({
+    url: ldapConfig.url,
+    connectTimeout: LDAP_CONNECT_TIMEOUT,
+    timeout: LDAP_TIMEOUT,
+    idleTimeout: LDAP_TIMEOUT
+});
+
+const safeUnbind = (client) => {
+    if (!client) return;
+    try { client.unbind(); } catch (_) {}
+};
+
+const safeDestroy = (client) => {
+    if (!client) return;
+    try {
+        if (typeof client.destroy === 'function') client.destroy();
+        else client.unbind();
+    } catch (_) {}
+};
+
 const mergeSubstituteGroups = async (username, groups) => {
     try {
         const substitutedUsers = await User.find({ substitutedBy: username });
@@ -113,22 +137,40 @@ const login = async (username, password, isPwa) => {
 
     const ldapConfig = settings.server.ldap;
 
-    return new Promise((resolve, reject) => {
-        const client = ldap.createClient({
-            url: ldapConfig.url
-        });
+    return new Promise((resolve) => {
+        let settled = false;
+        let userClient = null;
+        const client = createLdapClient(ldapConfig);
+
+        const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(value);
+        };
+
+        const timer = setTimeout(() => {
+            console.error(`[Auth] LDAP Login timeout for ${username}`);
+            safeDestroy(userClient);
+            safeDestroy(client);
+            finish(null);
+        }, LDAP_HARD_TIMEOUT);
+        if (typeof timer.unref === 'function') timer.unref();
 
         client.on('error', (err) => {
             console.error('[Auth] LDAP Client Error:', err);
-            resolve(null);
+            safeDestroy(userClient);
+            safeDestroy(client);
+            finish(null);
         });
 
         // A. Bind with Service Account
         client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+            if (settled) return;
             if (err) {
                 console.error('[Auth] LDAP Bind Error:', err);
-                client.unbind();
-                return resolve(null);
+                safeUnbind(client);
+                return finish(null);
             }
 
             // B. Search for User
@@ -142,10 +184,11 @@ const login = async (username, password, isPwa) => {
             };
 
             client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                if (settled) return;
                 if (err) {
                     console.error('[Auth] LDAP Search Error:', err);
-                    client.unbind();
-                    return resolve(null);
+                    safeUnbind(client);
+                    return finish(null);
                 }
 
                 let userEntry = null;
@@ -170,97 +213,113 @@ const login = async (username, password, isPwa) => {
                 });
 
                 searchRes.on('end', (result) => {
+                    if (settled) return;
                     if (result.status !== 0) {
                         console.error('[Auth] LDAP Search Status:', result.status);
-                        client.unbind();
-                        return resolve(null);
+                        safeUnbind(client);
+                        return finish(null);
                     }
 
                     if (!userEntry) {
                         console.log(`[Auth] User ${username} not found in LDAP`);
-                        client.unbind();
-                        return resolve(null);
+                        safeUnbind(client);
+                        return finish(null);
                     }
 
                     // C. Verify Password (Bind as User)
-                    const userClient = ldap.createClient({ url: ldapConfig.url });
+                    userClient = createLdapClient(ldapConfig);
+                    userClient.on('error', (userErr) => {
+                        console.error(`[Auth] LDAP User Client Error for ${username}:`, userErr);
+                        safeDestroy(userClient);
+                        safeUnbind(client);
+                        finish(null);
+                    });
+
                     const bindDn = decodeDN(userEntry.dn);
                     userClient.bind(bindDn, password, async (err) => {
-                        if (err) {
-                            console.log(`[Auth] Password check failed for ${username}`);
-                            userClient.unbind();
-                            client.unbind();
-                            return resolve(null);
-                        }
-
-                        // Success! Process Groups
-                        userClient.unbind();
-                        client.unbind();
-
-                        let employeeId = userEntry.employeeID || userEntry.employeeid || '';
-                        if (Array.isArray(employeeId)) employeeId = employeeId[0];
-
-                        const groups = [];
-                        const rawGroups = Array.isArray(userEntry.memberOf) ? userEntry.memberOf : [userEntry.memberOf];
-
-                        // memberOf format: CN=Groupname,OU=...,DC=...
-                        // We need to parse CN, check prefix, and strip it.
-                        const prefix = ldapConfig.groupprefix || '';
-
-                        if (rawGroups) {
-                            rawGroups.forEach(groupDn => {
-                                if (!groupDn) return;
-                                // Extract CN
-                                const match = groupDn.match(/^CN=([^,]+)/i);
-                                if (match) {
-                                    const cn = match[1];
-                                    if (cn.startsWith(prefix)) {
-                                        groups.push(cn.substring(prefix.length));
-                                    }
-                                }
-                            });
-                        }
-
-                        // Resolve displayName
-                        let givenName = userEntry.givenName || userEntry.givenname || '';
-                        let sn = userEntry.sn || '';
-                        if (Array.isArray(givenName)) givenName = givenName[0];
-                        if (Array.isArray(sn)) sn = sn[0];
-                        const displayName = [givenName, sn].filter(Boolean).join(' ') || username;
-
-                        console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
-
-                        // Auto create/update in MongoDB
+                        if (settled) return;
                         try {
-                            await User.findOneAndUpdate(
-                                { username: username },
-                                {
-                                    username: username,
-                                    displayName: displayName,
-                                    employeeId: employeeId,
-                                    groups: groups,
-                                    lastSeenInLdap: new Date()
-                                },
-                                { upsert: true }
-                            );
-                        } catch (mongoErr) {
-                            console.error(`[Auth] Error auto-creating LDAP user ${username} in Mongo:`, mongoErr.message);
+                            if (err) {
+                                console.log(`[Auth] Password check failed for ${username}`);
+                                safeUnbind(userClient);
+                                safeUnbind(client);
+                                return finish(null);
+                            }
+
+                            // Success! Process Groups
+                            safeUnbind(userClient);
+                            safeUnbind(client);
+
+                            let employeeId = userEntry.employeeID || userEntry.employeeid || '';
+                            if (Array.isArray(employeeId)) employeeId = employeeId[0];
+
+                            const groups = [];
+                            const rawGroups = Array.isArray(userEntry.memberOf) ? userEntry.memberOf : [userEntry.memberOf];
+
+                            // memberOf format: CN=Groupname,OU=...,DC=...
+                            // We need to parse CN, check prefix, and strip it.
+                            const prefix = ldapConfig.groupprefix || '';
+
+                            if (rawGroups) {
+                                rawGroups.forEach(groupDn => {
+                                    if (!groupDn) return;
+                                    // Extract CN
+                                    const match = groupDn.match(/^CN=([^,]+)/i);
+                                    if (match) {
+                                        const cn = match[1];
+                                        if (cn.startsWith(prefix)) {
+                                            groups.push(cn.substring(prefix.length));
+                                        }
+                                    }
+                                });
+                            }
+
+                            // Resolve displayName
+                            let givenName = userEntry.givenName || userEntry.givenname || '';
+                            let sn = userEntry.sn || '';
+                            if (Array.isArray(givenName)) givenName = givenName[0];
+                            if (Array.isArray(sn)) sn = sn[0];
+                            const displayName = [givenName, sn].filter(Boolean).join(' ') || username;
+
+                            console.log(`[Auth] LDAP Login successful for ${username}. Groups: ${groups.join(', ')}`);
+
+                            // Auto create/update in MongoDB
+                            try {
+                                await User.findOneAndUpdate(
+                                    { username: username },
+                                    {
+                                        username: username,
+                                        displayName: displayName,
+                                        employeeId: employeeId,
+                                        groups: groups,
+                                        lastSeenInLdap: new Date()
+                                    },
+                                    { upsert: true }
+                                );
+                            } catch (mongoErr) {
+                                console.error(`[Auth] Error auto-creating LDAP user ${username} in Mongo:`, mongoErr.message);
+                            }
+
+                            await mergeSubstituteGroups(username, groups);
+
+                            const lowerUsername = username.toLowerCase();
+                            const token = jwt.sign({ username: lowerUsername, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                            const result = { token, user: { username: lowerUsername, groups: groups } };
+                            if (isPwa) result.refreshToken = generateRefreshToken(lowerUsername, groups);
+                            finish(result);
+                        } catch (bindCallbackErr) {
+                            console.error(`[Auth] Unexpected error after LDAP bind for ${username}:`, bindCallbackErr);
+                            safeUnbind(userClient);
+                            safeUnbind(client);
+                            finish(null);
                         }
-
-                        await mergeSubstituteGroups(username, groups);
-
-                        const lowerUsername = username.toLowerCase();
-                        const token = jwt.sign({ username: lowerUsername, groups: groups }, SECRET_KEY, { expiresIn: ACCESS_TOKEN_EXPIRY });
-                        const result = { token, user: { username: lowerUsername, groups: groups } };
-                        if (isPwa) result.refreshToken = generateRefreshToken(lowerUsername, groups);
-                        resolve(result);
                     });
                 });
 
                 searchRes.on('error', (err) => {
                     console.error('[Auth] LDAP Search Event Error:', err);
-                    client.unbind();
-                    resolve(null);
+                    safeUnbind(client);
+                    finish(null);
                 });
             });
         });
@@ -321,16 +380,31 @@ const filterUsersByGroups = (users, filterGroups) => {
 };
 
 const fetchUsersFromLdap = (ldapConfig) => new Promise((resolve) => {
-    const client = ldap.createClient({ url: ldapConfig.url });
-    const fail = (label, err) => {
-        try { client.unbind(); } catch (_) {}
-        console.error(`[Auth] ${label}:`, err);
-        resolve({ users: [], failed: true });
+    let settled = false;
+    const client = createLdapClient(ldapConfig);
+
+    const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
     };
+
+    const fail = (label, err) => {
+        safeDestroy(client);
+        console.error(`[Auth] ${label}:`, err);
+        finish({ users: [], failed: true });
+    };
+
+    const timer = setTimeout(() => {
+        fail('LDAP Timeout (getUsers)', new Error(`Timed out after ${LDAP_HARD_TIMEOUT}ms`));
+    }, LDAP_HARD_TIMEOUT);
+    if (typeof timer.unref === 'function') timer.unref();
 
     client.on('error', (err) => fail('LDAP Client Error (getUsers)', err));
 
     client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+        if (settled) return;
         if (err) return fail('LDAP Bind Error (getUsers)', err);
 
         const opts = {
@@ -340,6 +414,7 @@ const fetchUsersFromLdap = (ldapConfig) => new Promise((resolve) => {
         };
 
         client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+            if (settled) return;
             if (err) return fail('LDAP Search Error (getUsers)', err);
 
             const foundUsers = [];
@@ -391,8 +466,8 @@ const fetchUsersFromLdap = (ldapConfig) => new Promise((resolve) => {
             });
 
             searchRes.on('end', () => {
-                client.unbind();
-                resolve({ users: foundUsers, failed: false });
+                safeUnbind(client);
+                finish({ users: foundUsers, failed: false });
             });
 
             searchRes.on('error', (err) => fail('LDAP Search Stream Error', err));
@@ -545,19 +620,37 @@ const getUser = async (username) => {
     // 3. LDAP fallback
     const ldapConfig = settings.server.ldap;
     try {
-        return await new Promise((resolve, reject) => {
-            const client = ldap.createClient({ url: ldapConfig.url });
+        return await new Promise((resolve) => {
+            let settled = false;
+            const client = createLdapClient(ldapConfig);
+            const fallbackUser = { username, displayName: username, employeeId: '' };
+
+            const finish = (value) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                resolve(value);
+            };
+
+            const timer = setTimeout(() => {
+                console.error(`[Auth] LDAP Timeout (getUser: ${username})`);
+                safeDestroy(client);
+                finish(fallbackUser);
+            }, LDAP_HARD_TIMEOUT);
+            if (typeof timer.unref === 'function') timer.unref();
 
             client.on('error', (err) => {
                 console.error('[Auth] LDAP Client Error (getUser):', err);
-                resolve({ username, displayName: username, employeeId: '' });
+                safeDestroy(client);
+                finish(fallbackUser);
             });
 
             client.bind(ldapConfig.binddn, ldapConfig.bindpw, (err) => {
+                if (settled) return;
                 if (err) {
-                    client.unbind();
+                    safeUnbind(client);
                     console.error('[Auth] LDAP Bind Error (getUser):', err);
-                    return resolve({ username, displayName: username, employeeId: '' });
+                    return finish(fallbackUser);
                 }
 
                 const escapedUsername = escapeLDAP(username);
@@ -569,12 +662,13 @@ const getUser = async (username) => {
                 };
 
                 client.search(ldapConfig.basedn, opts, (err, searchRes) => {
+                    if (settled) return;
                     if (err) {
-                        client.unbind();
-                        return resolve({ username, displayName: username, employeeId: '' });
+                        safeUnbind(client);
+                        return finish(fallbackUser);
                     }
 
-                    let result = { username, displayName: username, employeeId: '' };
+                    let result = { ...fallbackUser };
 
                     searchRes.on('searchEntry', (entry) => {
                         let userAttributes = entry.object;
@@ -600,13 +694,13 @@ const getUser = async (username) => {
                     });
 
                     searchRes.on('end', () => {
-                        client.unbind();
-                        resolve(result);
+                        safeUnbind(client);
+                        finish(result);
                     });
 
                     searchRes.on('error', () => {
-                        client.unbind();
-                        resolve(result);
+                        safeUnbind(client);
+                        finish(result);
                     });
                 });
             });

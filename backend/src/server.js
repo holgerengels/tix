@@ -53,6 +53,14 @@ app.get('*', (req, res) => {
 
 // Start Server
 if (require.main === module) {
+    process.on('unhandledRejection', (reason) => {
+        console.error('❌ [Server] Unhandled Promise Rejection:', reason);
+    });
+
+    process.on('uncaughtException', (err) => {
+        console.error('❌ [Server] Uncaught Exception:', err);
+    });
+
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
 

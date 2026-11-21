@@ -343,7 +343,16 @@ function findMatchingCalendar(calendars, calendarName) {
     const exact = calendars.find(c => c.name === calendarName);
     if (exact) return exact;
     const lower = calendarName.toLowerCase();
-    const fuzzy = calendars.find(c => c.name.toLowerCase() === lower || (lower === 'personal' && c.name.toLowerCase().includes('personal')));
+    const fuzzy = calendars.find(c => {
+        const nameLower = (c.name || '').toLowerCase();
+        if (nameLower === lower) return true;
+        if (lower === 'personal') {
+            return nameLower.includes('personal') ||
+                nameLower.includes('persönlich') ||
+                (c.href && c.href.toLowerCase().includes('/personal/'));
+        }
+        return false;
+    });
     if (fuzzy) return fuzzy;
     return null;
 }

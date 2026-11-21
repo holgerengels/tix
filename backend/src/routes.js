@@ -93,15 +93,20 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/refresh', async (req, res) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) return res.status(400).json({ message: 'Refresh token required' });
 
-    const { refreshAccessToken } = require('./auth');
-    const result = await refreshAccessToken(refreshToken);
-    if (result) {
-        res.json(result);
-    } else {
-        res.status(401).json({ message: 'Invalid or expired refresh token' });
+        const { refreshAccessToken } = require('./auth');
+        const result = await refreshAccessToken(refreshToken);
+        if (result) {
+            res.json(result);
+        } else {
+            res.status(401).json({ message: 'Invalid or expired refresh token' });
+        }
+    } catch (err) {
+        console.error('Refresh token error:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
@@ -113,23 +118,38 @@ router.post('/extend', verifyToken, (req, res) => {
 });
 
 router.get('/groups', verifyToken, async (req, res) => {
-    const { getGroups } = require('./auth');
-    res.json(await getGroups());
+    try {
+        const { getGroups } = require('./auth');
+        res.json(await getGroups());
+    } catch (err) {
+        console.error('Error fetching groups:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 router.get('/users', verifyToken, async (req, res) => {
-    const { getUsers } = require('./auth');
-    // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin
-    const groups = req.query.groups ? req.query.groups.split(',').filter(g => g.trim()) : [];
-    const forceFetch = req.query.forceFetch === 'true';
-    res.json(await getUsers(groups, forceFetch));
+    try {
+        const { getUsers } = require('./auth');
+        // Expecting comma separated groups in query: ?groups=Lehrkräfte,Admin
+        const groups = req.query.groups ? req.query.groups.split(',').filter(g => g.trim()) : [];
+        const forceFetch = req.query.forceFetch === 'true';
+        res.json(await getUsers(groups, forceFetch));
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 router.get('/users/:username', verifyToken, async (req, res) => {
-    const { getUser } = require('./auth');
-    const user = await getUser(req.params.username);
-    // Only return username and displayName — no groups for security
-    res.json({ username: user.username, displayName: user.displayName });
+    try {
+        const { getUser } = require('./auth');
+        const user = await getUser(req.params.username);
+        // Only return username and displayName — no groups for security
+        res.json({ username: user.username, displayName: user.displayName });
+    } catch (err) {
+        console.error('Error fetching user:', err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 });
 
 // Config
