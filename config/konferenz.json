@@ -315,8 +315,7 @@
             "name": "read",
             "groups": [
                 "@creator",
-                "Schulleitung",
-                "Netzwerkteam",
+                "Lehrkräfte",
                 "@assignee"
             ]
         },
