@@ -27,7 +27,8 @@
             "name": "dateUntil",
             "label": "Datum bis",
             "type": "Date",
-            "required": true
+            "required": true,
+            "highlight": "{{ !!ticket._id && (currentUser().groups || []).includes('Vertretungsplanung') && !!ticket.dateFrom && !!ticket.dateUntil && ticket.dateFrom !== ticket.dateUntil }}"
         },
         {
             "name": "who",

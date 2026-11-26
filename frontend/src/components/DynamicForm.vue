@@ -1,7 +1,7 @@
 <template>
   <div class="dynamic-form">
     <div class="dynamic-form-grid" :style="gridStyle">
-      <div v-for="field in orderedFields" :key="field.name" class="form-field" :style="getFieldStyle(field)">
+      <div v-for="field in orderedFields" :key="field.name" class="form-field" :class="{ 'field-highlight': field.highlight === true }" :style="getFieldStyle(field)">
           <FormField 
               v-if="field.visible !== false"
               :field="field"
@@ -246,5 +246,17 @@ const getFieldStyle = (field) => {
 }
 .error-item:last-child {
     margin-bottom: 0;
+}
+
+/* Field flagged via the "highlight" property (e.g. "{{ticket.a != ticket.b}}") */
+.form-field.field-highlight {
+    --wa-form-control-border-color: #d00000;
+    --wa-form-control-border-width: 4px;
+    --wa-form-control-background-color: #ffe5e5;
+}
+.form-field.field-highlight :deep(::part(base)) {
+    border: 4px solid #d00000;
+    background-color: #ffe5e5;
+    box-shadow: 0 0 0 5px rgba(220, 0, 0, 0.45);
 }
 </style>
