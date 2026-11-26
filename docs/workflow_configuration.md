@@ -58,6 +58,7 @@ The forms are structured generically. You define the data fields under `fields` 
 | `required` | Boolean / Expression | Indicates whether this field is mandatory. Can be dynamic (e.g. `"{{ ticket.wantsRoom === true }}"`). |
 | `visible` | Boolean / Expression | Dynamic visibility. If `false`, the field is hidden and skipped during validation. |
 | `readonly` | Boolean / Expression | Readonly flag. If `true`, the field remains visible but disabled. |
+| `highlight` | Boolean / Expression | If `true`, the field is framed with a strong red border to draw attention (e.g. `{{ticket.dateFrom !== ticket.dateUntil}}`). |
 | `default` | Any / Expression | Initial value applied **only if the field is currently empty** (see [Default vs. Computed](#22-default-vs-computed)). |
 | `computed` | String (Expression) | Derived value **always re-evaluated and overwriting** the field (see [Default vs. Computed](#22-default-vs-computed)). |
 | `validation` | Object | Field-level validation: `{ "expression": "...", "message": "..." }`. |

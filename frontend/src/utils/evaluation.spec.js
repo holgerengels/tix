@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { reactive } from 'vue';
 import {
     evaluateFields,
@@ -371,6 +373,43 @@ describe('evaluation.js', () => {
             expect(fnA()).toBe('A');
             expect(fnB()).toBe('B');
             expect(getEvaluatorCacheSize()).toBe(2);
+        });
+    });
+
+    describe('highlight (Krankmeldung dateUntil)', () => {
+        const krankmeldung = JSON.parse(
+            readFileSync(resolve(__dirname, '../../../config/krankmeldung.json'), 'utf-8')
+        );
+        const fields = krankmeldung.fields.filter(f => f.name === 'dateUntil');
+
+        const setUser = (groups) => localStorage.setItem('user', JSON.stringify({ username: 'test', groups }));
+        const highlight = (ticket) => evaluateFields(fields, ticket)[0].highlight;
+
+        afterEach(() => localStorage.removeItem('user'));
+
+        it('highlights a saved multi-day Krankmeldung for Vertretungsplanung', () => {
+            setUser(['Lehrkräfte', 'Vertretungsplanung']);
+            expect(highlight({ _id: 'abc', dateFrom: '2026-11-26', dateUntil: '2026-11-28' })).toBe(true);
+        });
+
+        it('does not highlight single-day Krankmeldungen', () => {
+            setUser(['Vertretungsplanung']);
+            expect(highlight({ _id: 'abc', dateFrom: '2026-11-26', dateUntil: '2026-11-26' })).toBe(false);
+        });
+
+        it('does not highlight while the ticket is being created', () => {
+            setUser(['Vertretungsplanung']);
+            expect(highlight({ dateFrom: '2026-11-26', dateUntil: '2026-11-28' })).toBe(false);
+        });
+
+        it('does not highlight for users outside Vertretungsplanung', () => {
+            setUser(['Lehrkräfte', 'Schulleitung']);
+            expect(highlight({ _id: 'abc', dateFrom: '2026-11-26', dateUntil: '2026-11-28' })).toBe(false);
+        });
+
+        it('does not highlight when a date is missing', () => {
+            setUser(['Vertretungsplanung']);
+            expect(highlight({ _id: 'abc', dateFrom: '2026-11-26' })).toBe(false);
         });
     });
 });
